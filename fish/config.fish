@@ -7,7 +7,6 @@ alias gc="git checkout"
 alias v="nvim"
 alias vi="nvim"
 alias vim="nvim"
-alias fd="fdfind"
 
 # Save you from mistyping
 alias sl=ls
@@ -16,7 +15,6 @@ alias sl=ls
 alias mv="mv -i"           # -i prompts before overwrite
 alias mkdir="mkdir -p"     # -p make parent dirs as needed
 alias df="df -h"           # -h prints human readable format
-alias lsd="du -shc *"
 
 # Alias can be composed
 alias la="ls -A"
@@ -25,12 +23,7 @@ alias llt="lla -t"
 alias tree='tree -I "venv|target|node_modules|__pycache__"'
 alias dc="docker-compose"
 
-alias dallow="direnv allow"
-
-
-# template
-# alias template="cat /home/ankit/workspace/template.txt"
-# alias etemplate="vim /home/ankit/workspace/template.txt"
+alias da="direnv allow"
 
 
 #
@@ -55,27 +48,14 @@ setenv FZF_DEFAULT_OPTS '--height 20%'
 
 function fish_user_key_bindings
     bind \cz 'fg>/dev/null ^/dev/null'
-    # if functions -q fzf_key_bindings
-	    # fzf_key_bindings
-    # end
     # Execute this once per mode that emacs bindings should be used in
     fish_default_key_bindings -M insert
     bind -M insert \cc kill-whole-line repaint
-    bind -M insert \ct 'tab'
-    bind \ct 'tab'
     # Without an argument, fish_vi_key_bindings will default to
     # resetting all bindings.
     # The argument specifies the initial mode (insert, "default" or visual).
     fish_vi_key_bindings insert
 end
-
-#function hybrid_bindings --description "Vi-style bindings that inherit emacs-style bindings in all modes"
-#    for mode in default insert visual
-#        fish_default_key_bindings -M $mode
-#    end
-#    fish_vi_key_bindings --no-erase
-#end
-#set -g fish_key_bindings hybrid_bindings
 
 # Emulates vim's cursor shape behavior
 # Set the normal and visual mode cursors to a block
