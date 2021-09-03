@@ -118,6 +118,8 @@ fi
 
 export PATH="$HOME/bin:$PATH:$HOME/.local/bin"
 export BAT_THEME="Monokai Extended Light"
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
 
 if [ -f $HOME/.cargo/env ]; then
     source "$HOME/.cargo/env"
