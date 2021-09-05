@@ -118,6 +118,7 @@ fi
 
 export PATH="$HOME/bin:$PATH:$HOME/.local/bin"
 export BAT_THEME="Monokai Extended Light"
+export EDITOR="vim"
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
 
