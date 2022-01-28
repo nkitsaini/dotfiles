@@ -26,5 +26,4 @@
     "security.workspace.trust.untrustedFiles": "open",
     "files.autoSave": "afterDelay",
     "editor.formatOnSave": true,
-    "editor.fontFamily": "MonoLisa",
 }

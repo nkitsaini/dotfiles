@@ -14,6 +14,7 @@ extensions = [
 	"github.github-vscode-theme",
 	"ms-python.python",
 	"ms-vscode-remote.remote-containers",
+	"ms-vscode-remote.remote-ssh",
 	"matklad.rust-analyzer",
 	"svelte.svelte-vscode",
 	"bradlc.vscode-tailwindcss",
