@@ -13,7 +13,7 @@
         "--style",
         "{based_on_style: pep8, use_tabs: true, continuation_align_style: 'valign-right', coalesce_brackets: true, dedent_closing_brackets: true, SPLIT_COMPLEX_COMPREHENSION: true, SPLIT_BEFORE_EXPRESSION_AFTER_OPENING_PAREN: true, column_limit: 128, spaces_before_comment: 1}"
     ],
-    "python.formatting.yapfPath": "/home/lab/.local/bin/yapf",
+    "python.formatting.yapfPath": "/usr/local/bin/yapf",
     "explorer.confirmDelete": false,
     "notebook.cellToolbarLocation": {
         "default": "right",

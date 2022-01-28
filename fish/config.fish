@@ -80,4 +80,4 @@ set -g man_underline -u 93a1a1
 #automatically load .envrc
 #install package (direnv), apt-get install direnv
 # eval (direnv hook fish)
-# starship init fish | source
+starship init fish | source
