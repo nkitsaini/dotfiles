@@ -22,3 +22,14 @@ and Github repo `x11docker-env` contains a full-fledged environment to get start
 ### Cloud Storage, Storj
 Rclone config in `dotfiles` and access token on `bitwarden`.
 
+### Some Important Tools
+- git
+- rust
+- python3
+- alacritty terminal, bat, rg, sd, btm (all installable through cargo)
+- fish shell
+- starship prompt
+- ssh-server
+- borg
+- tmux
+- firefox
