@@ -355,7 +355,7 @@ set $inactive-text-color "#676E7D"
 set $urgent-bg-color "#E53935"
 bar {
 	#status_command i3status
-	status_command bumblebee-status -m cpu disk network_traffic memory nic pasink pasource battery datetime -p disk.format="{left}" -p memory.format="{used}" -t solarized
+	status_command bumblebee-status -m cpu disk network_traffic memory nic pasink pasource battery datetime -p disk.format="{left}" -p memory.format="{used}" -p datetime.format="%a %d/%m/%Y %H:%M" -t solarized
 
 	#status_command i3blocks
 	#status_command py3status
