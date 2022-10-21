@@ -1,8 +1,12 @@
 #!/bin/env python3
+import hashlib
 from pathlib import Path
+import datetime as dt
+import shutil
 import subprocess
 from typing import *
 import sys
+import time
 from typing import TextIO
 
 def x(command: str) -> str:
@@ -12,6 +16,8 @@ def x(command: str) -> str:
 	return p.stdout.read().decode().strip()
 
 HOME = Path(f"/home/{x('id -un')}")
+BACKUP_PATH = Path(f".bak/{dt.datetime.now().strftime('%Y-%m-%d')}-{int(time.time()*1000)}")
+BACKUP_PATH.mkdir(exist_ok=True, parents=True)
 
 if len(sys.argv) == 2:
 	HOME = Path(sys.argv[1])
@@ -21,6 +27,9 @@ DF_PATH = Path(__file__).parent # DOT_FILE_PATH
 def copy_config(src: Path, dest: Path, mkdir: bool = True):
 	if mkdir:
 		dest.parent.mkdir(exist_ok=True, parents=True)
+	if dest.exists():
+		sha = hashlib.sha256(dest.read_bytes()).hexdigest()
+		shutil.copy(dest, BACKUP_PATH/(sha + '_' + dest.name))
 	dest.write_text(src.read_text())
 
 
