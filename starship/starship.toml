@@ -5,18 +5,23 @@ $directory\
 $git_branch\
 $git_state\
 $git_status\
+$status\
 $cmd_duration\
 $line_break\
 $python\
 $character"""
 
-[directory]
-style = "blue"
+#[directory]
+#style = "blue"
 
-[character]
-success_symbol = "[❯](blue)"
-error_symbol = "[❯](red)"
-vicmd_symbol = "[❮](green)"
+#[character]
+#success_symbol = "[❯](blue)"
+#error_symbol = "[❯](red)"
+#vicmd_symbol = "[❮](green)"
+#[character]
+#success_symbol = "[❯]"
+#error_symbol = "[❯]"
+#vicmd_symbol = "[❮]"
 
 [git_branch]
 format = "[$branch]($style)"
@@ -44,3 +49,7 @@ style = "yellow"
 [python]
 format = "[$virtualenv]($style) "
 style = "bright-black"
+
+[status]
+disabled = false
+format = " [E-$status]($style) "

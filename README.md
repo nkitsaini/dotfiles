@@ -13,7 +13,7 @@ password: you should know if you're reading this, hint: pythagorus.mpy
 
 ### Login
 Once you have the creds you can use them sign into
-	gmail/protonmail/github [totp codes are on bitwarden]
+	gmail/protonmail/github [you should have TOTP codes by this stage]
 
 ### Git Repos
 Github repo `dotfiles` contains most of configuration you need
