@@ -13,7 +13,7 @@ for (const key of 'jkbts?') {
 }
 
 api.unmapAllExcept([], /github.dev/);
-api.unmapAllExcept([], /console.aws.amazon.com/);
+api.unmapAllExcept([], /us-east-1.console.aws.amazon.com\/systems-manager\/session-manager/);
 // an example to remove mapkey `Ctrl-i`
 api.unmap('<ctrl-i>');
 
