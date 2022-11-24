@@ -12,6 +12,9 @@ for (const key of 'jkbts?') {
     api.unmap(key, /hn.nkit.dev/);
 }
 
+api.unmap('i', /youtube.com/);
+api.unmap('f', /youtube.com/);
+
 api.unmapAllExcept([], /github.dev/);
 api.unmapAllExcept([], /us-east-1.console.aws.amazon.com\/systems-manager\/session-manager/);
 api.unmapAllExcept([], /\/\/whimsical.com/);
