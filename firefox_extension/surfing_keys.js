@@ -16,6 +16,7 @@ api.unmap('i', /youtube.com/);
 api.unmap('f', /youtube.com/);
 
 api.unmapAllExcept([], /github.dev/);
+api.unmapAllExcept([], /localhost/);
 api.unmapAllExcept([], /us-east-1.console.aws.amazon.com\/systems-manager\/session-manager/);
 api.unmapAllExcept([], /\/\/whimsical.com/);
 
