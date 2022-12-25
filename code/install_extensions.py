@@ -6,6 +6,7 @@ from concurrent.futures import ProcessPoolExecutor, process
 extensions = [
 	"vscodevim.vim",
 	"eamodio.gitlens",
+    "rust-lang.rust-analyzer",
 	"ms-kubernetes-tools.vscode-kubernetes-tools",
 	"shd101wyy.markdown-preview-enhanced",
 	"redhat.vscode-yaml",
@@ -15,7 +16,7 @@ extensions = [
 	"ms-python.python",
 	"ms-vscode-remote.remote-containers",
 	"ms-vscode-remote.remote-ssh",
-	"matklad.rust-analyzer",
+    "VSpaceCode.vspacecode",
 	"svelte.svelte-vscode",
 	"bradlc.vscode-tailwindcss",
 ]
