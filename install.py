@@ -28,6 +28,8 @@ def copy_config(src: Path, dest: Path, mkdir: bool = True):
 	if mkdir:
 		dest.parent.mkdir(exist_ok=True, parents=True)
 	if dest.exists():
+		print(dest, "already exists. skipping")
+		return
 		sha = hashlib.sha256(dest.read_bytes()).hexdigest()
 		shutil.copy(dest, BACKUP_PATH/(sha + '_' + dest.name))
 	dest.write_text(src.read_text())
