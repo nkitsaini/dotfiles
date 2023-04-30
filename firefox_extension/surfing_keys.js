@@ -12,10 +12,18 @@ for (const key of 'jkbts?') {
     api.unmap(key, /hn.nkit.dev/);
 }
 
+api.mapkey('yY', '#1Copy all tabs url', function() {
+	runtime.command({action: 'getTabs'}, function (response) {
+	 Clipboard.write(response.tabs.map(tab => tab.url).join('\n'));
+	});
+});
+api.map('<Ctrl-i>', '<Alt-s>'); // hotkey must be one keystroke with/without modifier, it can not be a sequence of keystrokes like `gg`.
+
 api.unmap('i', /youtube.com/);
 api.unmap('f', /youtube.com/);
 
 api.unmapAllExcept([], /github.dev/);
+api.unmapAllExcept([], /linear.app/);
 api.unmapAllExcept([], /localhost/);
 api.unmapAllExcept([], /us-east-1.console.aws.amazon.com\/systems-manager\/session-manager/);
 api.unmapAllExcept([], /\/\/whimsical.com/);
@@ -62,3 +70,4 @@ settings.theme = `
     font-size: 20pt;
 }`;
 // click `Save` button to make above settings to take effect.</ctrl-i></ctrl-y>
+

@@ -1,0 +1,254 @@
+{
+    "workbench.colorTheme": "Solarized Light+",
+    "vim.easymotion": true,
+    "vim.useSystemClipboard": true,
+
+    "vim.normalModeKeyBindingsNonRecursive": [
+        {
+            "before": [
+                "j"
+            ],
+            "after": [
+                "g",
+                "j"
+            ]
+        },
+        {
+            "before": [
+                "k"
+            ],
+            "after": [
+                "g",
+                "k"
+            ]
+        },
+        {
+            "before": [
+                "<space>"
+            ],
+            "commands": [
+                "vspacecode.space"
+            ]
+        },
+        {
+            "before": [
+                ","
+            ],
+            "commands": [
+                "vspacecode.space",
+                {
+                    "command": "whichkey.triggerKey",
+                    "args": "m"
+                }
+            ]
+        }
+    ],
+    "vim.visualModeKeyBindingsNonRecursive": [
+        {
+            "before": [
+                "<space>"
+            ],
+            "commands": [
+                "vspacecode.space"
+            ]
+        },
+        {
+            "before": [
+                ","
+            ],
+            "commands": [
+                "vspacecode.space",
+                {
+                    "command": "whichkey.triggerKey",
+                    "args": "m"
+                }
+            ]
+        }
+    ],
+    "vspacecode.bindingOverrides": [
+        // explorer.newFolder
+        {
+            "keys": "f.N",
+            "name": "+ New Folder",
+            "type": "command",
+            "command": "explorer.newFolder"
+        },
+        {
+            "keys": "j.h",
+            "name": "Show Hover",
+            "type": "command",
+            "command": "editor.action.showHover"
+        },
+        {
+            "keys": "D.h",
+            "name": "Focus on other side of comparison/diff",
+            "type": "command",
+            "command": "workbench.action.compareEditor.focusOtherSide"
+        },
+        {
+            "keys": "D.l",
+            "name": "Focus on other side of comparison/diff",
+            "type": "command",
+            "command": "workbench.action.compareEditor.focusOtherSide"
+        },
+        {
+            "keys": "D.o",
+            "name": "Focus on other side of comparison/diff",
+            "type": "command",
+            "command": "workbench.action.compareEditor.focusOtherSide"
+        },
+        {
+            "keys": "w.c",
+            "name": "Focus on other side of comparison/diff",
+            "type": "command",
+            "command": "workbench.action.compareEditor.focusOtherSide"
+        },
+        {
+            "keys": "j.e",
+            "name": "Eslint Fix Errors",
+            "type": "command",
+            "command": "eslint.executeAutofix"
+        },
+        {
+            "keys": "j.f",
+            "name": "Format document",
+            "type": "command",
+            "command": "editor.action.formatDocument"
+        },
+        {
+            "keys": "g.a",
+            "name": "Stage(Add) Selected Ranges",
+            "type": "command",
+            "command": "git.stageSelectedRanges"
+        },
+        {
+            "keys": "g.A",
+            "name": "Stage(Add) current file",
+            "type": "command",
+            "command": "magit.stage-file"
+        },
+        {
+            "keys": "g.r",
+            "name": "Revert Selected Ranges",
+            "type": "command",
+            "command": "git.revertSelectedRanges"
+        },
+        {
+            "keys": "g.v",
+            "name": "Go to Source Control View",
+            "type": "command",
+            "command": "workbench.scm.focus"
+        },
+        {
+            "keys": "S.N",
+            "name": "Clear all notifications",
+            "type": "command",
+            "command": "notifications.clearAll"
+        },
+        {
+            "keys": "w.x",
+            "name": "Close the window",
+            "type": "command",
+            "command": "workbench.action.closeWindow"
+        }
+    ],
+    "window.zoomLevel": 2,
+    "explorer.confirmDelete": false,
+    "vim.foldfix": true,
+    "yaml.schemas": {
+        "file:///Users/nkit/.vscode/extensions/atlassian.atlascode-2.10.12/resources/schemas/pipelines-schema.json": "bitbucket-pipelines.yml"
+    },
+    "atlascode.jira.jqlList": [
+        {
+            "id": "88de975b-f1e9-48be-9c1d-dcd4655a28b1",
+            "enabled": true,
+            "name": "My postmanlabs Issues",
+            "query": "assignee = currentUser() AND resolution = Unresolved ORDER BY lastViewed DESC",
+            "siteId": "0d13b137-2934-4b74-a921-694ab83c54c5",
+            "monitor": true
+        }
+    ],
+    "redhat.telemetry.enabled": false,
+    "diffEditor.ignoreTrimWhitespace": false,
+    "security.workspace.trust.untrustedFiles": "open",
+    "yaml.customTags": [
+        "!And",
+        "!And sequence",
+        "!If",
+        "!If sequence",
+        "!Not",
+        "!Not sequence",
+        "!Equals",
+        "!Equals sequence",
+        "!Or",
+        "!Or sequence",
+        "!FindInMap",
+        "!FindInMap sequence",
+        "!Base64",
+        "!Join",
+        "!Join sequence",
+        "!Cidr",
+        "!Ref",
+        "!Sub",
+        "!Sub sequence",
+        "!GetAtt",
+        "!GetAZs",
+        "!ImportValue",
+        "!ImportValue sequence",
+        "!Select",
+        "!Select sequence",
+        "!Split",
+        "!Split sequence"
+    ],
+    "aws.resources.enabledResources": [
+        "AWS::EC2::Host"
+    ],
+    "editor.fontFamily": "MonoLisa",
+    "markdown.preview.fontFamily": "MonoLisa",
+    "zenMode.fullScreen": false,
+    "markdown.preview.breaks": true,
+    "git.autofetch": true,
+    "jupyter.widgetScriptSources": [
+        "jsdelivr.com",
+        "unpkg.com"
+    ],
+    "atlascode.jira.lastCreateSiteAndProject": {
+        "siteId": "",
+        "projectKey": ""
+    },
+    "svelte.enable-ts-plugin": true,
+    "svelte.plugin.svelte.note-new-transformation": false,
+    "[dart]": {
+        "editor.formatOnSave": true,
+        "editor.formatOnType": true,
+        "editor.rulers": [
+            80
+        ],
+        "editor.selectionHighlight": false,
+        "editor.suggest.snippetsPreventQuickSuggestions": false,
+        "editor.suggestSelection": "first",
+        "editor.tabCompletion": "onlySnippets",
+        "editor.wordBasedSuggestions": false
+    },
+    "markdown.extension.list.indentationSize": "inherit",
+    "python.formatting.provider": "autopep8",
+    "vscode-neovim.neovimExecutablePaths.darwin": "/Users/nkit/.local/bin/lvim",
+    "vscode-neovim.revealCursorScrollLine": true,
+    "[python]": {
+        "editor.formatOnType": true
+    },
+    "python.analysis.typeCheckingMode": "basic",
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[svelte]": {
+        "editor.defaultFormatter": "svelte.svelte-vscode"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "aws.codeWhisperer.shareCodeWhispererContentWithAWS": false,
+}
