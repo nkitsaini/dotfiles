@@ -24,7 +24,7 @@ o = { l = ":open ~/.config/helix/languages.toml", c = ":config-open" }
 t = { h = ":toggle-option lsp.display-inlay-hints" }
 w = { x = ":quit-all!" }
 
-{{ if .helix.eslint_bindings }}
+{{ if .helix.use_eslint }}
 e = { f = ":eslint-fix-all" }
 {{ end }}
 
