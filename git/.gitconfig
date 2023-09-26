@@ -1,7 +1,0 @@
-[user]
-	email = nnkitsaini@gmail.com
-	name = Ankit Saini
-[pull]
-	rebase = false
-[init]
-	defaultBranch = main
