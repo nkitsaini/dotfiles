@@ -4,7 +4,7 @@ set-option -g history-limit 100000
 
 # modern colors
 set -g default-terminal "tmux-256color"
-set -ga terminal-overrides ",alacritty:Tc"
+# set -ga terminal-overrides ",alacritty:Tc"
 
 {{ if .tmux.use_ctrl_a }}
 # unbind the prefix and bind it to Ctrl-a like screen
@@ -34,7 +34,7 @@ set -g set-titles-string "#T"
 set -g mode-keys vi
 
 # Mouse friendly
-# set -g mouse on
+set -g mouse on
 
 # Move between panes with vi keys
 bind h select-pane -L
@@ -42,11 +42,14 @@ bind j select-pane -D
 bind k select-pane -U
 bind l select-pane -R
 
-bind -n S-down new-window
+bind -n S-up prev
+bind -n S-down next
 bind -n C-PageUp prev
 bind -n C-PageDown next
 bind -n C-S-PageUp swap-window -t -1\; select-window -t -1
+bind -n C-S-up swap-window -t -1\; select-window -t -1
 bind -n C-S-PageDown swap-window -t +1\; select-window -t +1
+bind -n C-S-down swap-window -t +1\; select-window -t +1
 
 
 ######################
@@ -91,6 +94,8 @@ set-window-option -g window-status-current-style bg=#964B00,fg=#ffffff
 # should be after theme
 set -g pane-active-border-style fg=blue
 set -g pane-border-style fg=blue
+
+set -g status-left-length 40
 
 
 
