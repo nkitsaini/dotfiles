@@ -1,5 +1,5 @@
 # =================== Copilot 
-{{ .helix.use_copilot_pr }}
+{{ if .helix.has_copilot_pr }}
 [language-server.copilot]
 command = "copilot"
 args = ["--stdio"]
@@ -145,10 +145,10 @@ workingDirectories = [{ mode = 'location' }]
 name = "javascript"
 # formatter = { command = 'prettier', args = ["--parser", "typescript"] }
 formatter = { command = 'bunx', args = ["biome", "format", '--stdin-file-path=x.js'] }
-language-servers = ["typescript-language-server", {{if .helix.use_eslint }}"eslint-lsp",{{ end }}, {{if .helix.use_copilot_pr}} "copilot" {{end}}]
+language-servers = ["typescript-language-server", {{if .helix.use_eslint }}"eslint-lsp",{{ end }}, {{if .helix.has_copilot_pr}} "copilot" {{end}}]
 
 [[language]]
 name = "typescript"
 # formatter = { command = 'prettier', args = ["--parser", "typescript"] }
 formatter = { command = 'bunx', args = ["biome", "format", '--stdin-file-path=x.ts'] }
-language-servers = ["typescript-language-server", {{if .helix.use_eslint }}"eslint-lsp",{{ end }}, {{if .helix.use_copilot_pr}} "copilot" {{end}}]
+language-servers = ["typescript-language-server", {{if .helix.use_eslint }}"eslint-lsp",{{ end }}, {{if .helix.has_copilot_pr}} "copilot" {{end}}]
