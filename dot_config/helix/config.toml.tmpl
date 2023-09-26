@@ -1,0 +1,51 @@
+theme = "everforest_light"
+
+
+[editor]
+bufferline = "multiple"
+idle-timeout = 0
+undercurl = true
+true-color = true
+
+[editor.file-picker]
+git-exclude = false
+git-global = false
+hidden = false
+
+[keys.normal]
+esc = ["collapse_selection", "keep_primary_selection"]
+Z = { Z = [":write-quit"]}
+
+[keys.normal.space]
+F = "file_picker"
+f = "file_picker_in_current_directory"
+l = ":pipe-to xargs -I % tmux send-keys -t 1 \"%\" Enter"
+o = { l = ":open ~/.config/helix/languages.toml", c = ":config-open" }
+t = { h = ":toggle-option lsp.display-inlay-hints" }
+w = { x = ":quit-all!" }
+
+{{ if .helix.eslint_bindings }}
+e = { f = ":eslint-fix-all" }
+{{ end }}
+
+[keys.insert]
+j = { k = "normal_mode" }
+
+{{ if .helix.has_copilot_pr }}
+"C-e": "show_or_next_copilot_completion"
+"C-a": "hide_or_prev_copilot_completion"
+"C-y": "apply_copilot_completion"
+{{ end }}
+
+
+[editor.lsp]
+display-inlay-hints = true
+{{ if .helix.has_copilot_pr }}
+copilot-auto = true
+{{ end }}
+
+[editor.whitespace.render]
+space = "all"
+tab = "all"
+newline = "none"
+
