@@ -1,0 +1,107 @@
+# ~/.tmux.conf
+# set scroll history to 100,000 lines
+set-option -g history-limit 100000
+
+# modern colors
+set -g default-terminal "tmux-256color"
+# set -ga terminal-overrides ",alacritty:Tc"
+
+{{ if .tmux.use_ctrl_a }}
+# unbind the prefix and bind it to Ctrl-a like screen
+unbind C-b
+set -g prefix C-a
+bind C-a send-prefix
+{{ end }}
+
+# copy to X clipboard
+bind -T copy-mode-vi v send -X begin-selection
+bind -T copy-mode-vi y send-keys -X copy-pipe 'xclip -in -selection clipboard' # &> /dev/null'
+bind -T copy-mode-vi Enter send-keys -X cancel
+
+# shortcut for moving tmux buffer to clipboard
+# useful if you've selected with the mouse
+#bind-key -nr C-y run "tmux show-buffer | xclip -in -selection clipboard &> /dev/null"
+bind C-y run "tmux save-buffer - | xclip -selection clipboard"
+
+# Avoid ESC delay
+set -s escape-time 0
+
+# Fix titlebar
+set -g set-titles on
+set -g set-titles-string "#T"
+
+# VIM mode
+set -g mode-keys vi
+
+# Mouse friendly
+set -g mouse on
+
+# Move between panes with vi keys
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+
+bind -n S-up prev
+bind -n S-down next
+bind -n C-PageUp prev
+bind -n C-PageDown next
+bind -n C-S-PageUp swap-window -t -1\; select-window -t -1
+bind -n C-S-up swap-window -t -1\; select-window -t -1
+bind -n C-S-PageDown swap-window -t +1\; select-window -t +1
+bind -n C-S-down swap-window -t +1\; select-window -t +1
+
+
+######################
+### DESIGN CHANGES ###
+######################
+set-option -g status-position top
+
+# better borders
+set-option -g status-style fg=white,bg=black
+set-option -g status-style fg=white,bg=black
+
+
+#set-window-option -g window-status-fg colour244  # base0
+#set-window-option -g window-status-bg default
+
+set-window-option -g window-status-current-style bg=default,fg=colour244
+# active window title colors
+#set-window-option -g window-status-current-fg colour166  # orange
+set-window-option -g window-status-current-style bg=#964B00,fg=#ffffff
+
+#set-option -g pane-border-fg white
+#set-option -g pane-active-fg red
+
+# Avoid date/time taking up space
+# set -g status-right ''
+# set -g status-right-length 0
+#set -g @plugin 'tmux-plugins/tmux-resurrect'
+# set -g @plugin 'tmux-plugins/tpm'
+#set -g @plugin 'egel/tmux-gruvbox'
+#set -g @plugin 'jatap/tmux-base16-statusline'
+#set -g @plugin 'tmux-plugins/tmux-sensible'
+# set -g @plugin 'mattdavis90/base16-tmux'
+# Other examples:
+# set -g @plugin 'github_username/plugin_name'
+# set -g @plugin 'git@github.com:user/plugin'
+# set -g @plugin 'git@bitbucket.com:user/plugin'
+
+# Initialize TMUX plugin manager (keep this line at the very bottom of tmux.conf)
+# run '~/.tmux/plugins/tpm/tpm'
+
+# set -g window-active-style 'bg=colour234'
+# should be after theme
+set -g pane-active-border-style fg=blue
+set -g pane-border-style fg=blue
+
+set -g status-left-length 40
+
+
+
+# Tmux-sessionizer
+set -g status-right " #(tms sessions)"
+bind -r '(' switch-client -p\; refresh-client -S
+bind -r ')' switch-client -n\; refresh-client -S
+bind-key -r F run-shell "tmux neww tms"
+bind-key -r f run-shell "tmux neww tms switch"

@@ -1,0 +1,15 @@
+{{- $tmux_use_ctrl_a := promptBoolOnce . "tmux_use_ctrl_a" "Tmux Use Ctrl A" -}}
+{{- $helix_copilot_pr := promptBoolOnce . "helix_copilot_pr" "Use Helix Copilot Bindings" -}}
+{{- $helix_eslint_bindings := promptBoolOnce . "helix_eslint_bindings" "Helix Eslint bindings" -}}
+{{- $use_fish_in_bash := promptBoolOnce . "use_fish_in_bash" "Bash go into Fish" -}}
+
+[data.tmux]
+use_ctrl_a = {{ $tmux_use_ctrl_a }}
+
+[data.helix]
+has_copilot_pr = {{ $helix_copilot_pr }}
+use_eslint = {{ $helix_eslint_bindings }}
+
+
+[data.bash]
+proxy_fish = {{ $use_fish_in_bash }}
