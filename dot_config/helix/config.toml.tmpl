@@ -21,12 +21,23 @@ F = "file_picker"
 f = "file_picker_in_current_directory"
 l = ":pipe-to xargs -I % tmux send-keys -t 1 \"%\" Enter"
 o = { l = ":open ~/.config/helix/languages.toml", c = ":config-open" }
-t = { h = ":toggle-option lsp.display-inlay-hints" }
 w = { x = ":quit-all!" }
-
 {{ if .helix.use_eslint }}
 e = { f = ":eslint-fix-all" }
 {{ end }}
+
+[keys.normal.space.t]
+h = ":toggle-option lsp.display-inlay-hints"
+{{ if .helix.has_copilot_pr }}
+e = ":toggle-option lsp.inline-diagnostics.enabled"
+
+[keys.normal.space.t.l]
+e = ":set-option lsp.inline-diagnostics.other-lines error"
+w = ":set-option lsp.inline-diagnostics.other-lines warning"
+i = ":set-option lsp.inline-diagnostics.other-lines info"
+h = ":set-option lsp.inline-diagnostics.other-lines hint"
+{{ end }}
+
 
 [keys.insert]
 j = { k = "normal_mode" }
@@ -45,6 +56,11 @@ display-inlay-hints = true
 {{ if .helix.has_copilot_pr }}
 copilot-auto = true
 {{ end }}
+
+[editor.lsp.inline-diagnostics]
+enabled = true
+other-lines = "error"
+
 
 [editor.whitespace.render]
 space = "all"
