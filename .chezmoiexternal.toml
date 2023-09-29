@@ -1,4 +1,5 @@
-[".config/alacritty/themes"]
-  type = "git-repo"
-  url = "https://github.com/alacritty/alacritty-theme.git"
+[".config/alacritty"]
+  type = "archive"
+  url = "https://github.com/alacritty/alacritty-theme/archive/refs/heads/master.tar.gz"
   refreshPeriod = "168h"
+  format = "tar.gz"
