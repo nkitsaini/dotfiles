@@ -61,9 +61,11 @@ display-inlay-hints = true
 copilot-auto = true
 {{ end }}
 
+{{ if .helix.has_copilot_pr }}
 [editor.lsp.inline-diagnostics]
 enabled = true
 other-lines = "error"
+{{ end }}
 
 
 [editor.whitespace.render]

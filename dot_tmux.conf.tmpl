@@ -105,3 +105,10 @@ bind -r '(' switch-client -p\; refresh-client -S
 bind -r ')' switch-client -n\; refresh-client -S
 bind-key -r F run-shell "tmux neww tms"
 bind-key -r f run-shell "tmux neww tms switch"
+
+
+# Enable undercurl colors
+# https://github.com/helix-editor/helix/issues/7065#issuecomment-1740422472
+set -as terminal-overrides ',*:Smulx=\E[4::%p1%dm'
+set -as terminal-overrides ',*:Setulc=\E[58::2::%p1%{65536}%/%d::%p1%{256}%/%{255}%&%d::%p1%{255}%&%d%;m'
+
