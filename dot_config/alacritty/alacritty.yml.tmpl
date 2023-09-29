@@ -1,5 +1,11 @@
 import:
  - ~/.config/alacritty/alacritty-theme-master/themes/solarized_light.yaml
+ # - ~/.config/alacritty/alacritty-theme-master/themes/gruvbox_light.yaml
+ # - ~/.config/alacritty/alacritty-theme-master/themes/noctis-lux.yaml
+ # - ~/.config/alacritty/alacritty-theme-master/themes/papertheme.yaml
+ # - ~/.config/alacritty/alacritty-theme-master/themes/pencil_light.yaml
+ # - ~/.config/alacritty/alacritty-theme-master/themes/rose-pine-dawn.yaml
+
 
 # Any items in the `env` entry below will be added as
 # environment variables. Some entries may override variables
@@ -46,4 +52,9 @@ font:
     # family: "MonoLisa"
     # family: "FiraCode"
     family: {{ .alacritty.font_family | quote }}
+
+key_bindings:
+  - { key: V,        mods: Shift|Control, action: Paste                            }
+  #- { key: C,              mods: Control|Shift,                   action: Copy             }
+  - { key: C,        mods: Shift|Control, action: Copy                             }
 

@@ -123,6 +123,12 @@ export EDITOR="hx"
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
 
+# Makes ls/exa output not-bold
+# https://github.com/ogham/exa/issues/1203#issuecomment-1597009975
+export LS_COLORS='di=00;34:ln=00;36'
+export EXA_COLORS=$LS_COLORS
+
+
 if [ -f $HOME/.cargo/env ]; then
     source "$HOME/.cargo/env"
 fi
