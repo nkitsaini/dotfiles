@@ -2,9 +2,16 @@
 # set scroll history to 100,000 lines
 set-option -g history-limit 100000
 
+
 # modern colors
 set -g default-terminal "tmux-256color"
+
+# Support true color in alacritty
 set -ga terminal-overrides ",alacritty:Tc"
+
+# Support tmux-inside-tmux (ssh)
+set-option·-sa·terminal-overrides·",xterm*:Tc"
+
 
 {{ if .tmux.use_ctrl_a }}
 # unbind the prefix and bind it to Ctrl-a like screen
