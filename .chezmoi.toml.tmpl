@@ -1,6 +1,7 @@
 {{- $tmux_use_ctrl_a := promptBoolOnce . "tmux_use_ctrl_a" "Tmux Use Ctrl A" -}}
 {{- $helix_copilot_pr := promptBoolOnce . "helix_copilot_pr" "Use Helix Copilot Bindings" -}}
 {{- $helix_eslint_bindings := promptBoolOnce . "helix_eslint_bindings" "Helix Eslint bindings" -}}
+{{- $helix_add_tree_sitter_path := promptBoolOnce . "helix_add_tree_sitter_path" "Helix Tree Sitter path" -}}
 {{- $use_fish_in_bash := promptBoolOnce . "use_fish_in_bash" "Bash go into Fish" -}}
 {{- $alacritty_is_linux := promptBoolOnce . "alacritty_is_linux" "Is Using Linux? (alacritty font size/family config)" -}}
 
@@ -10,6 +11,7 @@ use_ctrl_a = {{ $tmux_use_ctrl_a }}
 [data.helix]
 has_copilot_pr = {{ $helix_copilot_pr }}
 use_eslint = {{ $helix_eslint_bindings }}
+tree_sitter_path = {{ $helix_add_tree_sitter_path }}
 
 
 [data.bash]

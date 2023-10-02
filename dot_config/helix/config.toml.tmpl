@@ -8,8 +8,10 @@ undercurl = true
 true-color = true
 soft-wrap = { enable = true }
 
+{{ if .helix.tree_sitter_path }}
 [editor.statusline]
 center = ["tree-sitter-path"]
+{{ end }}
 
 
 [editor.file-picker]
