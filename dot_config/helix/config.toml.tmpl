@@ -39,14 +39,18 @@ h = ":toggle-option lsp.display-inlay-hints"
 e = ":toggle-option lsp.inline-diagnostics.enabled"
 
 [keys.normal.space.t.l]
-e = ":set-option lsp.inline-diagnostics.other-lines error"
-w = ":set-option lsp.inline-diagnostics.other-lines warning"
-i = ":set-option lsp.inline-diagnostics.other-lines info"
-h = ":set-option lsp.inline-diagnostics.other-lines hint"
-{{ end }}
+# https://github.com/helix-editor/helix/pull/6417#issuecomment-1740819264
+n = ':set-option lsp.inline-diagnostics.other-lines []'
+e = ':set-option lsp.inline-diagnostics.other-lines ["error"]'
+w = ':set-option lsp.inline-diagnostics.other-lines ["warning","error"]'
+i = ':set-option lsp.inline-diagnostics.other-lines ["info","warning","error"]'
+h = ':set-option lsp.inline-diagnostics.other-lines ["hint","info","warning","error"]'
+o = ":set-option lsp.inline-diagnostics.enabled false"
+{{end}}
 
 
 {{ if .helix.has_copilot_pr }}
+[keys.insert]
 "C-e" = "show_or_next_copilot_completion"
 "C-a" = "hide_or_prev_copilot_completion"
 "C-y" = "apply_copilot_completion"
@@ -64,7 +68,7 @@ copilot-auto = true
 {{ if .helix.has_copilot_pr }}
 [editor.lsp.inline-diagnostics]
 enabled = true
-other-lines = "error"
+other-lines = ["error"]
 {{ end }}
 
 
