@@ -3,7 +3,7 @@
 {{- $helix_eslint_bindings := promptBoolOnce . "helix_eslint_bindings" "Helix Eslint bindings" -}}
 {{- $helix_add_tree_sitter_path := promptBoolOnce . "helix_add_tree_sitter_path" "Helix Tree Sitter path" -}}
 {{- $use_fish_in_bash := promptBoolOnce . "use_fish_in_bash" "Bash go into Fish" -}}
-{{- $alacritty_is_linux := promptBoolOnce . "alacritty_is_linux" "Is Using Linux? (alacritty font size/family config)" -}}
+{{- $alacritty_is_linux := promptBoolOnce . "alacritty_is_linux" "Is Using Linux? (alacritty font size)" -}}
 
 [data.tmux]
 use_ctrl_a = {{ $tmux_use_ctrl_a }}
@@ -20,4 +20,3 @@ proxy_fish = {{ $use_fish_in_bash }}
 
 [data.alacritty]
 font_size = {{ if $alacritty_is_linux }} 11 {{ else }} 18 {{ end }}
-font_family = {{ if $alacritty_is_linux }} "monospace" {{ else }} "Fira Code" {{ end }}
