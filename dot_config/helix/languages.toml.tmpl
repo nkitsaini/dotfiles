@@ -21,7 +21,7 @@ file-types = ["py","pyi","py3","pyw","ptl",".pythonstartup",".pythonrc","SConstr
 shebangs = ["python"]
 roots = ["setup.py", "setup.cfg", "pyproject.toml"]
 comment-token = "#"
-language-servers = [ "pyright" ]
+language-servers = [ "pyright"  {{if .helix.has_copilot_pr}}, "copilot" {{end}}]
 indent = { tab-width = 4, unit = "    " }
 
 # =================== C 
@@ -29,7 +29,7 @@ indent = { tab-width = 4, unit = "    " }
 name = "c"
 file-types = ["h", "c"]
 roots = ["justfile", "makefile"]
-language-servers = [ "clangd" ]
+language-servers = [ "clangd"  {{if .helix.has_copilot_pr}}, "copilot" {{end}}]
 formatter = {command = "clang-format", args = ["--style=google"]}
 
 
@@ -40,7 +40,7 @@ name = "svelte"
 scope = "source.svelte"
 file-types = ["svelte"]
 roots = ["tailwind.config.js","tailwind.config.cjs"]
-language-servers = [ "tailwindcss-svelte", "svelteserver" ]
+language-servers = [ "tailwindcss-svelte", "svelteserver"  {{if .helix.has_copilot_pr}}, "copilot" {{end}}]
 
 [language-server.tailwindcss-svelte]
 language-id = "svelte"
@@ -52,7 +52,7 @@ config = { }
 name = "css"
 scope = "source.css"
 file-types = ["css", "postcss"]
-language-servers = [ "tailwindcss-css", "vscode-css-language-server" ]
+language-servers = [ "tailwindcss-css", "vscode-css-language-server"  {{if .helix.has_copilot_pr}}, "copilot" {{end}}]
 
 [language-server.tailwindcss-css]
 language-id = "css"
@@ -64,7 +64,7 @@ config = { }
 name = "html"
 scope = "text.html.basic"
 file-types = ["html"]
-language-servers = [ "tailwindcss-html", "vscode-html-language-server" ]
+language-servers = [ "tailwindcss-html", "vscode-html-language-server"  {{if .helix.has_copilot_pr}}, "copilot" {{end}}]
 
 [language-server.tailwindcss-html]
 language-id = "html"
@@ -82,6 +82,7 @@ scope = "source.caddyfile"
 injection-regex = "caddyfile"
 file-types = ["Caddyfile"]
 comment-token = "#"
+language-server = [{{if .helix.has_copilot_pr}}"copilot" {{end}}]
 indent = { tab-width = 4, unit = "\t" }
 formatter = { command = "caddy-fmt"}
 
@@ -102,7 +103,7 @@ file-types = ["typ"]
 comment-token = "//"
 indent = { tab-width = 4, unit = "\t" }
 
-language-servers = [ "typst-lsp" ]
+language-servers = [ "typst-lsp"  {{if .helix.has_copilot_pr}}, "copilot" {{end}}]
 
 
 # =============== Prettier configuration
