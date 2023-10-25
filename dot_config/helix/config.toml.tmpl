@@ -26,7 +26,9 @@ Z = { Z = [":write-quit"]}
 [keys.normal.space]
 F = "file_picker"
 f = "file_picker_in_current_directory"
-l = ":pipe-to xargs -I % tmux send-keys -t 1 \"%\" Enter"
+l = """:pipe-to python3 -c "import shlex, os, sys;a=sys.stdin.read(); os.system(shlex.join(['tmux', 'send-keys', '-t', '1', a]));""""
+L = ":run-shell-command tmux send-keys -t 1 C-c"
+
 o = { l = ":open ~/.config/helix/languages.toml", c = ":config-open" }
 w = { x = ":quit-all!" }
 {{ if .helix.use_eslint }}
