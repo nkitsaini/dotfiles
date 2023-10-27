@@ -1,11 +1,11 @@
 [".config/alacritty/themes"]
   type = "archive"
   url = "https://github.com/alacritty/alacritty-theme/archive/refs/heads/master.tar.gz"
-  refreshPeriod = "168h"
+  refreshPeriod = "480h"
   stripComponents = 1
 
 ["external/git-fuzzy"]
   type = "archive"
   url = "https://github.com/bigH/git-fuzzy/archive/refs/heads/main.tar.gz"
-  refreshPeriod = "168h"
+  refreshPeriod = "480h"
   stripComponents = 1
