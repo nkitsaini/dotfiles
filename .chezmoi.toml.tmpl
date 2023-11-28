@@ -20,3 +20,6 @@ proxy_fish = {{ $use_fish_in_bash }}
 
 [data.alacritty]
 font_size = {{ if $alacritty_is_linux }} 11 {{ else }} 18 {{ end }}
+
+[diff]
+exclude = ["externals"]
