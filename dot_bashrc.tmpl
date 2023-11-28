@@ -138,6 +138,16 @@ fi
 export BUN_INSTALL="$HOME/.bun"
 export PATH=$BUN_INSTALL/bin:$PATH
 
+# Nix
+if [ -f $HOME/.nix-profile/etc/profile.d/nix.sh ]; then
+    source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+fi
+
+# Direnv
+if type "direnv" > /dev/null 2>&1; then
+  eval "$(direnv hook bash)"
+fi
+
 {{ if .bash.proxy_fish }}
 if [[ $(ps --no-header --pid=$PPID --format=cmd) != "fish" ]]
 then
