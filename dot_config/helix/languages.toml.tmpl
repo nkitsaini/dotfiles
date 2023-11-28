@@ -164,3 +164,9 @@ language-servers = ["typescript-language-server" {{if .helix.use_eslint }}, "esl
 [[language]]
 name = "go"
 language-servers = ["gopls" {{if .helix.has_copilot_pr}}, "copilot" {{end}}]
+
+
+[[language]]
+name = "dockerfile"
+language-servers = ["docker-langserver" {{if .helix.has_copilot_pr}}, "copilot" {{end}}]
+

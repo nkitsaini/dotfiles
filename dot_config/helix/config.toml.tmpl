@@ -26,7 +26,14 @@ Z = { Z = [":write-quit"]}
 [keys.normal.space]
 F = "file_picker"
 f = "file_picker_in_current_directory"
-l = """:pipe-to python3 -c "import shlex, os, sys;a=sys.stdin.read(); os.system(shlex.join(['tmux', 'send-keys', '-t', '1', a]));""""
+
+# To use various repls (bash/ipython3/duckdb/sqlite etc.)
+# with helix as editor
+# For ipython3
+# 1. Use `%autoindent` to disable autoindent
+# 2. `%logstart -o` to save code and output to a file.
+l = """:pipe-to python3 -c "import shlex, os, sys;a=sys.stdin.read();a += '\\n'; os.system(shlex.join(['tmux', 'send-keys', '-t', '1', a]));""""
+
 L = ":run-shell-command tmux send-keys -t 1 C-c"
 
 o = { l = ":open ~/.config/helix/languages.toml", c = ":config-open" }
