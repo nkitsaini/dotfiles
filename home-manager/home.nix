@@ -3,13 +3,12 @@
   username = "ankit";
   homeDirectory = "/home/${username}";
   childModuleArgs = { inherit pkgs lib config homeDirectory; };
-  mergeConfigs = lib.lists.foldr (a: b: lib.attrsets.recursiveUpdate a b) { };
-in mergeConfigs [
-  ((import ./shell.nix) childModuleArgs)
-  ((import ./i3.nix) childModuleArgs)
 
-  {
-    imports = [ ./i3.nix ];
+
+  # recurisvely merges all the sets in the list
+  _nRecursiveUpdate = lib.lists.foldr (a: b: lib.attrsets.recursiveUpdate a b) { };
+in   {
+    imports = [ ./i3.nix ./shell.nix ];
 
     # Home Manager needs a bit of information about you and the paths it should
     # manage.
@@ -62,6 +61,8 @@ in mergeConfigs [
       pkgs.brave
       pkgs.i3
       pkgs.nixfmt
+      pkgs.rofi
+      pkgs.firefox
 
       # # It is sometimes useful to fine-tune packages, for example, by applying
       # # overrides. You can do that directly here, just don't forget the
@@ -112,6 +113,6 @@ in mergeConfigs [
     # Let Home Manager install and manage itself.
     programs.home-manager.enable = true;
   }
-]
+
 )
 

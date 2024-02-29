@@ -1,4 +1,4 @@
-{ config, pkgs, lib, homeDirectory, ... }: {
+{ config, pkgs, lib, ... }: {
   programs.bash = {
     enable = true;
     # bashrcExtra = ''
@@ -101,7 +101,7 @@
       # visual mode, but due to fish_cursor_default, is redundant here
       set fish_cursor_visual block
 
-      set PATH "${homeDirectory}/bin/:$PATH"
+      set PATH "${config.home.homeDirectory}/bin/:$PATH"
     '';
   };
 }

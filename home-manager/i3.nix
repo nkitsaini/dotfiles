@@ -1,4 +1,8 @@
-{ config, pkgs, lib, ... }: {
+{ config, pkgs, lib, ... }:
+let
+  terminal = "${pkgs.alacritty}/bin/alacritty";
+  menu = "${pkgs.rofi}/bin/rofi -terminal ${terminal} -show drun -show-icons";
+in {
   xsession.windowManager.i3.enable = true;
   xsession.windowManager.i3.config.terminal = "nixGL alacritty";
   xsession.initExtra = ''
@@ -17,6 +21,9 @@
       "${modifier}+Shift+l" = "move right";
       "${modifier}+semicolon" = "split h";
       "${modifier}+Shift+e" = "exec 'i3-msg exit'";
+
+      "${modifier}+Return" = "exec nixGL ${terminal}";
+      "${modifier}+d" = "exec ${menu}";
     };
 
 }
