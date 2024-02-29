@@ -1,0 +1,61 @@
+import:
+ - ~/.config/alacritty/themes/themes/solarized_light.yaml
+ # - ~/.config/alacritty/themes/themes/gruvbox_light.yaml
+ # - ~/.config/alacritty/themes/themes/noctis-lux.yaml
+ # - ~/.config/alacritty/themes/themes/papertheme.yaml
+ # - ~/.config/alacritty/themes/themes/pencil_light.yaml
+ # - ~/.config/alacritty/themes/themes/rose-pine-dawn.yaml
+
+
+# Any items in the `env` entry below will be added as
+# environment variables. Some entries may override variables
+# set by alacritty itself.
+env:
+  # TERM variable
+  #
+  # This value is used to set the `$TERM` environment variable for
+  # each instance of Alacritty. If it is not present, alacritty will
+  # check the local terminfo database and use `alacritty` if it is
+  # available, otherwise `xterm-256color` is used.
+  # NKIT_NOTE: make sure you installed alacritty using package manager
+  #   So you get correct terminfo, and you won't need to set this manually
+  #TERM: alacritty
+
+
+  # otherwise doesn't shows the pipe, block, underscore cursor
+  # for fish keybindings
+  XTERM_VERSION: "9999"
+
+window:
+  decorations: full
+
+scrolling:
+  # Maximum number of lines in the scrollback buffer.
+  # Specifying '0' will disable scrolling.
+  history: 10000
+
+  # Scrolling distance multiplier.
+  #multiplier: 3
+
+# Font configuration
+font:
+  size: {{ .alacritty.font_size }}
+  # Normal (roman) font face
+  normal:
+    # Font family
+    #
+    # Default:
+    #   - (macOS) Menlo
+    #   - (Linux/BSD) monospace
+    #   - (Windows) Consolas
+    # family: "MonoLisa, MonoLisa-Thin"
+    # family: "MonoLisa"
+    # family: "FiraCode"
+    family: "Noto Sans Mono"
+    style: "Regular"
+
+key_bindings:
+  - { key: V,        mods: Shift|Control, action: Paste                            }
+  #- { key: C,              mods: Control|Shift,                   action: Copy             }
+  - { key: C,        mods: Shift|Control, action: Copy                             }
+

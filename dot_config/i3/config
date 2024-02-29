@@ -41,15 +41,15 @@ bindsym XF86AudioRaiseVolume exec --no-startup-id "pactl set-sink-volume @DEFAUL
 bindsym XF86AudioLowerVolume exec --no-startup-id "pactl set-sink-volume @DEFAULT_SINK@ -10%; pkill -RTMIN+10 i3blocks"
 bindsym XF86AudioMute exec --no-startup-id "pactl set-sink-mute @DEFAULT_SINK@ toggle; pkill -RTMIN+10 i3blocks"
 bindsym XF86AudioMicMute exec --no-startup-id "pactl set-source-mute @DEFAULT_SOURCE@ toggle; pkill -RTMIN+10 i3blocks"
-bindsym XF86MonBrightnessDown exec --no-startup-id "xbacklight -inc -10; pkill -RTMIN+10 i3blocks"
-bindsym XF86MonBrightnessUp exec --no-startup-id "xbacklight -inc +10; pkill -RTMIN+10 i3blocks"
+bindsym XF86MonBrightnessDown exec --no-startup-id "brightnessctl set 10-; pkill -RTMIN+10 i3blocks"
+bindsym XF86MonBrightnessUp exec --no-startup-id "brightnessctl set 10+; pkill -RTMIN+10 i3blocks"
 
 # Use Mouse+$mod to drag floating windows to their wanted position
 floating_modifier $mod
 
 # start a terminal
 # bindsym $mod+Return exec i3-sensible-terminal
-bindsym $mod+Return exec "alacritty"
+bindsym $mod+Return exec "PATH=$PATH:~/.cargo/bin alacritty || i3-sensible-terminal"
 # bindsym $mod+Return exec terminator
 
 # kill focused window
@@ -345,6 +345,26 @@ mode "mouse" {
 	bindsym Escape mode "default"
 }
 
+# Screenshot
+## Screenshots
+bindsym Print exec --no-startup-id maim "/home/$USER/Pictures/$(date)"
+bindsym $mod+Print exec --no-startup-id maim --window $(xdotool getactivewindow) "/home/$USER/Pictures/$(date)"
+bindsym Shift+Print exec --no-startup-id maim --select "/home/$USER/Pictures/$(date)"
+
+## Clipboard Screenshots
+bindsym Ctrl+Print exec --no-startup-id maim | xclip -selection clipboard -t image/png
+bindsym Ctrl+$mod+Print exec --no-startup-id maim --window $(xdotool getactivewindow) | xclip -selection clipboard -t image/png
+bindsym Ctrl+Shift+Print exec --no-startup-id maim --select | xclip -selection clipboard -t image/png
+
+
+
+# move focused workspace between monitors (wraps around)
+## alternate between up/down
+bindsym $mod+Ctrl+greater move workspace to output up
+## alternate between left/right
+bindsym $mod+Ctrl+less move workspace to output left
+
+# Mouse  mode
 bindsym $mod+m mode "mouse"
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
@@ -354,8 +374,8 @@ set $text-color "#f3f4f5"
 set $inactive-text-color "#676E7D"
 set $urgent-bg-color "#E53935"
 bar {
-	#status_command i3status
-	status_command bumblebee-status -m cpu disk network_traffic memory nic pasink pasource battery datetime -p disk.format="{left}" -p memory.format="{used}" -p datetime.format="%a %d/%m/%Y %H:%M" -t solarized
+	#status_command i3status (nic -> network)
+	status_command bumblebee-status -m cpu disk network_traffic memory  pasink pasource battery datetime -p disk.format="{left}" -p memory.format="{used}" -p datetime.format="%a %d/%m/%Y %H:%M" -t iceberg
 
 	#status_command i3blocks
 	#status_command py3status
@@ -373,4 +393,9 @@ bar {
 
 # keyboard rate
 exec_always xset r rate 160 50
-#exec_always xmodmap /home/ankit/.Xmodmap
+exec_always xmodmap ~/.Xmodmap
+# exec_always --no-startup-id feh --bg-fill ~/Downloads/1269270.jpg
+exec_always --no-startup-id feh --bg-fill ~/Downloads/b-k-HAl6CKxM3xU-unsplash.jpg
+
+# notification daemon
+exec_always --no-startup-id /usr/bin/dunst

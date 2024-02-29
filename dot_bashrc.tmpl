@@ -116,18 +116,43 @@ if ! shopt -oq posix; then
   fi
 fi
 
-export PATH="$HOME/bin:$PATH:$HOME/.local/bin"
+export PATH="$HOME/bin:$PATH:$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.nimble/bin"
+export PATH="$PATH:$HOME/external/git-fuzzy/bin/"
+export PATH="$PATH:$HOME/go/bin/"
+export PATH="$PATH:/usr/local/go/bin"
 export BAT_THEME="Monokai Extended Light"
-export EDITOR="vim"
+export EDITOR="hx"
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
+
+# Makes ls/exa output not-bold
+# https://github.com/ogham/exa/issues/1203#issuecomment-1597009975
+export LS_COLORS='di=00;34:ln=00;36'
+export EXA_COLORS=$LS_COLORS
+
 
 if [ -f $HOME/.cargo/env ]; then
     source "$HOME/.cargo/env"
 fi
 
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH=$BUN_INSTALL/bin:$PATH
 
+# Nix
+if [ -f $HOME/.nix-profile/etc/profile.d/nix.sh ]; then
+    source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+fi
+
+# Direnv
+if type "direnv" > /dev/null 2>&1; then
+  eval "$(direnv hook bash)"
+fi
+
+{{ if .bash.proxy_fish }}
 if [[ $(ps --no-header --pid=$PPID --format=cmd) != "fish" ]]
 then
 		exec fish
 fi
+{{ end }}
+

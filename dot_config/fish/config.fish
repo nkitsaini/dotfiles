@@ -12,19 +12,26 @@ alias vim="nvim"
 alias sl=ls
 
 # Overwrite existing commands for better defaults
-alias mv="mv -i"           # -i prompts before overwrite
-alias mkdir="mkdir -p"     # -p make parent dirs as needed
-alias df="df -h"           # -h prints human readable format
+alias mv="mv -i" # -i prompts before overwrite
+alias mkdir="mkdir -p" # -p make parent dirs as needed
+alias df="df -h" # -h prints human readable format
 
 # Alias can be composed
 alias la="ls -A"
 alias lla="la -l"
 alias llt="lla -t"
+alias lst="ls -t -r"
 alias tree='tree -I "venv|target|node_modules|__pycache__"'
 alias dc="docker-compose"
 
 alias da="direnv allow"
 
+
+
+## Monitor switch alias
+# Source: https://github.com/rockowitz/ddcutil/wiki/Switching-input-source-on-LG-monitors
+alias monitor-personal="ddcutil -d 1 setvcp xF4 x0090 --i2c-source-addr=x50 --noverify"
+alias monitor-work="ddcutil -d 1 setvcp xF4 x0091 --i2c-source-addr=x50 --noverify"
 
 #
 # Reinvented wheels
@@ -69,7 +76,7 @@ set fish_cursor_replace_one underscore
 set fish_cursor_visual block
 #if status --is-interactive
 #    task
-    #
+#
 #end
 set -g man_blink -o red
 set -g man_bold -o green
@@ -80,4 +87,6 @@ set -g man_underline -u 93a1a1
 #automatically load .envrc
 #install package (direnv), apt-get install direnv
 # eval (direnv hook fish)
+#zoxide init fish | source # https://github.com/ajeetdsouza/zoxide
 starship init fish | source
+#pyenv init - | source
