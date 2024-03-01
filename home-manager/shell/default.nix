@@ -102,6 +102,9 @@
       set fish_cursor_visual block
 
       set PATH "${config.home.homeDirectory}/bin/:$PATH"
+
+      # disable ls coloring by grc
+      set -U grc_plugin_ignore_execs ls
     '';
   };
 

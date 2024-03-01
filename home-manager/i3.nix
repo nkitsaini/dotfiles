@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, ... }:
 let
 
   left = "h";
@@ -44,7 +44,7 @@ in {
 
       # TODO: remove nixGL ones moved to NixOS
       "${mod}+Return" = "exec nixGL ${terminal_cmd}";
-      "${mod}+d" = "exec ${menu}";
+      "${mod}+d" = "exec nixGL ${menu}"; # run rofi with nixGL so all program opened inherit it
 
       "${mod}+Shift+c" = "reload";
       "${mod}+Shift+r" = "restart";
