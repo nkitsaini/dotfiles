@@ -8,7 +8,7 @@
   # recurisvely merges all the sets in the list
   _nRecursiveUpdate = lib.lists.foldr (a: b: lib.attrsets.recursiveUpdate a b) { };
 in   {
-    imports = [ ./i3.nix ./shell.nix ];
+    imports = [ ./i3.nix ./shell ./wezterm ./tms ];
 
     # Home Manager needs a bit of information about you and the paths it should
     # manage.
@@ -36,6 +36,19 @@ in   {
       enable = true;
       settings = {
         import = [ "${pkgs.alacritty-theme}/solarized_light.toml" ];
+        env = {
+          XTERM_VERION = "9999";
+        };
+        font = {
+          size = 16;
+        };
+        font.normal = {
+          family = "Noto Sans Mono";
+          style = "Regular";
+        };
+        scrolling = {
+          history = 10000;
+        };
       };
     };
 
@@ -48,6 +61,7 @@ in   {
       # # "Hello, world!" when run.
       # pkgs.hello
       pkgs.tmux
+      pkgs.zellij
       pkgs.tmuxp
       pkgs.nil
       pkgs.just
@@ -56,13 +70,27 @@ in   {
       pkgs.cargo-binstall
       pkgs.cargo-cross
       pkgs.hyperfine
-      pkgs.tmux-sessionizer
       pkgs.alacritty-theme
+      pkgs.wezterm
       pkgs.brave
-      pkgs.i3
       pkgs.nixfmt
-      pkgs.rofi
       pkgs.firefox
+
+      # I3 specific
+      pkgs.i3
+      pkgs.rofi
+      pkgs.light
+      pkgs.pulseaudio
+      pkgs.playerctl
+
+
+      # Xorg
+      pkgs.xorg.xev
+
+
+      # Kernel modules
+      # TODO: enable when on NixOS
+      # pkgs.linuxKernel.packages.linux_6_7.ddcci-driver
 
       # # It is sometimes useful to fine-tune packages, for example, by applying
       # # overrides. You can do that directly here, just don't forget the

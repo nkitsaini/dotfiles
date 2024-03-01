@@ -104,4 +104,25 @@
       set PATH "${config.home.homeDirectory}/bin/:$PATH"
     '';
   };
+
+  programs.tmux = {
+    enable = true;
+    # sensible defaults
+    sensibleOnTop = true;
+
+    # set by tmux-sensible but the config resets it
+    escapeTime = 0;
+    historyLimit = 10000;
+    aggressiveResize = true;
+    # terminal = "tmux-256color";
+    # focus-events
+
+    baseIndex = 1;
+    clock24 = true;
+    keyMode = "vi";
+
+    extraConfig = ''
+      ${builtins.readFile ./tmux.conf}
+    '';
+  };
 }
