@@ -5,6 +5,12 @@ let
   up = "k";
   down = "j";
   terminal_cmd = "${pkgs.alacritty}/bin/alacritty";
+
+  bg-color = "#1f242f";
+  inactive-bg-color = "#1f242f";
+  text-color = "#f3f4f5";
+  inactive-text-color = "#676E7D";
+  urgent-bg-color = "#E53935";
   menu =
     "${pkgs.rofi}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 in {
@@ -43,7 +49,8 @@ in {
 
       # TODO: remove nixGL ones moved to NixOS
       "${mod}+Return" = "exec nixGL ${terminal_cmd}";
-      "${mod}+d" = "exec nixGL ${menu}"; # run rofi with nixGL so all program opened inherit it
+      "${mod}+d" =
+        "exec nixGL ${menu}"; # run rofi with nixGL so all program opened inherit it
 
       "${mod}+Shift+c" = "reload";
       "${mod}+Shift+r" = "restart";
@@ -108,6 +115,66 @@ in {
       titlebar = false;
       border = 3;
     };
+
+    bars = [{
+      id = "bar-0";
+      position = "bottom";
+      hiddenState = "hide";
+      # These are the only two commands that differ
+      statusCommand = "${pkgs.i3blocks}/bin/i3blocks";
+      command = "i3bar";
+      fonts = {
+        names = [ "Noto Sans" ];
+        size = 10.0;
+      };
+
+
+      colors = {
+        # The colors for the workspace button for an active workspace.
+        activeWorkspace = {
+          background = bg-color;
+          border = inactive-text-color;
+          text = inactive-text-color;
+        };
+
+        # The background color of the bar.
+        background = bg-color;
+
+        # The colors for binding mode indicators.
+        bindingMode = {
+          background = bg-color;
+          border = urgent-bg-color;
+          text = text-color;
+        };
+
+        # The colors for focused workspaces.
+        focusedWorkspace = {
+          background = bg-color;
+          border = bg-color;
+          text = text-color;
+        };
+
+        # The colors for inactive workspaces.
+        inactiveWorkspace = {
+          background = inactive-bg-color;
+          border = inactive-bg-color;
+          text = inactive-text-color;
+        };
+
+        # The color for status line separators.
+        separator = "#757575";
+
+        # The foreground color for text for the statusline.
+        # statusline = colorNames.base00;
+
+        # The colors to use for urgent workspaces.
+        urgentWorkspace = {
+          background = urgent-bg-color;
+          border = urgent-bg-color;
+          text = text-color;
+        };
+      };
+    }];
 
     modes = {
       resize = {
