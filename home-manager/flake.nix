@@ -8,9 +8,14 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nkitsaini_helix = {
+      url = "github:nkitsaini/helix/nkit-driver";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { nixpkgs, home-manager, ... }:
+  outputs = { nixpkgs, home-manager, nkitsaini_helix, ... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -21,6 +26,10 @@
         # Specify your home configuration modules here, for example,
         # the path to your home.nix.
         modules = [ ./home.nix ];
+        extraSpecialArgs = {
+          inherit nkitsaini_helix;
+          inherit system;
+        };
 
         # Optionally use extraSpecialArgs
         # to pass through arguments to home.nix
