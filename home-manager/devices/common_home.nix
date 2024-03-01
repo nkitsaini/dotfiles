@@ -49,6 +49,9 @@
   home.packages = [
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
+    # Nix specific
+    pkgs.cached-nix-shell
+
     # pkgs.hello
     pkgs.tmux
     pkgs.zellij
