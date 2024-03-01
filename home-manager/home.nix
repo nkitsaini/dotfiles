@@ -59,6 +59,19 @@ in {
   programs.helix = {
     enable = true;
     package = nkitsaini_helix.packages.${system}.default;
+    extraPackages = [
+      pkgs.marksman
+      pkgs.nil
+      pkgs.texlab
+      pkgs.gopls
+      pkgs.rust-analyzer
+      pkgs.typst-lsp
+      pkgs.nodePackages.pyright
+      pkgs.nodePackages.vscode-css-languageserver-bin
+      pkgs.nodePackages.vscode-json-languageserver-bin
+      pkgs.nodePackages.vscode-html-languageserver-bin
+      pkgs.nodePackages.typescript-language-server
+    ];
   };
 
   # The home.packages option allows you to install Nix packages into your
@@ -70,7 +83,6 @@ in {
     pkgs.tmux
     pkgs.zellij
     pkgs.tmuxp
-    pkgs.nil
     pkgs.just
     pkgs.grc
     pkgs.fzf
@@ -82,6 +94,7 @@ in {
     pkgs.brave
     pkgs.nixfmt
     pkgs.firefox
+    pkgs.bun
 
     # I3 specific
     pkgs.i3
