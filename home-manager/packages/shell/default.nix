@@ -12,6 +12,9 @@
       fi
     '';
   };
+  programs.direnv = {
+    enable = true;
+  };
 
   programs.starship = {
     enable = true;
@@ -88,6 +91,7 @@
     ];
     shellAliases = {
       gs = "git status";
+      gc = "git checkout";
     };
     shellInit = ''
       # Emulates vim's cursor shape behavior
