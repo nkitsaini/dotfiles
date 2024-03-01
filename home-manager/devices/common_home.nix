@@ -53,6 +53,7 @@
     pkgs.cached-nix-shell
 
     # pkgs.hello
+    pkgs.ddcutil
     pkgs.tmux
     pkgs.zellij
     pkgs.tmuxp

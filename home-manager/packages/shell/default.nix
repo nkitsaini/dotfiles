@@ -12,9 +12,7 @@
       fi
     '';
   };
-  programs.direnv = {
-    enable = true;
-  };
+  programs.direnv = { enable = true; };
 
   programs.starship = {
     enable = true;
@@ -92,6 +90,14 @@
     shellAliases = {
       gs = "git status";
       gc = "git checkout";
+
+      ## Monitor switch alias
+      # Source: https://github.com/rockowitz/ddcutil/wiki/Switching-input-source-on-LG-monitors
+      monitor-work =
+        "ddcutil -d 1 setvcp xF4 x00100 --i2c-source-addr=x50 --noverify";
+      monitor-personal =
+        "ddcutil -d 1 setvcp xF4 x0091 --i2c-source-addr=x50 --noverify";
+      monitor-brightness = "ddcutil -d 1 setvcp x10";
     };
     shellInit = ''
       # Emulates vim's cursor shape behavior
