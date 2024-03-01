@@ -1,19 +1,5 @@
-{ config, pkgs, lib, nkitsaini_helix, system, ... }:
-(let
-  username = "ankit";
-  homeDirectory = "/home/${username}";
-  childModuleArgs = { inherit pkgs lib config homeDirectory; };
-
-  # recurisvely merges all the sets in the list
-  _nRecursiveUpdate =
-    lib.lists.foldr (a: b: lib.attrsets.recursiveUpdate a b) { };
-in {
-  imports = [ ./i3.nix ./shell ./wezterm ./tms ./helix ];
-
-  # Home Manager needs a bit of information about you and the paths it should
-  # manage.
-  home.username = username;
-  home.homeDirectory = homeDirectory;
+{ pkgs, ... }: ({
+  # username and home directory are provided by the parent home.nix
 
   # This value determines the Home Manager release that your configuration is
   # compatible with. This helps avoid breakage when a new Home Manager release

@@ -25,7 +25,21 @@
 
         # Specify your home configuration modules here, for example,
         # the path to your home.nix.
-        modules = [ ./home.nix ];
+        modules = [ ./devices/thinkpad_e14/home.nix ];
+        extraSpecialArgs = {
+          inherit nkitsaini_helix;
+          inherit system;
+        };
+
+        # Optionally use extraSpecialArgs
+        # to pass through arguments to home.nix
+      };
+      homeConfigurations."asaini" = home-manager.lib.homeManagerConfiguration {
+        inherit pkgs;
+
+        # Specify your home configuration modules here, for example,
+        # the path to your home.nix.
+        modules = [ ./devices/thinkpad_p14s/home.nix ];
         extraSpecialArgs = {
           inherit nkitsaini_helix;
           inherit system;
