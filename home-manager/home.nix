@@ -50,6 +50,12 @@ in {
     };
   };
 
+  programs.neovim = {
+    enable = true;
+    vimAlias = true;
+    plugins = [pkgs.vimPlugins.copilot-vim];
+  };
+
   xsession.enable = true;
 
   # The home.packages option allows you to install Nix packages into your
@@ -76,10 +82,17 @@ in {
     pkgs.caddy
 
     # Code specific
-    pkgs.sbclPackages.spellcheck
     pkgs.nixfmt
     pkgs.ruff
     pkgs.lazygit
+    pkgs.nodejs_20
+    (
+      pkgs.writeScriptBin "copilot" ''
+        #!/bin/bash
+        exec ${pkgs.nodejs_20}/bin/node ${pkgs.vimPlugins.copilot-vim}/dist/agent.js
+      ''
+    )
+
 
     # I3 specific
     pkgs.i3
