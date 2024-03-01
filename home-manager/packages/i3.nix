@@ -121,13 +121,13 @@ in {
       position = "bottom";
       hiddenState = "hide";
       # These are the only two commands that differ
-      statusCommand = "${pkgs.i3blocks}/bin/i3blocks";
-      command = "i3bar";
+      # statusCommand = "${pkgs.i3blocks}/bin/i3blocks";
+      statusCommand = "${pkgs.i3status}/bin/i3status";
+      command = "${pkgs.i3}/bin/i3bar";
       fonts = {
         names = [ "Noto Sans" ];
         size = 10.0;
       };
-
 
       colors = {
         # The colors for the workspace button for an active workspace.
@@ -192,17 +192,34 @@ in {
     };
   };
 
+  programs.i3status.enable = true;
+  services.polybar = {
+    enable = false;
+    script = "polybar &";
+    extraConfig = ''
+    wm-restack = i3
+    ${builtins.readFile "${pkgs.polybar}/etc/polybar/config.ini"}
+    '';
+    # settings = {
+    #   "bar/bottom" = {
+    #     height = "3%";
+    #     width = "100%";
+    #     modules-right = "volume";
+    #   };
+    #   "module/volume" = {
+    #     type = "internal/pulseaudio";
+    #     format.volume = "<ramp-volume> <label-volume>";
+    #     label.muted.text = "🔇";
+    #     label.muted.foreground = "#666";
+    #     ramp.volume = [ "🔈" "🔉" "🔊" ];
+    #     click.right = "pavucontrol &";
+    #   };
+    # };
+  };
   programs.i3blocks = {
-    enable = true;
+    enable = false;
     bars = {
-      top = {
-        # The title block
-        title = {
-          interval = "persist";
-          command = "xtitle -s";
-        };
-      };
-      bottom = {
+      config = {
         time = {
           command = "date +%r";
           interval = 1;
