@@ -1,6 +1,5 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 let
-
   left = "h";
   right = "l";
   up = "k";
@@ -40,7 +39,7 @@ in {
       "${mod}+Ctrl+${down}" = "move workspace to output down";
 
       "${mod}+semicolon" = "split h";
-      "${mod}+Shift+e" = "exec 'i3-msg exit'";
+      "${mod}+Shift+e" = "exec i3-msg exit";
 
       # TODO: remove nixGL ones moved to NixOS
       "${mod}+Return" = "exec nixGL ${terminal_cmd}";
@@ -125,4 +124,34 @@ in {
       };
     };
   };
+
+  programs.i3blocks = {
+    enable = true;
+    bars = {
+      top = {
+        # The title block
+        title = {
+          interval = "persist";
+          command = "xtitle -s";
+        };
+      };
+      bottom = {
+        time = {
+          command = "date +%r";
+          interval = 1;
+        };
+        # Make sure this block comes after the time block
+        date = lib.hm.dag.entryAfter [ "time" ] {
+          command = "date +%d";
+          interval = 5;
+        };
+        # And this block after the example block
+        example = lib.hm.dag.entryAfter [ "date" ] {
+          command = "echo hi $(date +%s)";
+          interval = 3;
+        };
+      };
+    };
+  };
+
 }

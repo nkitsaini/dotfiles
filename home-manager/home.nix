@@ -53,7 +53,7 @@ in {
   programs.neovim = {
     enable = true;
     vimAlias = true;
-    plugins = [pkgs.vimPlugins.copilot-vim];
+    plugins = [ pkgs.vimPlugins.copilot-vim ];
   };
 
   xsession.enable = true;
@@ -86,13 +86,10 @@ in {
     pkgs.ruff
     pkgs.lazygit
     pkgs.nodejs_20
-    (
-      pkgs.writeScriptBin "copilot" ''
-        #!/bin/bash
-        exec ${pkgs.nodejs_20}/bin/node ${pkgs.vimPlugins.copilot-vim}/dist/agent.js
-      ''
-    )
-
+    (pkgs.writeScriptBin "copilot" ''
+      #!/bin/bash
+      exec ${pkgs.nodejs_20}/bin/node ${pkgs.vimPlugins.copilot-vim}/dist/agent.js
+    '')
 
     # I3 specific
     pkgs.i3
