@@ -33,11 +33,7 @@ in {
 
   programs.bottom = {
     enable = true;
-    settings = {
-      flags = {
-        color = "gruvbox-light";
-      };
-    };
+    settings = { flags = { color = "gruvbox-light"; }; };
   };
 
   programs.alacritty = {
@@ -143,7 +139,7 @@ in {
   #
   #  /etc/profiles/per-user/ankit/etc/profile.d/hm-session-vars.sh
   #
-  home.sessionVariables = {};
+  home.sessionVariables = { };
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
