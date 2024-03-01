@@ -67,10 +67,13 @@ in {
       pkgs.rust-analyzer
       pkgs.typst-lsp
       pkgs.nodePackages.pyright
+      pkgs.dockerfile-language-server-nodejs
       pkgs.nodePackages.vscode-css-languageserver-bin
       pkgs.nodePackages.vscode-json-languageserver-bin
       pkgs.nodePackages.vscode-html-languageserver-bin
       pkgs.nodePackages.typescript-language-server
+      pkgs.nodePackages.svelte-language-server
+      pkgs.tailwindcss-language-server
     ];
   };
 
@@ -92,9 +95,15 @@ in {
     pkgs.alacritty-theme
     pkgs.wezterm
     pkgs.brave
-    pkgs.nixfmt
     pkgs.firefox
     pkgs.bun
+    pkgs.ncdu
+    pkgs.caddy
+
+    # Code specific
+    pkgs.sbclPackages.spellcheck
+    pkgs.nixfmt
+    pkgs.ruff
 
     # I3 specific
     pkgs.i3
