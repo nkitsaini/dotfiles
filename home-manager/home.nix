@@ -8,7 +8,7 @@
   _nRecursiveUpdate =
     lib.lists.foldr (a: b: lib.attrsets.recursiveUpdate a b) { };
 in {
-  imports = [ ./i3.nix ./shell ./wezterm ./tms ];
+  imports = [ ./i3.nix ./shell ./wezterm ./tms ./helix ];
 
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
@@ -56,27 +56,6 @@ in {
 
   xsession.enable = true;
 
-  programs.helix = {
-    enable = true;
-    package = nkitsaini_helix.packages.${system}.default;
-    extraPackages = [
-      pkgs.marksman
-      pkgs.nil
-      pkgs.texlab
-      pkgs.gopls
-      pkgs.rust-analyzer
-      pkgs.typst-lsp
-      pkgs.nodePackages.pyright
-      pkgs.dockerfile-language-server-nodejs
-      pkgs.nodePackages.vscode-css-languageserver-bin
-      pkgs.nodePackages.vscode-json-languageserver-bin
-      pkgs.nodePackages.vscode-html-languageserver-bin
-      pkgs.nodePackages.typescript-language-server
-      pkgs.nodePackages.svelte-language-server
-      pkgs.tailwindcss-language-server
-    ];
-  };
-
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = [
@@ -104,6 +83,7 @@ in {
     pkgs.sbclPackages.spellcheck
     pkgs.nixfmt
     pkgs.ruff
+    pkgs.lazygit
 
     # I3 specific
     pkgs.i3
@@ -163,7 +143,7 @@ in {
   #
   #  /etc/profiles/per-user/ankit/etc/profile.d/hm-session-vars.sh
   #
-  home.sessionVariables = { EDITOR = "hx"; };
+  home.sessionVariables = {};
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
