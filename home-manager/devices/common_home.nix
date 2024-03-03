@@ -10,6 +10,7 @@
     ../packages/tms
     ../packages/helix
     ../packages/firefox.nix
+    ../packages/yt-dlp.nix
   ];
   # username and home directory are provided by the parent home.nix
 
@@ -24,6 +25,8 @@
 
   programs.gh.enable = true;
   programs.ssh.enable = true;
+  programs.feh.enable = true;
+  programs.zathura.enable = true;
 
   # Stores configs I don't want to be in Nix
   programs.ssh.extraConfig =
@@ -209,6 +212,7 @@
     pkgs.cached-nix-shell
 
     # pkgs.hello
+    pkgs.obsidian
     pkgs.kubectl
     pkgs.sd
     pkgs.rsync
