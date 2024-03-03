@@ -5,11 +5,13 @@
   username = "ankits";
   homeDirectory = "/home/${username}";
 in {
-  programs.git.userName = name;
-  programs.git.userEmail = email;
   home.username = username;
   home.homeDirectory = homeDirectory;
   imports = [ ../common_home.nix ];
+
+  programs.git.userName = name;
+  programs.git.userEmail = email;
+  programs.fish.shellAliases.rebuild-system = "sudo nixos-rebuild switch --flake /home/ankits/code/dotfiles/home-manager/";
 }
 )
 

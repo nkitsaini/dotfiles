@@ -98,6 +98,7 @@
       monitor-personal =
         "ddcutil -d 1 setvcp xF4 x0091 --i2c-source-addr=x50 --noverify";
       monitor-brightness = "ddcutil -d 1 setvcp x10";
+
     };
     shellInit = ''
       # Emulates vim's cursor shape behavior

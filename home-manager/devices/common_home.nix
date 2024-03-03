@@ -55,6 +55,11 @@
         mnemonicprefix = true;
         colormoved = "default";
       };
+      url = { "git@github.com:" = { insteadOf = "gh:"; }; };
+      url = { "git@github.com:nkitsaini/" = { insteadOf = "ghme:"; }; };
+      init.defaultBranch = "main";
+      help.autocorrect = 1;
+
       push = {
         default = "simple";
         autoSetupRemote = true;
@@ -204,6 +209,10 @@
     pkgs.cached-nix-shell
 
     # pkgs.hello
+    pkgs.kubectl
+    pkgs.sd
+    pkgs.rsync
+    pkgs.nmap
     pkgs.xfce.thunar
     pkgs.kopia
     pkgs.xdragon
@@ -230,7 +239,7 @@
     pkgs.lazygit
     pkgs.nodejs_20
     (pkgs.writeScriptBin "copilot" ''
-      #!/bin/bash
+      #!/usr/bin/env bash
       exec ${pkgs.nodejs_20}/bin/node ${pkgs.vimPlugins.copilot-vim}/dist/agent.js
     '')
 
