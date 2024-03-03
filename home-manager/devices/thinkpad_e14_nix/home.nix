@@ -2,7 +2,7 @@
 (let
   name = "Ankit Saini";
   email = "asaini@singlestore.com";
-  username = "asaini";
+  username = "ankits";
   homeDirectory = "/home/${username}";
 in {
   programs.git.userName = name;

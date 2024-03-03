@@ -111,6 +111,9 @@
       # visual mode, but due to fish_cursor_default, is redundant here
       set fish_cursor_visual block
 
+      # Start vim mode
+      set -g fish_key_bindings fish_vi_key_bindings
+
       set PATH "${config.home.homeDirectory}/bin/:$PATH"
 
       # disable ls coloring by grc

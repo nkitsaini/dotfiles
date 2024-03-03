@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, enableNixGL, ... }:
 let
   left = "h";
   right = "l";
@@ -11,6 +11,7 @@ let
   text-color = "#f3f4f5";
   inactive-text-color = "#676E7D";
   urgent-bg-color = "#E53935";
+  nixGLCommandPrefix = if enableNixGL then "nixGL " else "";
   menu =
     "${pkgs.rofi}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 in {
@@ -20,8 +21,8 @@ in {
     xset r rate 160 50
   '';
 
-  xsession.windowManager.i3.config = {
-    terminal = "nixGL ${terminal_cmd}";
+  xsession.windowManager.i3.config = rec {
+    terminal = "${nixGLCommandPrefix}${terminal_cmd}";
 
     keybindings = let mod = config.xsession.windowManager.i3.config.modifier;
     in {
@@ -48,9 +49,9 @@ in {
       "${mod}+Shift+e" = "exec i3-msg exit";
 
       # TODO: remove nixGL ones moved to NixOS
-      "${mod}+Return" = "exec nixGL ${terminal_cmd}";
+      "${mod}+Return" = "exec ${terminal}";
       "${mod}+d" =
-        "exec nixGL ${menu}"; # run rofi with nixGL so all program opened inherit it
+        "exec ${nixGLCommandPrefix}${menu}"; # run rofi with nixGL so all program opened inherit it
 
       "${mod}+Shift+c" = "reload";
       "${mod}+Shift+r" = "restart";
@@ -94,8 +95,8 @@ in {
 
       "${mod}+r" = "mode resize";
 
-      "XF86MonBrightnessUp" = "exec ${pkgs.light}/bin/light -T 1.3";
-      "XF86MonBrightnessDown" = "exec ${pkgs.light}/bin/light -T 0.72";
+      "XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5+%";
+      "XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5-%";
 
       ## Pulse Audio controls
       "XF86AudioRaiseVolume" =
@@ -104,6 +105,8 @@ in {
         "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-volume @DEFAULT_SINK@ -5%"; # decrease sound volume
       "XF86AudioMute" =
         "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; # mute sound
+      "XF86AudioMicMute" =
+        "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle"; # mute mic audio
 
       "XF86AudioPlay" = "exec ${pkgs.playerctl}/bin/playerctl play-pause";
       "XF86AudioPause" = "exec ${pkgs.playerctl}/bin/playerctl play-pause";

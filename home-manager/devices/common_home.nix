@@ -1,4 +1,16 @@
-{ pkgs, ... }: ({
+{ config, pkgs, nur, ... }: ({
+  # modules = [
+  #   nur.hmModules.nur
+  # ];
+  imports = [
+    nur.hmModules.nur
+    ../packages/i3.nix
+    ../packages/shell
+    ../packages/wezterm
+    ../packages/tms
+    ../packages/helix
+    ../packages/firefox.nix
+  ];
   # username and home directory are provided by the parent home.nix
 
   # This value determines the Home Manager release that your configuration is
@@ -11,6 +23,53 @@
   home.stateVersion = "23.11"; # Please read the comment before changing.
 
   programs.gh.enable = true;
+  programs.ssh.enable = true;
+
+  # Stores configs I don't want to be in Nix
+  programs.ssh.extraConfig =
+    "Include ${config.home.homeDirectory}/.ssh/user_config";
+
+  programs.git = {
+    # username and email are defined
+    # by device specific config
+    enable = true;
+
+    delta = {
+      enable = true;
+      options = {
+        navigate = true;
+        syntax-theme = "Monokai Extended Light";
+        features = "side-by-side line-numbers decorations"; # hyperlinks
+        whitespace-error-style = "22 reverse";
+        decorations = {
+          commit-decoration-style = "bold yellow box ul";
+          file-style = "bold yellow ul";
+          file-decoration-style = "none";
+        };
+      };
+    };
+    extraConfig = {
+      diff = {
+        algorithm = "histogram";
+        renames = "copies";
+        mnemonicprefix = true;
+        colormoved = "default";
+      };
+      push = {
+        default = "simple";
+        autoSetupRemote = true;
+      };
+      merge = { conflictstyle = "zdiff3"; };
+      rerere = { enabled = 1; };
+      pull = { rebase = true; };
+      rebase = { autostash = true; };
+    };
+    aliases = {
+      l =
+        "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset %C(yellow)%an%Creset' --all --abbrev-commit --date=relative";
+      ls = "log --stat --oneline";
+    };
+  };
 
   programs.ripgrep = {
     enable = true;
@@ -43,6 +102,98 @@
   };
 
   xsession.enable = true;
+  programs.nix-index = { enable = true; };
+
+  xdg.configFile."nixpkgs/config.nix".text = ''
+     {
+      packageOverrides = pkgs: {
+        nur = import (builtins.fetchTarball "https://github.com/nix-community/NUR/archive/master.tar.gz") {
+          inherit pkgs;
+        };
+      };
+    }
+  '';
+
+  xdg.enable = true;
+  /* [Default Applications]
+     x-scheme-handler/http=firefox.desktop
+     x-scheme-handler/https=firefox.desktop
+     x-scheme-handler/chrome=firefox.desktop
+     text/html=firefox.desktop
+     application/x-extension-htm=firefox.desktop
+     application/x-extension-html=firefox.desktop
+     application/x-extension-shtml=firefox.desktop
+     application/xhtml+xml=firefox.desktop
+     application/x-extension-xhtml=firefox.desktop
+     application/x-extension-xht=firefox.desktop
+
+     [Added Associations]
+     x-scheme-handler/http=firefox.desktop;
+     x-scheme-handler/https=firefox.desktop;
+     x-scheme-handler/chrome=firefox.desktop;
+     text/html=firefox.desktop;
+     application/x-extension-htm=firefox.desktop;
+     application/x-extension-html=firefox.desktop;
+     application/x-extension-shtml=firefox.desktop;
+     application/xhtml+xml=firefox.desktop;
+     application/x-extension-xhtml=firefox.desktop;
+     application/x-extension-xht=firefox.desktop;
+     [
+     "x-scheme-handler/http"
+     "x-scheme-handler/https"
+     "x-scheme-handler/chrome"
+     "text/html"
+     "application/x-extension-htm"
+     "application/x-extension-html"
+     "application/x-extension-shtml"
+     "application/xhtml+xml"
+     "application/x-extension-xhtml"
+     "application/x-extension-xht" ]
+  */
+  xdg.mimeApps = let
+    browser_mimes = [
+      "x-scheme-handler/http"
+      "x-scheme-handler/https"
+      "x-scheme-handler/chrome"
+      "text/html"
+      "application/x-extension-htm"
+      "application/x-extension-html"
+      "application/x-extension-shtml"
+      "application/xhtml+xml"
+      "application/x-extension-xhtml"
+      "application/x-extension-xht"
+    ];
+  in {
+    enable = true;
+    defaultApplications = builtins.listToAttrs (builtins.map (x: {
+      name = x;
+      value = "${pkgs.firefox}/share/applications/firefox.desktop";
+    }) browser_mimes);
+    associations.added = builtins.listToAttrs (builtins.map (x: {
+      name = x;
+      value = [ "${pkgs.firefox}/share/applications/firefox.desktop" ];
+    }) browser_mimes);
+  };
+  xdg.userDirs = {
+    enable = true;
+    createDirectories = true;
+    desktop = "/var/empty";
+    publicShare = "/var/empty";
+    documents = "documents";
+    download = "downloads";
+    music = "music";
+    videos = "videos";
+    pictures = "tmp";
+    templates = "tmp";
+  };
+
+  # Home Directories
+  home.file."external/.keep".text = ""; # External repos
+  home.file."mnt/.keep".text = ""; # mount points
+  home.file."tmp/.keep".text = ""; # temporary directory
+  home.file."music/.keep".text = ""; # temporary directory
+  home.file."video/.keep".text = ""; # temporary directory
+  home.file."downloads/.keep".text = ""; # downloads directory
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
@@ -53,6 +204,9 @@
     pkgs.cached-nix-shell
 
     # pkgs.hello
+    pkgs.xfce.thunar
+    pkgs.kopia
+    pkgs.xdragon
     pkgs.ddcutil
     pkgs.tmux
     pkgs.zellij
@@ -66,7 +220,6 @@
     pkgs.alacritty-theme
     pkgs.wezterm
     pkgs.brave
-    pkgs.firefox
     pkgs.bun
     pkgs.ncdu
     pkgs.caddy
@@ -84,12 +237,15 @@
     # I3 specific
     pkgs.i3
     pkgs.rofi
-    pkgs.light
     pkgs.pulseaudio
     pkgs.playerctl
+    pkgs.brightnessctl
 
     # Xorg
     pkgs.xorg.xev
+
+    # MTP
+    pkgs.jmtpfs
 
     # Kernel modules
     # TODO: enable when on NixOS
