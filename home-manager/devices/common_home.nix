@@ -9,7 +9,7 @@
     ../packages/wezterm
     ../packages/tms
     ../packages/helix
-    ../packages/firefox.nix
+    # ../packages/firefox.nix
     ../packages/yt-dlp.nix
   ];
   # username and home directory are provided by the parent home.nix
@@ -22,6 +22,8 @@
   # want to update the value, then make sure to first check the Home Manager
   # release notes.
   home.stateVersion = "23.11"; # Please read the comment before changing.
+
+  nixpkgs.config.allowUnfree = true;
 
   programs.gh.enable = true;
   programs.ssh.enable = true;
@@ -158,42 +160,6 @@
      "application/x-extension-xhtml"
      "application/x-extension-xht" ]
   */
-  xdg.mimeApps = let
-    browser_mimes = [
-      "x-scheme-handler/http"
-      "x-scheme-handler/https"
-      "x-scheme-handler/chrome"
-      "text/html"
-      "application/x-extension-htm"
-      "application/x-extension-html"
-      "application/x-extension-shtml"
-      "application/xhtml+xml"
-      "application/x-extension-xhtml"
-      "application/x-extension-xht"
-    ];
-  in {
-    enable = true;
-    defaultApplications = builtins.listToAttrs (builtins.map (x: {
-      name = x;
-      value = "${pkgs.firefox}/share/applications/firefox.desktop";
-    }) browser_mimes);
-    associations.added = builtins.listToAttrs (builtins.map (x: {
-      name = x;
-      value = [ "${pkgs.firefox}/share/applications/firefox.desktop" ];
-    }) browser_mimes);
-  };
-  xdg.userDirs = {
-    enable = true;
-    createDirectories = true;
-    desktop = "/var/empty";
-    publicShare = "/var/empty";
-    documents = "documents";
-    download = "downloads";
-    music = "music";
-    videos = "videos";
-    pictures = "tmp";
-    templates = "tmp";
-  };
 
   # Home Directories
   home.file."external/.keep".text = ""; # External repos
