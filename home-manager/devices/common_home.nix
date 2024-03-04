@@ -203,20 +203,83 @@
   home.file."video/.keep".text = ""; # temporary directory
   home.file."downloads/.keep".text = ""; # downloads directory
 
+  qt.enable = true;
+  qt.platformTheme = "kde";
+  qt.style.name = "fusion";
+  # qt.style.name = "breeze";
+
+  # qt = {
+  #   enable = true;
+  #   platformTheme = "qtct";
+  #   style.name = "breeze";
+  # };
+
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = [
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
+
+    pkgs.qbittorrent
+
+    pkgs.breeze-icons
+    # pkgs.papirus-icon-theme
+    # Qt related packages
+
+    pkgs.libsForQt5.breeze-icons
+    # pkgs.libsForQt5.qt5ct
+    # pkgs.libsForQt5.kemoticons
+    pkgs.libsForQt5.oxygen-icons
+    # pkgs.qt6Packages.qt6ct
+
+    pkgs.qgnomeplatform
+    pkgs.lightly-qt
+
+    pkgs.qgnomeplatform-qt6
+
+    pkgs.libsForQt5.plasma-integration
+
+    pkgs.libsForQt5.qt5ct
+
+    pkgs.libsForQt5.qtstyleplugins
+
+    pkgs.libsForQt5.systemsettings
+
+    pkgs.lxqt.lxqt-config
+
+    pkgs.lxqt.lxqt-qtplugin
+
+    pkgs.qt6Packages.qt6ct
+
+    pkgs.qt6Packages.qt6gtk2
+
+    # qt style plugins
+    pkgs.adwaita-qt
+
+    pkgs.adwaita-qt6
+
+    pkgs.libsForQt5.breeze-qt5
+
+    pkgs.libsForQt5.qtstyleplugin-kvantum
+
+    pkgs.libsForQt5.qtstyleplugins
+
+    pkgs.qt6Packages.qt6gtk2
+
+    pkgs.qt6Packages.qtstyleplugin-kvantum
+
     # Nix specific
     pkgs.cached-nix-shell
 
     # pkgs.hello
     pkgs.obsidian
+    pkgs.mosh
+    pkgs.python3
     pkgs.kubectl
     pkgs.sd
     pkgs.rsync
     pkgs.nmap
+    pkgs.ffmpeg
     pkgs.xfce.thunar
     pkgs.kopia
     pkgs.xdragon
@@ -227,7 +290,6 @@
     pkgs.just
     pkgs.grc
     pkgs.fzf
-    pkgs.cargo-binstall
     pkgs.cargo-cross
     pkgs.hyperfine
     pkgs.alacritty-theme
