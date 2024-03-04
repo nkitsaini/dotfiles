@@ -222,51 +222,7 @@
 
     pkgs.qbittorrent
 
-    pkgs.breeze-icons
-    # pkgs.papirus-icon-theme
-    # Qt related packages
-
-    pkgs.libsForQt5.breeze-icons
-    # pkgs.libsForQt5.qt5ct
-    # pkgs.libsForQt5.kemoticons
-    pkgs.libsForQt5.oxygen-icons
-    # pkgs.qt6Packages.qt6ct
-
-    pkgs.qgnomeplatform
-    pkgs.lightly-qt
-
-    pkgs.qgnomeplatform-qt6
-
-    pkgs.libsForQt5.plasma-integration
-
-    pkgs.libsForQt5.qt5ct
-
-    pkgs.libsForQt5.qtstyleplugins
-
-    pkgs.libsForQt5.systemsettings
-
-    pkgs.lxqt.lxqt-config
-
-    pkgs.lxqt.lxqt-qtplugin
-
-    pkgs.qt6Packages.qt6ct
-
-    pkgs.qt6Packages.qt6gtk2
-
-    # qt style plugins
-    pkgs.adwaita-qt
-
-    pkgs.adwaita-qt6
-
-    pkgs.libsForQt5.breeze-qt5
-
-    pkgs.libsForQt5.qtstyleplugin-kvantum
-
-    pkgs.libsForQt5.qtstyleplugins
-
-    pkgs.qt6Packages.qt6gtk2
-
-    pkgs.qt6Packages.qtstyleplugin-kvantum
+    pkgs.papirus-icon-theme
 
     # Nix specific
     pkgs.cached-nix-shell
