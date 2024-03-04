@@ -170,15 +170,12 @@
   home.file."downloads/.keep".text = ""; # downloads directory
 
   qt.enable = true;
-  qt.platformTheme = "kde";
-  qt.style.name = "fusion";
-  # qt.style.name = "breeze";
-
-  # qt = {
-  #   enable = true;
-  #   platformTheme = "qtct";
-  #   style.name = "breeze";
-  # };
+  qt.platformTheme = "qtct";
+  xdg.configFile."qt5ct/qt5ct.conf".text = ''
+    [Appearance]
+    icon_theme=breeze
+  '';
+  
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
@@ -186,15 +183,14 @@
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
 
-    pkgs.qbittorrent
-
-    pkgs.papirus-icon-theme
 
     # Nix specific
     pkgs.cached-nix-shell
 
     # pkgs.hello
+    pkgs.qbittorrent
     pkgs.obsidian
+    pkgs.vlc
     pkgs.mosh
     pkgs.python3
     pkgs.kubectl
