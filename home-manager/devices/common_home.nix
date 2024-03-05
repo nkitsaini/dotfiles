@@ -9,7 +9,8 @@
     ../packages/wezterm
     ../packages/tms
     ../packages/helix
-    # ../packages/firefox.nix
+    ../packages/firefox.nix
+    ../packages/xdg_config.nix
     ../packages/yt-dlp.nix
   ];
   # username and home directory are provided by the parent home.nix
@@ -125,6 +126,10 @@
 
   xsession.enable = true;
   programs.nix-index = { enable = true; };
+
+  services.batsignal = {
+    enable = true;
+  };
 
   xdg.configFile."nixpkgs/config.nix".text = ''
      {

@@ -7,7 +7,7 @@
 in {
   home.username = username;
   home.homeDirectory = homeDirectory;
-  imports = [ ../common_home.nix ../../packages/firefox.nix ../../packages/xdg_config.nix ];
+  imports = [ ../common_home.nix ];
 
   programs.git.userName = name;
   programs.git.userEmail = email;

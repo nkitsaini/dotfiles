@@ -87,6 +87,7 @@
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
+  services.tlp.enable = true;
 
   # Enable sound with pipewire.
   sound.enable = true;
