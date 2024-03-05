@@ -1,6 +1,7 @@
 local wezterm = require 'wezterm';
 return {
-  color_scheme = "Solarized (light) (terminal.sexy)",
+  -- color_scheme = "Solarized (dark) (terminal.sexy)",
+  color_scheme = "Gruvbox Dark (Gogh)",
   hide_tab_bar_if_only_one_tab = true,
   -- font_hinting = "None",
   --
@@ -12,14 +13,20 @@ return {
   -- line_height = 1.15,
   
   -- timeout_milliseconds defaults to 1000 and can be omitted
-  leader = { key="a", mods="CTRL", timeout_milliseconds=1000 },
-  keys = {
-    {key="|", mods="LEADER|SHIFT", action=wezterm.action{SplitHorizontal={domain="CurrentPaneDomain"}}},
-    {key="-", mods="LEADER", action=wezterm.action{SplitVertical={domain="CurrentPaneDomain"}}},
-    -- Send "CTRL-A" to the terminal when pressing CTRL-A, CTRL-A
-    {key="a", mods="LEADER|CTRL", action=wezterm.action{SendString="\x01"}},
-  },
+  -- leader = { key="a", mods="CTRL", timeout_milliseconds=1000 },
+  -- keys = {
+  --   {key="|", mods="LEADER|SHIFT", action=wezterm.action{SplitHorizontal={domain="CurrentPaneDomain"}}},
+  --   {key="-", mods="LEADER", action=wezterm.action{SplitVertical={domain="CurrentPaneDomain"}}},
+  --   -- Send "CTRL-A" to the terminal when pressing CTRL-A, CTRL-A
+  --   {key="a", mods="LEADER|CTRL", action=wezterm.action{SendString="\x01"}},
+  -- },
   
+  window_padding = {
+      left = 0,
+      right = 0,
+      top = 0,
+      bottom = 0,
+  }
   -- window_frame = {
   --   -- The font used in the tab bar.
   --   -- Roboto Bold is the default; this font is bundled

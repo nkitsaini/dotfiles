@@ -4,7 +4,7 @@ let
   right = "l";
   up = "k";
   down = "j";
-  terminal_cmd = "${pkgs.alacritty}/bin/alacritty";
+  terminal_cmd = "${pkgs.wezterm}/bin/wezterm";
 
   bg-color = "#1f242f";
   inactive-bg-color = "#1f242f";

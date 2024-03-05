@@ -94,7 +94,7 @@
   programs.alacritty = {
     enable = true;
     settings = {
-      import = [ "${pkgs.alacritty-theme}/solarized_light.toml" ];
+      import = [ "${pkgs.alacritty-theme}/gruvbox_dark.toml" ];
       env = { XTERM_VERION = "9999"; };
       font = { size = 16; };
       font.normal = {
@@ -108,8 +108,18 @@
   programs.neovim = {
     enable = true;
     vimAlias = true;
-    plugins = [ pkgs.vimPlugins.copilot-vim ];
+    plugins = [ pkgs.vimPlugins.copilot-vim pkgs.vimPlugins.vim-fugitive ];
   };
+  programs.tealdeer = {
+    enable = true;
+    settings = {
+      updates = {
+        auto_update = true;
+      };
+    };
+  };
+  programs.gitui.enable = true;
+  programs.gitui.keyConfig = builtins.readFile ../packages/gitui_keybindings.ron;
 
   xsession.enable = true;
   programs.nix-index = { enable = true; };
@@ -175,7 +185,6 @@
     [Appearance]
     icon_theme=breeze
   '';
-  
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
@@ -183,12 +192,26 @@
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
 
-
     # Nix specific
     pkgs.cached-nix-shell
 
+    # For yazi
+    pkgs.yazi
+    pkgs.unar
+    pkgs.exiftool
+    # pkgs.mpv
+    pkgs.mediainfo
+
     # pkgs.hello
-    pkgs.qbittorrent
+    # pkgs.qbittorrent
+    pkgs.deluge
+    pkgs.xclip
+    pkgs.jq
+    pkgs.jless
+    pkgs.zip
+    pkgs.unzip
+    pkgs.gnutar
+    pkgs.zsh
     pkgs.obsidian
     pkgs.vlc
     pkgs.mosh

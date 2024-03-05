@@ -21,7 +21,7 @@
     ];
 
     settings = {
-      theme = "everforest_light";
+      theme = "gruvbox_dark_hard";
       editor = {
         bufferline = "multiple";
         idle-timeout = 5;
@@ -98,10 +98,11 @@
           "C-y" = "apply_copilot_completion";
         };
 
-        select.space = {
-
-          l = ''
-            :pipe-to python3 -c "import shlex, os, sys;a=sys.stdin.read();a += '\\n'; os.system(shlex.join(['tmux', 'send-keys', '-t', '1', a]));"'';
+        select = {
+          space = {
+            l = ''
+              :pipe-to python3 -c "import shlex, os, sys;a=sys.stdin.read();a += '\\n'; os.system(shlex.join(['tmux', 'send-keys', '-t', '1', a]));"'';
+          };
         };
       };
     };
@@ -177,7 +178,7 @@
           comment-token = "//";
           indent = {
             tab-width = 4;
-            unit = "\t";
+            unit = "	";
           };
           language-servers = [ "typst-lsp" "copilot" ];
         }

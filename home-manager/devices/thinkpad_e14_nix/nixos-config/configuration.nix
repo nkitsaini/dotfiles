@@ -27,6 +27,7 @@
 
   networking.hostName = "nixos"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  # TODO: debug iwd issue
   # networking.wireless.iwd = {
   #   enable = true;
 
@@ -41,7 +42,7 @@
   # };
   # Enable networking
   networking.networkmanager.enable = true;
-  networking.networkmanager.wifi.backend = "iwd";
+  networking.networkmanager.wifi.backend = "wpa_supplicant";
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
@@ -164,6 +165,7 @@
     noto-fonts-cjk-sans
     noto-fonts-cjk-serif
     noto-fonts-monochrome-emoji
+  (nerdfonts.override { fonts = [ "Noto" ]; })
   ];
 
   # List packages installed in system profile. To search, run:
