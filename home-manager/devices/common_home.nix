@@ -78,6 +78,8 @@
       l =
         "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset %C(yellow)%an%Creset' --all --abbrev-commit --date=relative";
       ls = "log --stat --oneline";
+      pf = "push --force-with-lease";
+      p = "push";
     };
   };
 
@@ -214,6 +216,7 @@
     pkgs.zsh
     pkgs.obsidian
     pkgs.vlc
+    pkgs.github-desktop
     pkgs.mosh
     pkgs.python3
     pkgs.kubectl
