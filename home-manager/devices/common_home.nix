@@ -214,6 +214,7 @@
     pkgs.deluge
     pkgs.xclip
     pkgs.jq
+    pkgs.fd
     pkgs.jless
     pkgs.zip
     pkgs.unzip
