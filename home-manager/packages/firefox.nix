@@ -15,6 +15,7 @@
   # home-manager-path/bin/hx
   xdg.configFile."tridactyl/tridactylrc".text = ''
     js tri.config.set("editorcmd", "${pkgs.wezterm}/bin/wezterm -e ${nkitsaini_helix.packages.${system}.default}/bin/hx")
+    js tri.config.set("theme", "shydactyl")
     bind --mode=normal <C-V> mode ignore
   ''; 
 
