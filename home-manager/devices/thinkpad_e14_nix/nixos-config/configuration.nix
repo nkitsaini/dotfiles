@@ -25,6 +25,10 @@
     };
   };
 
+  # required for sway
+  security.polkit.enable = true;
+  programs.dconf.enable = true;
+
   networking.hostName = "nixos"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
   # TODO: debug iwd issue
@@ -72,12 +76,14 @@
     LC_TIME = "en_IN";
   };
 
+  # programs.hyprland.enable = true;
+
   # Enable the X11 windowing system.
-  services.xserver.enable = true;
+  # services.xserver.enable = true;
 
   # Enable the LXQT Desktop Environment.
-  services.xserver.displayManager.lightdm.enable = true;
-  services.xserver.desktopManager.lxqt.enable = true;
+  # services.xserver.displayManager.lightdm.enable = true;
+  # services.xserver.desktopManager.lxqt.enable = true;
 
   # Configure keymap in X11
   services.xserver.xkb = {

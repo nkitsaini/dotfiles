@@ -7,7 +7,7 @@
 in {
   home.username = username;
   home.homeDirectory = homeDirectory;
-  imports = [ ../common_home.nix ];
+  imports = [ ../common_home.nix ../../packages/sway.nix ];
 
   programs.git.userName = name;
   programs.git.userEmail = email;

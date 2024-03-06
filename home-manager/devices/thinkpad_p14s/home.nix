@@ -9,7 +9,7 @@ in {
   programs.git.userEmail = email;
   home.username = username;
   home.homeDirectory = homeDirectory;
-  imports = [ ../common_home.nix ];
+  imports = [ ../common_home.nix ../../packages/i3.nix ];
 }
 )
 

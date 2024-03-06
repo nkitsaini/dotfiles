@@ -4,7 +4,6 @@
   # ];
   imports = [
     nur.hmModules.nur
-    ../packages/i3.nix
     ../packages/shell
     ../packages/wezterm
     ../packages/tms
@@ -26,6 +25,17 @@
 
   nixpkgs.config.allowUnfree = true;
 
+  gtk = {
+    enable = true;
+    cursorTheme.name = "Adwaita";
+    cursorTheme.package = pkgs.gnome.adwaita-icon-theme;
+    theme.name = "adw-gtk3-dark";
+    theme.package = pkgs.adw-gtk3;
+    iconTheme = {
+      package = pkgs.gnome.adwaita-icon-theme;
+      name = "adwaita-icon-theme";
+    };
+  };
   programs.gh.enable = true;
   programs.ssh.enable = true;
   programs.feh.enable = true;
@@ -115,21 +125,16 @@
   };
   programs.tealdeer = {
     enable = true;
-    settings = {
-      updates = {
-        auto_update = true;
-      };
-    };
+    settings = { updates = { auto_update = true; }; };
   };
   programs.gitui.enable = true;
-  programs.gitui.keyConfig = builtins.readFile ../packages/gitui_keybindings.ron;
+  programs.gitui.keyConfig =
+    builtins.readFile ../packages/gitui_keybindings.ron;
 
   xsession.enable = true;
   programs.nix-index = { enable = true; };
 
-  services.batsignal = {
-    enable = true;
-  };
+  services.batsignal = { enable = true; };
 
   xdg.configFile."nixpkgs/config.nix".text = ''
      {
