@@ -54,7 +54,6 @@
   # networking.proxy.default = "http://user:password@proxy:port/";
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
-
   # Enable network manager applet
   programs.nm-applet.enable = true;
 
@@ -172,7 +171,8 @@
     noto-fonts-cjk-sans
     noto-fonts-cjk-serif
     noto-fonts-monochrome-emoji
-  (nerdfonts.override { fonts = [ "Noto" ]; })
+    (nerdfonts.override { fonts = [ "Noto" ]; })
+    font-awesome
   ];
 
   # List packages installed in system profile. To search, run:

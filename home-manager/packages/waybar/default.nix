@@ -2,6 +2,7 @@
 
   programs.waybar = {
     enable = true;
+    systemd.enable = true;
     settings.mainBar = {
       "layer" = "top"; # Waybar at top layer
       "position" = "bottom"; # Waybar position (top|bottom|left|right)

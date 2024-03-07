@@ -41,29 +41,31 @@ let
     "${pkgs.rofi-wayland}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 in {
 
-  imports = [./waybar];
-    services.mako = {
-      enable = true;
-      padding = "15,20";
-      # # backgroundColor = "#3b224cF0";
-      # backgroundColor = "#281733F0";
-      # textColor = "#ebeafa";
-      borderSize = 2;
-      # borderColor = "#a4a0e8";
-      defaultTimeout = 5000;
-      markup = true;
-      format = "<b>%s</b>\\n\\n%b";
+  home.packages = [ pkgs.wl-clipboard ];
+  imports = [ ./waybar  ];
+   programs.swaylock.enable = true;
+  services.mako = {
+    enable = true;
+    padding = "15,20";
+    # # backgroundColor = "#3b224cF0";
+    # backgroundColor = "#281733F0";
+    # textColor = "#ebeafa";
+    borderSize = 2;
+    # borderColor = "#a4a0e8";
+    defaultTimeout = 5000;
+    markup = true;
+    format = "<b>%s</b>\\n\\n%b";
 
-      # TODO:
-      # [hidden]
-      # format=(and %h more)
-      # text-color=#999999
+    # TODO:
+    # [hidden]
+    # format=(and %h more)
+    # text-color=#999999
 
-      # [urgency=high]
-      # text-color=#F22C86
-      # border-color=#F22C86
-      # border-size=4
-    };
+    # [urgency=high]
+    # text-color=#F22C86
+    # border-color=#F22C86
+    # border-size=4
+  };
 
   wayland.windowManager.sway.enable = true;
   wayland.windowManager.sway.systemd.enable = true;
@@ -83,11 +85,9 @@ in {
     };
 
     output = {
-      "${out_laptop}" = {
-        position = "0,0";
-      };
+      "${out_laptop}" = { position = "0,0"; };
       "${out_monitor}" = {
-        resolution="2560x1080";
+        resolution = "2560x1080";
         position = "0,-1080";
       };
     };
