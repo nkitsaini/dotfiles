@@ -228,6 +228,8 @@
     pkgs.obsidian
     pkgs.vlc
     pkgs.github-desktop
+    pkgs.pavucontrol
+    pkgs.qrencode
     pkgs.mosh
     pkgs.python3
     pkgs.kubectl

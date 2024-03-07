@@ -115,7 +115,7 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.users.ankits =
+            home-manager.users.root =
               import ./devices/skygod/home.nix;
             home-manager.extraSpecialArgs = {
               inherit system;
