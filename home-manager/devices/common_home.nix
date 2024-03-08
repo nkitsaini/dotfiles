@@ -232,6 +232,8 @@
     pkgs.pavucontrol
     pkgs.qrencode
     pkgs.mosh
+    pkgs.qpdf
+    pkgs.minio-client
     pkgs.python3
     pkgs.kubectl
     pkgs.sd
