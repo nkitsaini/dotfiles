@@ -21,7 +21,8 @@
     ];
 
     settings = {
-      theme = "gruvbox_dark_hard";
+      # theme = "gruvbox_dark_hard";
+      theme = "gruvbox_light_soft";
       editor = {
         bufferline = "multiple";
         idle-timeout = 5;
@@ -41,6 +42,7 @@
           inline-diagnostics.other-lines = [ ];
         };
         cursor-shape.insert = "bar";
+        insert-final-newline = false;
       };
 
       keys = {
@@ -120,6 +122,9 @@
           venv = "./.venv";
           venvPath = ".";
         };
+      };
+      language-server.gopls = {
+        environment = { "GOFLAGS" = "-tags=cluster"; };
       };
       language-server.typst-lsp = {
         language-id = "typst";

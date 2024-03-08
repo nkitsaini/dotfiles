@@ -94,14 +94,19 @@
     shellAliases = {
       gs = "git status";
       gc = "git checkout";
+      g = "git";
 
       ## Monitor switch alias
       # Source: https://github.com/rockowitz/ddcutil/wiki/Switching-input-source-on-LG-monitors
       monitor-work =
-        "ddcutil -d 1 setvcp xF4 x00100 --i2c-source-addr=x50 --noverify";
+        "ddcutil -d 1 setvcp xF4 x0090 --i2c-source-addr=x50 --noverify";
       monitor-personal =
         "ddcutil -d 1 setvcp xF4 x0091 --i2c-source-addr=x50 --noverify";
       monitor-brightness = "ddcutil -d 1 setvcp x10";
+
+      j = "z"; # jump
+      ll = "${pkgs.eza}/bin/eza -lahgF";
+      l = "${pkgs.eza}/bin/eza -F";
 
     };
     shellInit = ''

@@ -24,6 +24,12 @@ in {
   xsession.windowManager.i3.config = rec {
     terminal = "${nixGLCommandPrefix}${terminal_cmd}";
 
+    startup = [{
+      command = "xset r rate 160 50";
+      always = true;
+      notification = false;
+    }];
+
     keybindings = let mod = config.xsession.windowManager.i3.config.modifier;
     in {
 
@@ -95,8 +101,10 @@ in {
 
       "${mod}+r" = "mode resize";
 
-      "XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5+%";
-      "XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5-%";
+      "XF86MonBrightnessUp" =
+        "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5+%";
+      "XF86MonBrightnessDown" =
+        "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5-%";
 
       ## Pulse Audio controls
       "XF86AudioRaiseVolume" =
@@ -200,8 +208,8 @@ in {
     enable = false;
     script = "polybar &";
     extraConfig = ''
-    wm-restack = i3
-    ${builtins.readFile "${pkgs.polybar}/etc/polybar/config.ini"}
+      wm-restack = i3
+      ${builtins.readFile "${pkgs.polybar}/etc/polybar/config.ini"}
     '';
     # settings = {
     #   "bar/bottom" = {

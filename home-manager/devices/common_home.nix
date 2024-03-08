@@ -40,6 +40,7 @@
   programs.ssh.enable = true;
   programs.feh.enable = true;
   programs.zathura.enable = true;
+  # programs.zoxide.enable = true;
 
   # Stores configs I don't want to be in Nix
   programs.ssh.extraConfig =
@@ -236,6 +237,7 @@
     pkgs.sd
     pkgs.rsync
     pkgs.nmap
+    pkgs.minio-client
     pkgs.ffmpeg
     pkgs.xfce.thunar
     pkgs.kopia

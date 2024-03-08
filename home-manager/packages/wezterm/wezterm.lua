@@ -19,7 +19,9 @@ return {
   xcursor_theme = xcursor_theme,
   xcursor_size = xcursor_size,
   -- color_scheme = "Solarized (dark) (terminal.sexy)",
-  color_scheme = "Gruvbox Dark (Gogh)",
+  -- color_scheme = "Gruvbox Dark (Gogh)",
+  -- color_scheme = "Gruvbox Dark (Gogh)",
+  color_scheme = "GruvboxLight",
   hide_tab_bar_if_only_one_tab = true,
   -- font_hinting = "None",
   --

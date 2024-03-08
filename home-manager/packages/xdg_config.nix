@@ -17,11 +17,13 @@
     enable = true;
     defaultApplications = builtins.listToAttrs (builtins.map (x: {
       name = x;
-      value = "${pkgs.firefox}/share/applications/firefox.desktop";
+      # value = "${pkgs.firefox}/share/applications/firefox.desktop";
+      value = "firefox.desktop";
     }) browser_mimes);
     associations.added = builtins.listToAttrs (builtins.map (x: {
       name = x;
-      value = [ "${pkgs.firefox}/share/applications/firefox.desktop" ];
+      # value = [ "${pkgs.firefox}/share/applications/firefox.desktop" ];
+      value = [ "firefox.desktop" ];
     }) browser_mimes);
   };
   xdg.userDirs = {
