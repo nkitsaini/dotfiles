@@ -26,18 +26,18 @@
   };
 
   programs.firefox.profiles."default" = {
-    containers = {
-      personal = {
-        color = "orange";
-        icon = "fruit";
-        id = 1;
-      };
-      random = {
-        color = "yellow";
-        icon = "cart";
-        id = 2;
-      };
-    };
+    # containers = {
+    #   personal = {
+    #     color = "orange";
+    #     icon = "fruit";
+    #     id = 1;
+    #   };
+    #   random = {
+    #     color = "yellow";
+    #     icon = "cart";
+    #     id = 2;
+    #   };
+    # };
     extensions = with config.nur.repos.rycee.firefox-addons; [
       ublock-origin
       tridactyl

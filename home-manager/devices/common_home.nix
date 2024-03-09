@@ -29,7 +29,7 @@
     enable = true;
     cursorTheme.name = "Adwaita";
     cursorTheme.package = pkgs.gnome.adwaita-icon-theme;
-    theme.name = "adw-gtk3-dark";
+    theme.name = "adw-gtk3-light";
     theme.package = pkgs.adw-gtk3;
     iconTheme = {
       package = pkgs.gnome.adwaita-icon-theme;
@@ -147,6 +147,11 @@
     }
   '';
 
+  home.file.".cargo/config.toml".text = ''
+    [registries.crates-io]
+    protocol = "sparse"
+  '';
+
   xdg.enable = true;
   /* [Default Applications]
      x-scheme-handler/http=firefox.desktop
@@ -199,104 +204,110 @@
     icon_theme=breeze
   '';
 
+  programs.eza = {
+    enable = true;
+  };
+
   # The home.packages option allows you to install Nix packages into your
   # environment.
-  home.packages = [
+  home.packages = with pkgs; [
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
 
     # Nix specific
-    pkgs.cached-nix-shell
+    cached-nix-shell
 
     # For yazi
-    pkgs.yazi
-    pkgs.unar
-    pkgs.exiftool
-    # pkgs.mpv
-    pkgs.mediainfo
+    yazi
+    unar
+    exiftool
+    # mpv
+    mediainfo
 
-    # pkgs.hello
-    # pkgs.qbittorrent
-    pkgs.deluge
-    pkgs.xclip
-    pkgs.jq
-    pkgs.fd
-    pkgs.jless
-    pkgs.zip
-    pkgs.unzip
-    pkgs.gnutar
-    pkgs.zsh
-    pkgs.obsidian
-    pkgs.vlc
-    pkgs.github-desktop
-    pkgs.pavucontrol
-    pkgs.qrencode
-    pkgs.mosh
-    pkgs.qpdf
-    pkgs.minio-client
-    pkgs.python3
-    pkgs.kubectl
-    pkgs.sd
-    pkgs.rsync
-    pkgs.nmap
-    pkgs.minio-client
-    pkgs.ffmpeg
-    pkgs.xfce.thunar
-    pkgs.kopia
-    pkgs.xdragon
-    pkgs.ddcutil
-    pkgs.tmux
-    pkgs.zellij
-    pkgs.tmuxp
-    pkgs.just
-    pkgs.grc
-    pkgs.fzf
-    pkgs.cargo-cross
-    pkgs.hyperfine
-    pkgs.alacritty-theme
-    pkgs.wezterm
-    pkgs.brave
-    pkgs.bun
-    pkgs.ncdu
-    pkgs.caddy
+    # hello
+    # qbittorrent
+    deluge
+    xclip
+    jq
+    fd
+    jless
+    hexyl
+    zip
+    unzip
+    gnutar
+    zsh
+    rustup
+    obsidian
+    vlc
+    github-desktop
+    pavucontrol
+    qrencode
+    mosh
+    qpdf
+    minio-client
+    python3
+    kubectl
+    sd
+    rsync
+    nmap
+    minio-client
+    ffmpeg
+    xfce.thunar
+    kopia
+    xdragon
+    ddcutil
+    tmux
+    zellij
+    tmuxp
+    just
+    grc
+    fzf
+    cargo-cross
+    hyperfine
+    alacritty-theme
+    wezterm
+    brave
+    bun
+    ncdu
+    caddy
 
     # Code specific
-    pkgs.nixfmt
-    pkgs.ruff
-    pkgs.lazygit
-    pkgs.nodejs_20
-    (pkgs.writeScriptBin "copilot" ''
+    nixfmt
+    ruff
+    lazygit
+    nodejs_20
+    (writeScriptBin "copilot" ''
       #!/usr/bin/env bash
-      exec ${pkgs.nodejs_20}/bin/node ${pkgs.vimPlugins.copilot-vim}/dist/agent.js
+      exec ${nodejs_20}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
     '')
 
     # I3 specific
-    pkgs.i3
-    pkgs.rofi
-    pkgs.pulseaudio
-    pkgs.playerctl
-    pkgs.brightnessctl
+    i3
+    rofi
+    pulseaudio
+    playerctl
+    brightnessctl
 
     # Xorg
-    pkgs.xorg.xev
+    xorg.xev
 
     # MTP
-    pkgs.jmtpfs
+    jmtpfs
 
     # Kernel modules
     # TODO: enable when on NixOS
-    # pkgs.linuxKernel.packages.linux_6_7.ddcci-driver
+    # linuxKernel.packages.linux_6_7.ddcci-driver
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
     # # overrides. You can do that directly here, just don't forget the
     # # parentheses. Maybe you want to install Nerd Fonts with a limited number of
     # # fonts?
-    # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
+    # (nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
 
     # # You can also create simple shell scripts directly inside your
     # # configuration. For example, this adds a command 'my-hello' to your
     # # environment:
-    # (pkgs.writeShellScriptBin "my-hello" ''
+    # (writeShellScriptBin "my-hello" ''
     #   echo "Hello, ${config.home.username}!"
     # '')
   ];

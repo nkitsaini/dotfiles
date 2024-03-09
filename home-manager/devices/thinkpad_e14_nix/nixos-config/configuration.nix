@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   imports = [ # Include the results of the hardware scan.
@@ -28,9 +28,16 @@
     };
   };
 
-  # required for sway
+  ####### SWAY START
   security.polkit.enable = true;
+  security.pam.services.swaylock = { };
   programs.dconf.enable = true;
+
+  xdg.portal.config.common.default = "*";
+  xdg.portal.enable = true;
+  xdg.portal.wlr.enable = true;
+  xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+  ####### SWAY END
 
   networking.hostName = "nixos"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -96,6 +103,7 @@
   # Enable CUPS to print documents.
   services.printing.enable = true;
   services.tlp.enable = true;
+
 
   # Enable sound with pipewire.
   sound.enable = true;
@@ -209,7 +217,7 @@
     };
   };
   # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
+  networking.firewall.allowedTCPPorts = [ 8005 ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;

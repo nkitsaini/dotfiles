@@ -1,4 +1,5 @@
-{ config, pkgs, lib, enableNixGL, ... }:
+# This is a nixos package (not home-manager)
+{ pkgs, enableNixGL, ... }:
 let
 
   left = "h";
@@ -7,11 +8,6 @@ let
   down = "j";
   terminal_cmd = "${pkgs.wezterm}/bin/wezterm";
 
-  bg-color = "#1f242f";
-  inactive-bg-color = "#1f242f";
-  text-color = "#f3f4f5";
-  inactive-text-color = "#676E7D";
-  urgent-bg-color = "#E53935";
   nixGLCommandPrefix = if enableNixGL then "nixGL " else "";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
@@ -41,9 +37,17 @@ let
     "${pkgs.rofi-wayland}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 in {
 
-  home.packages = [ pkgs.wl-clipboard ];
-  imports = [ ./waybar  ];
-   programs.swaylock.enable = true;
+  home.packages = with pkgs; [
+    wl-clipboard
+    swaylock
+    swayidle
+    xwayland
+
+    grim
+    slurp
+  ];
+  imports = [ ./waybar ];
+  # programs.swaylock.enable = true;
   services.mako = {
     enable = true;
     padding = "15,20";

@@ -16,7 +16,10 @@
       fi
     '';
   };
-  programs.direnv = { enable = true; };
+  programs.direnv = {
+    enable = true;
+    config = { global = { hide_env_diff = true; }; };
+  };
 
   programs.starship = {
     enable = true;
@@ -105,8 +108,8 @@
       monitor-brightness = "ddcutil -d 1 setvcp x10";
 
       j = "z"; # jump
-      ll = "${pkgs.eza}/bin/eza -lahgF";
-      l = "${pkgs.eza}/bin/eza -F";
+      ll = "${pkgs.eza}/bin/eza -lahgF --hyperlink";
+      l = "${pkgs.eza}/bin/eza -F --hyperlink";
 
     };
     shellInit = ''

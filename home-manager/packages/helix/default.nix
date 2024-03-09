@@ -10,6 +10,7 @@
       pkgs.gopls
       pkgs.rust-analyzer
       pkgs.typst-lsp
+      pkgs.biome
       pkgs.nodePackages.pyright
       pkgs.dockerfile-language-server-nodejs
       pkgs.nodePackages.vscode-css-languageserver-bin
