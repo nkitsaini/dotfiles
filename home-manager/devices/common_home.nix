@@ -233,6 +233,7 @@
     fd
     jless
     hexyl
+    bat
     zip
     unzip
     gnutar
