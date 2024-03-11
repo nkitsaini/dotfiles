@@ -29,8 +29,8 @@
   xdg.userDirs = {
     enable = true;
     createDirectories = true;
-    desktop = "/var/empty";
-    publicShare = "/var/empty";
+    desktop = "desktop";
+    publicShare = "share";
     documents = "documents";
     download = "downloads";
     music = "music";

@@ -224,6 +224,7 @@
     # mpv
     mediainfo
 
+    
     # hello
     # qbittorrent
     deluge
@@ -235,7 +236,6 @@
     zip
     unzip
     gnutar
-    zsh
     rustup
     obsidian
     vlc
@@ -244,7 +244,6 @@
     qrencode
     mosh
     qpdf
-    minio-client
     python3
     kubectl
     sd

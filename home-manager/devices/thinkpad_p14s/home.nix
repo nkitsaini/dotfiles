@@ -1,4 +1,4 @@
-{ ... }:
+{ pkgs, ... }:
 (let
   name = "Ankit Saini";
   email = "asaini@singlestore.com";

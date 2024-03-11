@@ -18,7 +18,7 @@ in {
   xsession.windowManager.i3.enable = true;
 
   xsession.initExtra = ''
-    xset r rate 160 50
+    xset r rate 160 55
   '';
 
   xsession.windowManager.i3.config = rec {
