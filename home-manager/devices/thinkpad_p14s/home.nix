@@ -10,6 +10,13 @@ in {
   home.username = username;
   home.homeDirectory = homeDirectory;
   imports = [ ../common_home.nix ../../packages/i3.nix ];
-}
-)
+  home.packages = with pkgs;
+    [
+      (writeScriptBin "rebuild-system" ''
+        #!/usr/bin/env bash
+        home-manager switch --flake ${homeDirectory}/code/dotfiles/home-manager#asaini
+      '')
+
+    ];
+})
 

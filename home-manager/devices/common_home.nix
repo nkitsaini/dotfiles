@@ -284,6 +284,7 @@
     # I3 specific
     i3
     rofi
+    trashy
     pulseaudio
     playerctl
     brightnessctl

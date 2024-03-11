@@ -111,6 +111,8 @@
       ll = "${pkgs.eza}/bin/eza -lahgF --hyperlink";
       l = "${pkgs.eza}/bin/eza -F --hyperlink";
 
+      tp = "${pkgs.trashy}/bin/trash put";
+
     };
     shellInit = ''
       # Emulates vim's cursor shape behavior
