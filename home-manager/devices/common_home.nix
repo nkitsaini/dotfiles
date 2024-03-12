@@ -12,6 +12,7 @@
     ../packages/xdg_config.nix
     ../packages/yt-dlp.nix
     ../packages/vcs.nix
+    ../packages/yazi.nix
   ];
   # username and home directory are provided by the parent home.nix
 
@@ -74,7 +75,29 @@
   programs.neovim = {
     enable = true;
     vimAlias = true;
-    plugins = [ pkgs.vimPlugins.copilot-vim pkgs.vimPlugins.vim-fugitive ];
+    plugins = [
+      pkgs.vimPlugins.copilot-vim
+      pkgs.vimPlugins.vim-fugitive
+      pkgs.vimPlugins.neogit
+      pkgs.vimPlugins.tokyonight-nvim
+      pkgs.vimPlugins.diffview-nvim
+      pkgs.vimPlugins.telescope-nvim
+    ];
+    extraLuaConfig = ''
+      local neogit = require('neogit')
+      neogit.setup {}
+
+      vim.g.mapleader = ' '
+      vim.opt.termguicolors = true
+      vim.cmd 'colorscheme tokyonight-storm'
+
+      local builtin = require('telescope.builtin')
+      vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
+      vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
+      vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
+      vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
+      vim.print("Config done")
+    '';
   };
   programs.tealdeer = {
     enable = true;
@@ -130,6 +153,7 @@
     # Nix specific
     cached-nix-shell
 
+<<<<<<< Updated upstream
     # For yazi
     yazi
     unar
@@ -140,6 +164,17 @@
     # httpie in rust
     xh
 
+||||||| Stash base
+    # For yazi
+    yazi
+    unar
+    exiftool
+    # mpv
+    mediainfo
+
+    
+=======
+>>>>>>> Stashed changes
     # hello
     # qbittorrent
     deluge

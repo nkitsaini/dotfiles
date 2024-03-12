@@ -136,6 +136,16 @@
     '';
   };
 
+  home.packages = [
+    (pkgs.writeScriptBin "tmux-times" ''
+      #!/usr/bin/env bash
+      for pid in $(tmux list-panes -a -F '#{pane_pid}'); do
+        for child in $(pgrep -P $pid); do
+          ps -p $child -ho etime,comm,args;
+        done;
+      done
+    '')
+  ];
   programs.tmux = {
     enable = true;
     # sensible defaults
