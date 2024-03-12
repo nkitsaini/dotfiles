@@ -153,18 +153,9 @@
     # Nix specific
     cached-nix-shell
 
-<<<<<<< Updated upstream
-    # For yazi
-    yazi
-    unar
-    exiftool
-    # mpv
-    mediainfo
-
     # httpie in rust
     xh
 
-||||||| Stash base
     # For yazi
     yazi
     unar
@@ -173,8 +164,6 @@
     mediainfo
 
     
-=======
->>>>>>> Stashed changes
     # hello
     # qbittorrent
     deluge
