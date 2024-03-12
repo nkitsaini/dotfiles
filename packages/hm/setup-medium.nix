@@ -186,8 +186,6 @@
     # Nix specific
     cached-nix-shell
 
-    # httpie in rust
-    xh
     difftastic
 
     # For yazi
@@ -196,6 +194,9 @@
     exiftool
     # mpv
     mediainfo
+
+    # httpie in rust
+    xh
 
     # hello
     # qbittorrent
