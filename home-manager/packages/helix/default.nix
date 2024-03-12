@@ -150,6 +150,7 @@
         {
           name = "svelte";
           language-servers = [ "svelteserver" "tailwindcss-ls" "copilot" ];
+          block-comment-tokens = [{start="<!--"; end="-->";}];
         }
         {
           name = "css";

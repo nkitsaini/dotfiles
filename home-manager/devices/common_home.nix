@@ -11,6 +11,7 @@
     ../packages/firefox.nix
     ../packages/xdg_config.nix
     ../packages/yt-dlp.nix
+    ../packages/vcs.nix
   ];
   # username and home directory are provided by the parent home.nix
 
@@ -45,55 +46,6 @@
   # Stores configs I don't want to be in Nix
   programs.ssh.extraConfig =
     "Include ${config.home.homeDirectory}/.ssh/user_config";
-
-  programs.git = {
-    # username and email are defined
-    # by device specific config
-    enable = true;
-
-    delta = {
-      enable = true;
-      options = {
-        navigate = true;
-        syntax-theme = "Monokai Extended Light";
-        features = "side-by-side line-numbers decorations"; # hyperlinks
-        whitespace-error-style = "22 reverse";
-        decorations = {
-          commit-decoration-style = "bold yellow box ul";
-          file-style = "bold yellow ul";
-          file-decoration-style = "none";
-        };
-      };
-    };
-    extraConfig = {
-      diff = {
-        algorithm = "histogram";
-        renames = "copies";
-        mnemonicprefix = true;
-        colormoved = "default";
-      };
-      url = { "git@github.com:" = { insteadOf = "gh:"; }; };
-      url = { "git@github.com:nkitsaini/" = { insteadOf = "ghme:"; }; };
-      init.defaultBranch = "main";
-      help.autocorrect = 1;
-
-      push = {
-        default = "simple";
-        autoSetupRemote = true;
-      };
-      merge = { conflictstyle = "zdiff3"; };
-      rerere = { enabled = 1; };
-      pull = { rebase = true; };
-      rebase = { autostash = true; };
-    };
-    aliases = {
-      l =
-        "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset %C(yellow)%an%Creset' --all --abbrev-commit --date=relative";
-      ls = "log --stat --oneline";
-      pf = "push --force-with-lease";
-      p = "push";
-    };
-  };
 
   programs.ripgrep = {
     enable = true;
@@ -152,43 +104,6 @@
     protocol = "sparse"
   '';
 
-  xdg.enable = true;
-  /* [Default Applications]
-     x-scheme-handler/http=firefox.desktop
-     x-scheme-handler/https=firefox.desktop
-     x-scheme-handler/chrome=firefox.desktop
-     text/html=firefox.desktop
-     application/x-extension-htm=firefox.desktop
-     application/x-extension-html=firefox.desktop
-     application/x-extension-shtml=firefox.desktop
-     application/xhtml+xml=firefox.desktop
-     application/x-extension-xhtml=firefox.desktop
-     application/x-extension-xht=firefox.desktop
-
-     [Added Associations]
-     x-scheme-handler/http=firefox.desktop;
-     x-scheme-handler/https=firefox.desktop;
-     x-scheme-handler/chrome=firefox.desktop;
-     text/html=firefox.desktop;
-     application/x-extension-htm=firefox.desktop;
-     application/x-extension-html=firefox.desktop;
-     application/x-extension-shtml=firefox.desktop;
-     application/xhtml+xml=firefox.desktop;
-     application/x-extension-xhtml=firefox.desktop;
-     application/x-extension-xht=firefox.desktop;
-     [
-     "x-scheme-handler/http"
-     "x-scheme-handler/https"
-     "x-scheme-handler/chrome"
-     "text/html"
-     "application/x-extension-htm"
-     "application/x-extension-html"
-     "application/x-extension-shtml"
-     "application/xhtml+xml"
-     "application/x-extension-xhtml"
-     "application/x-extension-xht" ]
-  */
-
   # Home Directories
   home.file."external/.keep".text = ""; # External repos
   home.file."mnt/.keep".text = ""; # mount points
@@ -204,9 +119,7 @@
     icon_theme=breeze
   '';
 
-  programs.eza = {
-    enable = true;
-  };
+  programs.eza = { enable = true; };
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
@@ -224,7 +137,9 @@
     # mpv
     mediainfo
 
-    
+    # httpie in rust
+    xh
+
     # hello
     # qbittorrent
     deluge
@@ -294,6 +209,42 @@
 
     # MTP
     jmtpfs
+
+    # From old fish history
+    acpi
+    aria2
+    asciinema
+    bandwhich
+    bat
+    batsignal
+    bc
+    bear
+    biome
+    bitwarden
+    dig
+    delve
+    dolphin
+    duckdb
+    fortune
+    gdb
+    gen-license
+    hexyl
+    htop
+    httpie
+    hwatch
+    hyperfine
+    mold
+    tmate
+    libnotify
+    obs-studio
+    bruno
+    podman-compose
+    sqlite
+    litecli
+    tokei
+    valgrind
+    wget
+    evcxr
 
     # Kernel modules
     # TODO: enable when on NixOS

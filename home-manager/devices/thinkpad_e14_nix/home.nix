@@ -1,7 +1,7 @@
 { ... }:
 (let
   name = "Ankit Saini";
-  email = "asaini@singlestore.com";
+  email = "nnkitsaini@gmail.com";
   username = "ankits";
   homeDirectory = "/home/${username}";
 in {
@@ -11,6 +11,8 @@ in {
 
   programs.git.userName = name;
   programs.git.userEmail = email;
+  programs.jujutsu.settings.user.name = name;
+  programs.jujutsu.settings.user.email = email;
   programs.fish.shellAliases.rebuild-system = "sudo nixos-rebuild switch --flake /home/ankits/code/dotfiles/home-manager/";
 }
 )
