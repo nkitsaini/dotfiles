@@ -58,6 +58,15 @@
     settings = { flags = { color = "gruvbox-light"; }; };
   };
 
+  programs.bat = {
+    enable = true;
+    config = {
+      pager = "delta";
+      theme = "gruvbox-light";
+    };
+
+  };
+
   programs.alacritty = {
     enable = true;
     settings = {
@@ -155,6 +164,7 @@
 
     # httpie in rust
     xh
+    difftastic
 
     # For yazi
     yazi
@@ -172,7 +182,6 @@
     fd
     jless
     hexyl
-    bat
     zip
     unzip
     gnutar
@@ -240,8 +249,6 @@
     aria2
     asciinema
     bandwhich
-    bat
-    batsignal
     bc
     bear
     biome

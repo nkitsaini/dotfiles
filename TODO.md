@@ -1,2 +1,2 @@
-- Fish
-- Git
+- git config
+- ssh config

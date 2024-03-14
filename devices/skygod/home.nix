@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+{ config, pkgs, ... }: {
   home.stateVersion = "23.11";
   nixpkgs.config.allowUnfree = true;
   home.username = "root";
@@ -12,7 +12,7 @@
     [
       (writeScriptBin "rebuild-system" ''
         #!/usr/bin/env bash
-        sudo nixos-rebuild switch --flake /root/code/dotfiles/home-manager#skygod
+        sudo nixos-rebuild switch --flake ${config.home.homeDirectory}/code/home-manager#skygod
       '')
 
     ];

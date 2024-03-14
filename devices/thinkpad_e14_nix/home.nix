@@ -13,7 +13,7 @@ in {
   programs.git.userEmail = email;
   programs.jujutsu.settings.user.name = name;
   programs.jujutsu.settings.user.email = email;
-  programs.fish.shellAliases.rebuild-system = "sudo nixos-rebuild switch --flake /home/ankits/code/dotfiles/home-manager/";
+  programs.fish.shellAliases.rebuild-system = "sudo nixos-rebuild switch --flake ${homeDirectory}/code/dotfiles/";
 }
 )
 

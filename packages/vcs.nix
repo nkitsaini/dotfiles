@@ -19,12 +19,18 @@
         whitespace-error-style = "22 reverse";
         decorations = {
           commit-decoration-style = "bold yellow box ul";
+          # plus-style = ''syntax "#c4ffc4"'';
+          # minos-style = ''syntax "#ffebe8"'';
           file-style = "bold yellow ul";
           file-decoration-style = "none";
         };
       };
     };
     extraConfig = {
+      include.path = builtins.fetchurl {
+        url = "https://raw.githubusercontent.com/dandavison/delta/2f76c56d91d3d49feb170b89d7526e0272634998/themes.gitconfig";
+        sha256 = "06d6a1dafb5df353b2de52558bc17cf78b0fbd31da7186f41eb0489b2bcd6e26";
+      };
       diff = {
         algorithm = "histogram";
         renames = "copies";
