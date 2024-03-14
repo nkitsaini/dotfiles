@@ -1,5 +1,5 @@
-{ pkgs, ... }: {
-  home.packages = [ pkgs.git-absorb ];
+{ config, pkgs, ... }: {
+  home.packages = [ pkgs.git-absorb pkgs.meld ];
   programs.jujutsu = {
     enable = true;
     settings = { ui.paginate = "never"; };
@@ -31,10 +31,19 @@
         mnemonicprefix = true;
         colormoved = "default";
       };
-      url = { "git@github.com:" = { insteadOf = "gh:"; }; };
-      url = { "git@github.com:nkitsaini/" = { insteadOf = "ghme:"; }; };
+      url = {
+        "git@github.com:" = { insteadOf = "gh:"; };
+        "git@github.com:nkitsaini/" = { insteadOf = "ghme:"; };
+      };
+
+      transfer.fsckobjects = true;
+      fetch.fsckobjects = true;
+      receive.fsckObjects = true;
+
+      branch = { sort = "-committerdate"; };
       init.defaultBranch = "main";
-      help.autocorrect = 1;
+      help.autocorrect = 10;
+      merge.tool = "meld";
 
       push = {
         default = "simple";
@@ -44,6 +53,8 @@
       rerere = { enabled = 1; };
       pull = { rebase = true; };
       rebase = { autostash = true; };
+      commit = { verbose = true; };
+      core = { excludeFiles = "${config.home.homeDirectory}/.gitignore"; };
     };
     aliases = {
       l =

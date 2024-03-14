@@ -9,12 +9,22 @@
   ];
   programs.yazi.enable = true;
   programs.yazi.settings = {
-    opener = { video = [{ exec = ''vlc "$1"''; }]; };
+    opener = {
+      video = [{ exec = ''vlc -d "$1"''; }];
+      audio = [{ exec = ''vlc -d "$1"''; }];
+    };
     open = {
-      rules = [{
-        mime = "video/*";
-        use = "video";
-      }];
+      rules = [
+        {
+          mime = "video/*";
+          use = "video";
+        }
+
+        {
+          mime = "audio/*";
+          use = "audio";
+        }
+      ];
     };
   };
 }

@@ -184,7 +184,8 @@
     qrencode
     mosh
     qpdf
-    python3
+    gcc
+    python312
     kubectl
     sd
     rsync

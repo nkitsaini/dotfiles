@@ -1,5 +1,7 @@
-{ pkgs, nkitsaini_helix, system, ... }: {
-  programs.helix = {
+{ config, pkgs, nkitsaini_helix, system, ... }: {
+  programs.helix = let
+    comment_binding = '':pipe ${config.home.homeDirectory}/code/commenter/target/release/commenter --start-comment-token="/*" --end-comment-token="*/"'';
+  in {
     enable = true;
     package = nkitsaini_helix.packages.${system}.default;
     defaultEditor = true;
@@ -92,6 +94,8 @@
               };
             };
 
+            m = comment_binding;
+
           };
         };
 
@@ -105,6 +109,8 @@
           space = {
             l = ''
               :pipe-to python3 -c "import shlex, os, sys;a=sys.stdin.read();a += '\\n'; os.system(shlex.join(['tmux', 'send-keys', '-t', '1', a]));"'';
+
+            m = comment_binding;
           };
         };
       };
