@@ -196,6 +196,8 @@
     gcc
     python312
     kubectl
+    kubectl-tree
+    kubectx
     sd
     rsync
     nmap
