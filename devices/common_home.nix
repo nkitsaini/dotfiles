@@ -180,6 +180,7 @@
     xclip
     jq
     fd
+    killall
     jless
     hexyl
     zip
@@ -265,6 +266,8 @@
     hexyl
     htop
     httpie
+    iperf3
+    gnumake
     hwatch
     hyperfine
     mold

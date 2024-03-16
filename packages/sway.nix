@@ -42,11 +42,14 @@ in {
     swaylock
     swayidle
     xwayland
-
     grim
     slurp
   ];
   imports = [ ./waybar ];
+
+  services.copyq = {
+    enable = true;
+  };
   # programs.swaylock.enable = true;
   services.mako = {
     enable = true;

@@ -76,18 +76,7 @@
         # NOTE: Change this to aarch64-linux if you are on ARM
         inherit system;
         modules = [
-          # idea_from: https://discourse.nixos.org/t/command-not-found-unable-to-open-database/3807/11
-          # syntax_from: https://raw.githubusercontent.com/MatthewCroughan/nixcfg/master/flake.nix
-          # { nixpkgs.overlays = [ nur.overlay ]; }
-          # ({ pkgs, ... }:
-          #   let
-          #     nur-no-pkgs =
-          #       import nur { nurpkgs = import nixpkgs { inherit system; }; };
-          #   in {
-          #     imports = [ nur-no-pkgs.repos.iopq.modules.xraya ];
-          #     services.xraya.enable = true;
-          #   })
-          ./devices/thinkpad_e14_nix/nixos-config/configuration.nix
+          ./devices/thinkpad_e14_nix/configuration.nix
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
@@ -119,6 +108,29 @@
               import ./devices/skygod/home.nix;
             home-manager.extraSpecialArgs = {
               inherit system;
+              inherit nkitsaini_helix;
+              enableNixGL = false;
+            };
+          }
+        ];
+      };
+
+      nixosConfigurations.budla = nixpkgs.lib.nixosSystem {
+        # NOTE: Change this to aarch64-linux if you are on ARM
+        inherit system;
+        modules = [
+          ./devices/budla/configuration.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.budla =
+              import ./devices/budla/home.nix;
+            home-manager.extraSpecialArgs = {
+              inherit system;
+              inherit hyprland;
+              inherit hy3;
+              inherit nur;
               inherit nkitsaini_helix;
               enableNixGL = false;
             };
