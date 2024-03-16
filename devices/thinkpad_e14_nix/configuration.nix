@@ -39,7 +39,7 @@
   xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
   ####### SWAY END
 
-  networking.hostName = "nixos"; # Define your hostname.
+  networking.hostName = "ankits"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
   # TODO: debug iwd issue
   # networking.wireless.iwd = {
@@ -104,7 +104,6 @@
   # Enable CUPS to print documents.
   services.printing.enable = true;
   services.tlp.enable = true;
-
 
   # Enable sound with pipewire.
   sound.enable = true;

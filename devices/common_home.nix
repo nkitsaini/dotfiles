@@ -131,6 +131,27 @@
     }
   '';
 
+  # TODO: Move to nix config using registeries v2 after https://github.com/NixOS/nixpkgs/issues/280288
+  xdg.configFile."containers/registries.conf".source =
+    (pkgs.formats.toml { }).generate "registeries.conf" {
+      # unqualified-search-registries = [ "quay.io" "docker.io" ];
+      unqualified-search-registries = [ "docker.io" ];
+      registry = [
+        {
+          insecure = true;
+          location = "budla.lan:5000/";
+        }
+        {
+          insecure = true;
+          location = "budla.lan/containers";
+        }
+        {
+          insecure = true;
+          location = "budla.lan/docker";
+        }
+      ];
+    };
+
   home.file.".cargo/config.toml".text = ''
     [registries.crates-io]
     protocol = "sparse"
@@ -274,7 +295,10 @@
     tmate
     libnotify
     obs-studio
+    iptables
     bruno
+    tree
+    podman
     podman-compose
     sqlite
     litecli

@@ -103,6 +103,7 @@
           "C-e" = "show_or_next_copilot_completion";
           "C-f" = "hide_or_prev_copilot_completion";
           "C-y" = "apply_copilot_completion";
+          "C-space" = "completion";
         };
 
         select = {

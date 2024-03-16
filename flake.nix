@@ -72,7 +72,7 @@
       };
 
       # NOTE: 'nixos' is the default hostname set by the installer
-      nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      nixosConfigurations.ankits = nixpkgs.lib.nixosSystem {
         # NOTE: Change this to aarch64-linux if you are on ARM
         inherit system;
         modules = [

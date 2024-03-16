@@ -8,6 +8,7 @@
   imports = [ # Include the results of the hardware scan.
     ./hardware-configuration.nix
     ./k3s.nix
+    ./docker-registery.nix
   ];
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -219,8 +220,8 @@
     settings = { };
   };
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 8005 ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
+  networking.firewall.allowedTCPPorts = [ 8005  ];
+  networking.firewall.allowedUDPPorts = [  ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
 
