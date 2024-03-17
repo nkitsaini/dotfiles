@@ -108,8 +108,8 @@
       monitor-brightness = "ddcutil -d 1 setvcp x10";
 
       j = "z"; # jump
-      ll = "${pkgs.eza}/bin/eza -lahgF --hyperlink";
-      l = "${pkgs.eza}/bin/eza -F --hyperlink";
+      ll = "${pkgs.eza}/bin/eza -lahgF";
+      l = "${pkgs.eza}/bin/eza -F";
 
       tp = "${pkgs.trashy}/bin/trash put";
 
