@@ -9,7 +9,7 @@ in {
   programs.git.userEmail = email;
   home.username = username;
   home.homeDirectory = homeDirectory;
-  imports = [ ../common_home.nix ../../packages/i3.nix ];
+  imports = [ ../../packages/hm/setup-medium.nix ../../packages/hm/i3.nix ];
   home.packages = with pkgs;
     [
       (writeScriptBin "rebuild-system" ''

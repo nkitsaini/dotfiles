@@ -8,8 +8,6 @@
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
-  hardware.i2c.enable = true;
-  hardware.opengl.enable = true;
 
   boot.initrd.availableKernelModules = [ "ehci_pci" "ahci" "firewire_ohci" "usb_storage" "sd_mod" "sr_mod" "sdhci_pci" ];
   boot.initrd.kernelModules = [ ];

@@ -131,6 +131,9 @@
 
       set PATH "${config.home.homeDirectory}/bin/:$PATH"
 
+      # Could've sworn this was already the default
+      fzf_configure_bindings  --directory=\ct
+
       # disable ls coloring by grc
       set -U grc_plugin_ignore_execs ls
     '';

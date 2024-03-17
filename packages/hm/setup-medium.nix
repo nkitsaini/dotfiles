@@ -1,18 +1,21 @@
+# Has everything except for desktop manager.
+# It is good to be used in nixos or standalone home-manager for desktop setups.
+
 { config, pkgs, nur, ... }: ({
   # modules = [
   #   nur.hmModules.nur
   # ];
   imports = [
     nur.hmModules.nur
-    ../packages/hm/shell
-    ../packages/hm/wezterm
-    ../packages/hm/tms
-    ../packages/hm/helix
-    ../packages/hm/firefox.nix
-    ../packages/hm/xdg_config.nix
-    ../packages/hm/yt-dlp.nix
-    ../packages/hm/vcs.nix
-    ../packages/hm/yazi.nix
+    ./shell
+    ./wezterm
+    ./tms
+    ./helix
+    ./firefox.nix
+    ./xdg_config.nix
+    ./yt-dlp.nix
+    ./vcs.nix
+    ./yazi.nix
   ];
   # username and home directory are provided by the parent home.nix
 
@@ -114,7 +117,7 @@
   };
   programs.gitui.enable = true;
   programs.gitui.keyConfig =
-    builtins.readFile ../packages/gitui_keybindings.ron;
+    builtins.readFile ./gitui_keybindings.ron;
 
   xsession.enable = true;
   programs.nix-index = { enable = true; };
@@ -194,7 +197,6 @@
     # mpv
     mediainfo
 
-    
     # hello
     # qbittorrent
     deluge
@@ -361,3 +363,4 @@
 }
 
 )
+
