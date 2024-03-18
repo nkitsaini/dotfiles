@@ -6,6 +6,8 @@
 # - run this file to create partitions (have disko pre-installed in image)
 # - run `nixos-generate-config --show-hardware-config --no-filesystems` and save to this directory  (also remove the hardware-configuration from here, so that it is an error, or do something like {todo.add-hardware-config = ''This will fail. Run command to generate config''}})
 # - run `nixos-install --flake ...`
+# Maybe also have helix in the iso to avoid rebuilding (this is the only thing we build from source). Hopefully no more, once plugin system arrives.
+#     - similarly see if any big dependency can be included to allow quick install.
 
 {
   disko.devices = {
