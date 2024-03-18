@@ -92,10 +92,11 @@ in {
     };
 
     output = {
-      "${out_laptop}" = { position = "0,0"; };
+      # Can't use negative indexes due to https://github.com/swaywm/sway/wiki#mouse-events-clicking-scrolling-arent-working-on-some-of-my-workspaces
+      "${out_laptop}" = { position = "0,1080"; };
       "${out_monitor}" = {
         resolution = "2560x1080";
-        position = "0,-1080";
+        position = "0,0";
       };
     };
 

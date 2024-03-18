@@ -112,7 +112,8 @@
       l = "${pkgs.eza}/bin/eza -F";
 
       tp = "${pkgs.trashy}/bin/trash put";
-
+      rm = "echo 'use `tp` or `rmforce`'";
+      rmforce = "${pkgs.coreutils-full}/bin/rm";
     };
     shellInit = ''
       # Emulates vim's cursor shape behavior
