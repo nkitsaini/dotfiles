@@ -308,6 +308,11 @@
     wget
     evcxr
 
+    # btrfs
+    compsize
+
+    sshfs
+
     # Kernel modules
     # TODO: enable when on NixOS
     # linuxKernel.packages.linux_6_7.ddcci-driver
