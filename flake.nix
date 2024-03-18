@@ -14,22 +14,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nur.url = "github:nix-community/NUR";
-
-    # https://github.com/outfoxxed/hy3?tab=readme-ov-file#nix
-    hyprland.url =
-      "github:hyprwm/Hyprland?ref=v0.35.0"; # where {version} is the hyprland release version
-    # or "github:hyprwm/Hyprland" to follow the development branch
-
-    hy3 = {
-      url =
-        "github:outfoxxed/hy3?ref=hl0.35.0"; # where {version} is the hyprland release version
-      # or "github:outfoxxed/hy3" to follow the development branch.
-      # (you may encounter issues if you dont do the same for hyprland)
-      inputs.hyprland.follows = "hyprland";
-    };
   };
 
-  outputs = { nixpkgs, home-manager, nkitsaini_helix, nur, hyprland, hy3, ... }:
+  outputs = { nixpkgs, home-manager, nkitsaini_helix, nur,... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -42,8 +29,6 @@
         modules = [ ./devices/thinkpad_e14/home.nix ];
         extraSpecialArgs = {
           inherit nkitsaini_helix;
-          inherit hyprland;
-          inherit hy3;
           inherit system;
           inherit nur;
           enableNixGL = true;
@@ -60,8 +45,6 @@
         modules = [ ./devices/thinkpad_p14s/home.nix ];
         extraSpecialArgs = {
           inherit nkitsaini_helix;
-          inherit hyprland;
-          inherit hy3;
           inherit system;
           inherit nur;
           enableNixGL = true;
@@ -85,8 +68,6 @@
               import ./devices/thinkpad_e14_nix/home.nix;
             home-manager.extraSpecialArgs = {
               inherit system;
-              inherit hyprland;
-              inherit hy3;
               inherit nkitsaini_helix;
               inherit nur;
               enableNixGL = false;
@@ -128,8 +109,6 @@
               import ./devices/budla/home.nix;
             home-manager.extraSpecialArgs = {
               inherit system;
-              inherit hyprland;
-              inherit hy3;
               inherit nur;
               inherit nkitsaini_helix;
               enableNixGL = false;
