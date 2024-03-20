@@ -277,7 +277,7 @@
     bc
     bear
     biome
-    bws # bitwarden cli
+    bitwarden-cli
     dig
     delve
     dolphin
