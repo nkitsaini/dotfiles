@@ -14,7 +14,7 @@ in {
     [
       (writeScriptBin "rebuild-system" ''
         #!/usr/bin/env bash
-        home-manager switch --flake ${homeDirectory}/code/home-manager#asaini
+        home-manager switch --flake ${homeDirectory}/code/dotfiles#asaini
       '')
 
     ];

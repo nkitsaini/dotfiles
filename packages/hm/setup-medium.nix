@@ -304,6 +304,7 @@
     podman-compose
     sqlite
     litecli
+    pgcli
     tokei
     valgrind
     wget
