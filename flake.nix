@@ -117,5 +117,12 @@
         ];
       };
 
+      iso = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          ./devices/iso/default.nix
+        ];
+      };
+
     };
 }
