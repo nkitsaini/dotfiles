@@ -36,12 +36,6 @@
   # networking.proxy.default = "http://user:password@proxy:port/";
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
-  networking.useNetworkd = true;
-  systemd.network.networks."40-wired" = {
-    matchConfig = {Name = pkgs.lib.mkForce "enp* eth*" ;};
-    DHCP = "yes";
-  };
-
   # Enable CUPS to print documents.
   services.printing.enable = true;
 
