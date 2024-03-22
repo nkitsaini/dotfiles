@@ -121,6 +121,19 @@
         inherit system;
         modules = [
           ./devices/iso/default.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.nixos =
+              import ./devices/iso/home.nix;
+            home-manager.extraSpecialArgs = {
+              inherit system;
+              inherit nur;
+              inherit nkitsaini_helix;
+              enableNixGL = false;
+            };
+          }
         ];
       };
 

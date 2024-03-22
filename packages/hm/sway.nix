@@ -44,6 +44,10 @@ in {
     xwayland
     grim
     slurp
+    (pkgs.writeScriptBin "screenshot" ''
+      #!${pkgs.bash}/bin/bash
+      
+    '')
   ];
   imports = [ ./waybar ];
 

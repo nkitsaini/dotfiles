@@ -213,7 +213,6 @@
     rustup
     obsidian
     vlc
-    github-desktop
     pavucontrol
     qrencode
     qpdf
@@ -241,7 +240,6 @@
     hyperfine
     alacritty-theme
     wezterm
-    brave
     bun
     ncdu
     caddy
@@ -296,7 +294,6 @@
     mold
     tmate
     libnotify
-    obs-studio
     iptables
     bruno
     tree
@@ -308,7 +305,6 @@
     tokei
     valgrind
     wget
-    evcxr
 
     # btrfs
     compsize

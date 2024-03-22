@@ -3,5 +3,7 @@
     neovim
     tmux
     git
+    fish
+    helix
   ];
 }

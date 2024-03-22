@@ -10,6 +10,7 @@
     ./wireguard.nix
     ../../packages/os/kernel.nix
     ../../packages/os/podman.nix
+    ../../packages/os/virtualbox.nix
     ../../packages/os/ssh.nix
     ../../packages/os/battery.nix
     ../../packages/os/sound.nix
@@ -28,6 +29,7 @@
 
   networking.hostName = "ankits"; # Define your hostname.
 
+   users.extraGroups.vboxusers.members = [ "ankits" ];
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   # Configure network proxy if necessary
