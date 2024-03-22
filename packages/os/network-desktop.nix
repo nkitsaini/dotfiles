@@ -19,12 +19,13 @@
   # otherwise blocks nixos-rebuild if wired is unplugged.
   systemd.network.wait-online.enable = false;
 
-  systemd.network.networks."40-wired" = {
+  systemd.network.networks."30-wired" = {
     matchConfig = { Name = lib.mkForce "enp* eth*"; };
     DHCP = "yes";
     networkConfig = {
       IPv6PrivacyExtensions = "yes";
-      Address = "192.168.10.1/24";
+      LinkLocalAddressing ="yes";
+      # Address = "192.168.10.2/24";
     };
   };
 
