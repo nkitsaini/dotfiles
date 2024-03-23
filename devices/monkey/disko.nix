@@ -7,6 +7,12 @@
 # nvme-SKHynix_HFS001TDE9X081N_AN12N419010402B1Q-part1@                                                             usb-Kingston_DataTraveler_2.0_60A44C413C91F040961B3D3C-0:0-part1@
 # nvme-SKHynix_HFS001TDE9X081N_AN12N419010402B1Q-part2@                                                             usb-Kingston_DataTraveler_2.0_60A44C413C91F040961B3D3C-0:0-part2@
 
+
+
+# NOTE: if after the install /boot gets garbled, i.e. ls /boot gives Input/Output error with weird filenames, clean and re-format /boot and run
+# sudo NIXOS_INSTALL_BOOTLOADER=1 /nix/var/nix/profiles/system/bin/switch-to-configuration boot
+# This happened once, not sure if it was one time thing or not?
+
 {
   disko.devices.disk = {
     primary = {
