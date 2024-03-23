@@ -14,9 +14,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nur.url = "github:nix-community/NUR";
+    disko.url = "github:nix-community/disko";
+    disko.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { nixpkgs, home-manager, nkitsaini_helix, nur, ... }@inputs:
+  outputs = { nixpkgs, home-manager, nkitsaini_helix, nur, disko, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -62,7 +64,11 @@
           inherit inputs;
           inherit system;
         };
-        modules = [ ./devices/monkey home-manager.nixosModules.home-manager ];
+        modules = [ ./devices/monkey
+        home-manager.nixosModules.home-manager
+        disko.nixosModules.disko
+
+        ];
       };
 
       nixosConfigurations.crane = nixpkgs.lib.nixosSystem {

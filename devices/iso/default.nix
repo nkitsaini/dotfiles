@@ -50,6 +50,8 @@
       Use commands starting with `nixc` to manage stuff.
 
       # Use iwctl to manage network
+      # Make sure to stop wpa (sudo systemctl stop wpa_supplicant.service) and keep NetworkManager running.
+      # If it doesn't work play around with NetworkManager off/on and update this document about whichever works :)
       iwctl
       > station wlan0 get-networks
       > station wlan0 connect xyz
@@ -62,7 +64,7 @@
       nixc-clone-dotfiles
       cd ~/code/dotfiles
       nixos-generate-config --show-hardware-config --no-filesystems > devices/<hostname>/hardware-configuration.nix
-      git diff # Verify if changes look okay. possibly there will be none. but if there are copy this to /mnt/root/hardware-configuration.nix so that it can later be pushed to github 
+      git diff # Verify if changes look okay. possibly there will be none. but if there are copy this to /mnt/tmp_dotfiles/... so that it can later be pushed to github 
 
       # Do nix install
       cd /mnt
