@@ -9,6 +9,9 @@
     ./hardware-configuration.nix
     ./wireguard.nix
 
+    # sudo nix run github:nix-community/disko --extra-experimental-features flakes --extra=experimental-features nix-command -- --mode disko --flake github:nkitsaini/dotfiles#monkey
+    ./disko.nix
+
     ../../packages/os/core.nix
     ../../packages/os/kernel.nix
 

@@ -48,6 +48,28 @@
     (pkgs.writeScriptBin "nixc-readme" ''
       #!${pkgs.coreutils-full}/bin/cat
       Use commands starting with `nixc` to manage stuff.
+
+      # Use iwctl to manage network
+      iwctl
+      > station wlan0 get-networks
+      > station wlan0 connect xyz
+
+      # Apply file partition
+      sudo nix run github:nix-community/disko --extra-experimental-features flakes --extra=experimental-features nix-command -- --mode disko --flake github:nkitsaini/dotfiles#<hostname, eg. monkey>
+
+
+      # Clone the dotfiles
+      nixc-clone-dotfiles
+      cd ~/code/dotfiles
+      nixos-generate-config --show-hardware-config --no-filesystems > devices/<hostname>/hardware-configuration.nix
+      git diff # Verify if changes look okay. possibly there will be none. but if there are copy this to /mnt/root/hardware-configuration.nix so that it can later be pushed to github 
+
+      # Do nix install
+      cd /mnt
+      sudo nixos-install --flake ~/code/dotfiles#<hostname> 
+
+
+      # Should be good to restart now
     '')
   ];
 
