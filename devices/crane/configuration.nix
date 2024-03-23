@@ -11,7 +11,7 @@
 
   boot.tmp.cleanOnBoot = true;
   zramSwap.enable = true;
-  networking.hostName = "skygod";
+  networking.hostName = "crane";
   networking.domain = "";
   users.users.root.openssh.authorizedKeys.keys = [(import ./authorized_keys.nix)];
 

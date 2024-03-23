@@ -1,9 +1,9 @@
-{ config, pkgs, nkitsaini_helix, system, ... }: {
+{ config, pkgs, inputs, system, ... }: {
   programs.helix = let
     comment_binding = '':pipe ${config.home.homeDirectory}/code/commenter/target/release/commenter --start-comment-token="/*" --end-comment-token="*/"'';
   in {
     enable = true;
-    package = nkitsaini_helix.packages.${system}.default;
+    package = inputs.nkitsaini_helix.packages.${system}.default;
     defaultEditor = true;
     extraPackages = [
       pkgs.marksman

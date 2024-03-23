@@ -1,4 +1,4 @@
-{ config, pkgs, lib, enableNixGL, ... }:
+{ config, pkgs, lib, enableNixGL ? false, ... }:
 let
   left = "h";
   right = "l";

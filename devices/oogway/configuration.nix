@@ -7,10 +7,10 @@
 {
   imports = [ # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    ./wireguard.nix
+    ./k3s.nix
+    ./docker-registery.nix
     ../../packages/os/kernel.nix
     ../../packages/os/podman.nix
-    ../../packages/os/virtualbox.nix
     ../../packages/os/ssh.nix
     ../../packages/os/battery.nix
     ../../packages/os/sound.nix
@@ -22,42 +22,51 @@
     ../../packages/os/shell-minimal.nix
   ];
 
-
+  
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  networking.hostName = "ankits"; # Define your hostname.
+  networking.hostName = "oogway"; # Define your hostname.
 
-   users.extraGroups.vboxusers.members = [ "ankits" ];
+  services.logind.lidSwitch = "ignore";
+  services.logind.lidSwitchDocked = "ignore";
+  services.logind.lidSwitchExternalPower = "ignore";
+
+  
+  # For ddcutil
+  hardware.i2c.enable = true;
+
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
-
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.ankits = {
+  users.users.oogway = {
     isNormalUser = true;
-    description = "Ankit Saini";
+    description = "Oogway The Survivor";
     extraGroups = [
       "networkmanager"
       "wheel"
-      "video"
-    ]; # "video" is required for brightness control
+      "video" # "video" is required for brightness control
+    ];
     packages = with pkgs;
       [
         firefox
-        #  thunderbird
       ];
   };
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
+  # TODO:
+  services.openssh = {
+    settings = {
+      KbdInteractiveAuthentication = pkgs.lib.mkForce false;
+      PasswordAuthentication = pkgs.lib.mkForce false;
+    };
+  };
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

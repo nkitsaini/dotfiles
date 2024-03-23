@@ -5,9 +5,9 @@
 
 environment.etc."rancher/k3s/registries.yaml".text = ''
 mirrors:
-  budla.lan:5000:
+  oogway.lan:5000:
     endpoint:
-      - "http://budla.lan:5000"
+      - "http://oogway.lan:5000"
 '';
   
 }

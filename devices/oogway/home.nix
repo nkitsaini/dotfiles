@@ -1,8 +1,8 @@
 { ... }:
 (let
-  name = "Budla The Survivor";
-  email = "budla@example.com";
-  username = "budla";
+  name = "Oogway The Survivor";
+  email = "oogway@example.com";
+  username = "oogway";
   homeDirectory = "/home/${username}";
 in {
   home.username = username;
@@ -14,6 +14,6 @@ in {
   programs.jujutsu.settings.user.name = name;
   programs.jujutsu.settings.user.email = email;
   programs.fish.shellAliases.rebuild-system =
-    "sudo nixos-rebuild switch --flake ${homeDirectory}/code/dotfiles/#budla";
+    "sudo nixos-rebuild switch --flake ${homeDirectory}/code/dotfiles/#oogway";
 })
 

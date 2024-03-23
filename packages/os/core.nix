@@ -1,0 +1,65 @@
+# The core profile is automatically applied to all hosts.
+{ lib, pkgs, inputs, system, ... }: {
+
+  i18n.defaultLocale = "en_US.UTF-8";
+  time.timeZone = lib.mkDefault "Asia/Kolkata";
+
+  environment = {
+    systemPackages = with pkgs; [
+      binutils
+      coreutils
+      curl
+      direnv
+      dnsutils
+      dosfstools
+      fd
+      git
+      tmux
+      fish
+      neovim
+      htop
+      powertop
+      iputils
+      jq
+      # moreutils
+      nmap
+      sd
+      ripgrep
+      util-linux
+      whois
+    ];
+  };
+
+  nix = {
+    gc.automatic = true;
+    optimise.automatic = true;
+    settings = {
+      cores = 0;
+      auto-optimise-store = true;
+      allowed-users = [ "@wheel" ];
+      trusted-users = [ "root" "@wheel" ];
+      experimental-features = [ "nix-command" "flakes" ];
+    };
+  };
+
+  # Need to configure home-manager to work with flakes
+  home-manager.useGlobalPkgs = true;
+  home-manager.useUserPackages = true;
+  home-manager.extraSpecialArgs = { inherit inputs; inherit system; enableNixGL = false; };
+
+  nixpkgs.config.allowUnfree = true;
+
+
+  security.protectKernelImage = true;
+  services.earlyoom.enable = true;
+  users.mutableUsers = false;
+
+  # This value determines the NixOS release from which the default
+  # settings for stateful data, like file locations and database versions
+  # on your system were taken. It‘s perfectly fine and recommended to leave
+  # this value at the release version of the first install of this system.
+  # Before changing this value read the documentation for this option
+  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
+  system.stateVersion = "23.11"; # Did you read the comment?
+}
+

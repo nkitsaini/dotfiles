@@ -1,12 +1,12 @@
 # Has everything except for desktop manager.
 # It is good to be used in nixos or standalone home-manager for desktop setups.
 
-{ config, pkgs, nur, ... }: ({
+{ config, pkgs, inputs, ... }: ({
   # modules = [
   #   nur.hmModules.nur
   # ];
   imports = [
-    nur.hmModules.nur
+    inputs.nur.hmModules.nur
     ./shell
     ./wezterm
     ./tms
@@ -142,15 +142,15 @@
       registry = [
         {
           insecure = true;
-          location = "budla.lan:5000/";
+          location = "oogway.lan:5000/";
         }
         {
           insecure = true;
-          location = "budla.lan/containers";
+          location = "oogway.lan/containers";
         }
         {
           insecure = true;
-          location = "budla.lan/docker";
+          location = "oogway.lan/docker";
         }
       ];
     };

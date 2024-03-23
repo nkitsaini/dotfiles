@@ -6,43 +6,26 @@
     ../../packages/os/ssh.nix
     ../../packages/os/sound.nix
     ../../packages/os/keyboard.nix
-    ../../packages/os/locale_in.nix
     ../../packages/os/network-desktop.nix
-    # ../../packages/os/sway-knobs.nix
     ../../packages/os/fonts.nix
-    ../../packages/os/shell-minimal.nix
+    ../../packages/os/core.nix
   ];
 
   # not sure?
   services.xserver.windowManager.i3 = { enable = true; };
 
+  users.users.nixos = {
+    openssh.authorizedKeys.keys = import ../../packages/authorized_keys.nix;
+  };
+  users.users.root = {
+    openssh.authorizedKeys.keys = import ../../packages/authorized_keys.nix;
+  };
+
   # Needed for https://github.com/NixOS/nixpkgs/issues/58959
   boot.supportedFilesystems =
     lib.mkForce [ "btrfs" "reiserfs" "vfat" "f2fs" "xfs" "ntfs" "cifs" ];
 
-  networking.useNetworkd = true;
-  systemd.network.networks."40-wired" = {
-    matchConfig = { Name = pkgs.lib.mkForce "enp* eth*"; };
-    DHCP = "yes";
-  };
-
-  # users.users.iso = {
-  #   isNormalUser = true;
-  #   description = "ISO";
-  #   extraGroups = [
-  #     "networkmanager"
-  #     "wheel"
-  #     "video"
-  #   ]; # "video" is required for brightness control
-  #   packages = with pkgs;
-  #     [
-  #       firefox
-  #       #  thunderbird
-  #     ];
-  # };
-
-  # Allow unfree packages
-  nixpkgs.config.allowUnfree = true;
+  home-manager.users.nixos = import ./home.nix;
 
   environment.systemPackages = with pkgs; [
     bitwarden-cli

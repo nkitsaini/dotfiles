@@ -16,7 +16,7 @@
     nur.url = "github:nix-community/NUR";
   };
 
-  outputs = { nixpkgs, home-manager, nkitsaini_helix, nur,... }:
+  outputs = { nixpkgs, home-manager, nkitsaini_helix, nur, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -55,38 +55,26 @@
       };
 
       # NOTE: 'nixos' is the default hostname set by the installer
-      nixosConfigurations.ankits = nixpkgs.lib.nixosSystem {
+      nixosConfigurations.monkey = nixpkgs.lib.nixosSystem {
         # NOTE: Change this to aarch64-linux if you are on ARM
         inherit system;
-        modules = [
-          ./devices/thinkpad_e14_nix/configuration.nix
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.ankits =
-              import ./devices/thinkpad_e14_nix/home.nix;
-            home-manager.extraSpecialArgs = {
-              inherit system;
-              inherit nkitsaini_helix;
-              inherit nur;
-              enableNixGL = false;
-            };
-          }
-        ];
+        specialArgs = {
+          inherit inputs;
+          inherit system;
+        };
+        modules = [ ./devices/monkey home-manager.nixosModules.home-manager ];
       };
 
-      nixosConfigurations.skygod = nixpkgs.lib.nixosSystem {
+      nixosConfigurations.crane = nixpkgs.lib.nixosSystem {
         # NOTE: Change this to aarch64-linux if you are on ARM
         inherit system;
         modules = [
-          ./devices/skygod/configuration.nix
+          ./devices/crane/configuration.nix
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.users.root =
-              import ./devices/skygod/home.nix;
+            home-manager.users.root = import ./devices/crane/home.nix;
             home-manager.extraSpecialArgs = {
               inherit system;
               inherit nkitsaini_helix;
@@ -96,17 +84,16 @@
         ];
       };
 
-      nixosConfigurations.budla = nixpkgs.lib.nixosSystem {
+      nixosConfigurations.oogway = nixpkgs.lib.nixosSystem {
         # NOTE: Change this to aarch64-linux if you are on ARM
         inherit system;
         modules = [
-          ./devices/budla/configuration.nix
+          ./devices/oogway/configuration.nix
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.users.budla =
-              import ./devices/budla/home.nix;
+            home-manager.users.oogway = import ./devices/oogway/home.nix;
             home-manager.extraSpecialArgs = {
               inherit system;
               inherit nur;
@@ -119,22 +106,12 @@
 
       iso = nixpkgs.lib.nixosSystem {
         inherit system;
-        modules = [
-          ./devices/iso/default.nix
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.nixos =
-              import ./devices/iso/home.nix;
-            home-manager.extraSpecialArgs = {
-              inherit system;
-              inherit nur;
-              inherit nkitsaini_helix;
-              enableNixGL = false;
-            };
-          }
-        ];
+        specialArgs = {
+          inherit system;
+          inherit inputs;
+        };
+        modules =
+          [ ./devices/iso/default.nix home-manager.nixosModules.home-manager ];
       };
 
     };
