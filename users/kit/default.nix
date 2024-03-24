@@ -1,7 +1,7 @@
 { hostname, ... }:
 let
   name = "Ankit Saini";
-  email = "ankitsaini100205@gmail.com";
+  email = "nnkitsaini@gmail.com";
   username = import ./username.nix;
   homeDirectory = "/home/${username}";
 in {
