@@ -82,24 +82,6 @@
         ];
       };
 
-      nixosConfigurations.oogway = nixpkgs.lib.nixosSystem {
-        # NOTE: Change this to aarch64-linux if you are on ARM
-        inherit system;
-        modules = [
-          ./devices/oogway/configuration.nix
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.oogway = import ./devices/oogway/home.nix;
-            home-manager.extraSpecialArgs = {
-              inherit system;
-              inherit nur;
-              inherit nkitsaini_helix;
-              enableNixGL = false;
-            };
-          }
-        ];
-      };
+      nixosConfigurations.oogway = mkSystem "oogway";
     };
 }
