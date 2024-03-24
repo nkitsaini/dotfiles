@@ -17,6 +17,7 @@
   disko.devices.disk = {
     primary = {
       type = "disk";
+      # Next time use ID
       device = "/dev/nvme0n1";
       content = {
         type = "gpt";

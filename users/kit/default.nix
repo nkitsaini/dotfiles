@@ -1,4 +1,4 @@
-{ ... }:
+{ hostname, ... }:
 let
   name = "Ankit Saini";
   email = "ankitsaini100205@gmail.com";
@@ -14,7 +14,7 @@ in {
     programs.jujutsu.settings.user.name = name;
     programs.jujutsu.settings.user.email = email;
     programs.fish.shellAliases.rebuild-system =
-      "sudo nixos-rebuild switch --flake ${homeDirectory}/code/dotfiles/";
+      "sudo nixos-rebuild switch --flake ${homeDirectory}/code/dotfiles/#${hostname}";
   };
 
   # Avoid typing the username on TTY and only prompt for the password

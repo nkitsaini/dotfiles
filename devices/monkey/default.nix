@@ -2,9 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ ... }:
-
-{
+{ hostname, ... }: {
   imports = [ # Include the results of the hardware scan.
     ./hardware-configuration.nix
     ./wireguard.nix
@@ -33,15 +31,14 @@
   ];
 
   home-manager.users.${import ../../users/kit/username.nix} = {
-    imports = [../../packages/hm/setup-full.nix];
+    imports = [ ../../packages/hm/setup-full.nix ];
   };
-
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  networking.hostName = "monkey"; # Define your hostname.
+  networking.hostName = hostname; # Define your hostname.
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
