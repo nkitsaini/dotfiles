@@ -293,6 +293,7 @@
     hyperfine
     mold
     tmate
+    tailscale
     libnotify
     iptables
     bruno

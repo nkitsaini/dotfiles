@@ -1,4 +1,20 @@
 # From https://nixos.wiki/wiki/WireGuard
+#   mkdir /tmp/wg_generator
+#   wg genkey | cat > private.key
+#   wg pubkey < private.key > public.key
+
+# [Interface]
+# Address = 10.0.0.2/24
+# ListenPort = 51820
+# PrivateKey = <generated private key>
+# 
+# 
+# [Peer]
+# PublicKey = <server public key>
+# AllowedIPs = 0.0.0.0/0, ::/0
+# Endpoint = <host>:51820
+
+
 {pkgs, ...}: 
 let 
   interface = "enp1s0";
@@ -49,7 +65,7 @@ let
         }
         {
           # E14
-          publicKey = "enUvoem3DXAbrx35KX/3ttaGZlHhJO8NBT6oc1M0DSM=";
+          publicKey = "eHSiKUygfyRlsCZKkYDTiMmOI3BKdKfReMWWRDxksBY=";
           # List of IPs assigned to this peer within the tunnel subnet. Used to configure routing.
           allowedIPs = [ "10.100.0.3/32" ];
         }
