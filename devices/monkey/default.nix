@@ -13,6 +13,8 @@
     ../../packages/os/core.nix
     ../../packages/os/kernel.nix
 
+    ../../packages/os/tailscale.nix
+
     ../../packages/os/podman.nix
     ../../packages/os/virtualbox.nix
 
