@@ -56,6 +56,10 @@
       nixosConfigurations.monkey = mkSystem "monkey";
       nixosConfigurations.iso = mkSystem "iso";
 
+
+      # TODO: disko config remaining
+      nixosConfigurations.oogway = mkSystem "oogway";
+
       # TODO: following configs to be in similar fashion as `monkey`
       # i.e.
       # 1. use fixed users,
@@ -81,7 +85,5 @@
           }
         ];
       };
-
-      nixosConfigurations.oogway = mkSystem "oogway";
     };
 }
