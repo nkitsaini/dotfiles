@@ -1,7 +1,11 @@
 { config, system, pkgs, inputs, ... }: {
   programs.firefox.enable = true;
 
-  # remove after this: https://bugzilla.mozilla.org/show_bug.cgi?id=259356
+  home.packages = with pkgs; [
+    xdg-desktop-portal-xapp
+    xdg-desktop-portal-gtk
+
+  ];
 
   programs.firefox.package = pkgs.firefox.override {
     # See nixpkgs' firefox/wrapper.nix to check which options you can use
@@ -21,6 +25,7 @@
     bind --mode=normal <C-V> mode ignore
   '';
 
+  # remove after this: https://bugzilla.mozilla.org/show_bug.cgi?id=259356
   programs.firefox.policies = {
     DefaultDownloadsDirectory = "\${home}/downloads";
   };

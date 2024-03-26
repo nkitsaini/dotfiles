@@ -312,6 +312,17 @@
 
     sshfs
 
+    binutils
+    coreutils
+    curl
+    dnsutils
+    dosfstools
+    powertop
+    iputils
+    # moreutils
+    nmap
+    util-linux
+    whois
     # Kernel modules
     # TODO: enable when on NixOS
     # linuxKernel.packages.linux_6_7.ddcci-driver

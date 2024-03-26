@@ -46,10 +46,13 @@
   # Need to configure home-manager to work with flakes
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
-  home-manager.extraSpecialArgs = { inherit inputs; inherit system; enableNixGL = false; };
+  home-manager.extraSpecialArgs = {
+    inherit inputs;
+    inherit system;
+    enableNixGL = false;
+  };
 
   nixpkgs.config.allowUnfree = true;
-
 
   security.protectKernelImage = true;
   services.earlyoom.enable = true;
