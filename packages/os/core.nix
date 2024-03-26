@@ -17,6 +17,7 @@
       tmux
       fish
       neovim
+      helix
       htop
       powertop
       iputils
@@ -53,6 +54,9 @@
   security.protectKernelImage = true;
   services.earlyoom.enable = true;
   users.mutableUsers = false;
+
+  # For ddcutil
+  hardware.i2c.enable = true;
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
