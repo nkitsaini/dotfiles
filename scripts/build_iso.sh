@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-exec nix build .#iso.config.system.build.isoImage
+exec nix build .#nixosConfigurations.iso.config.system.build.isoImage

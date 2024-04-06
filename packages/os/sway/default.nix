@@ -22,6 +22,7 @@ let
   };
   _keyboard = {
     xkb_layout = "us";
+    # xkb_variant = "colemak_dh";
     repeat_rate = "50";
     repeat_delay = "160";
   };

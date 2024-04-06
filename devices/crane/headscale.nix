@@ -10,13 +10,12 @@ in {
   #  - https://headscale.net/exit-node/
   #  - https://headscale.net/android-client/
 
-  # namespace = head
-  # headscale namespaces create <namespace>
+  # headscale users create <user>
 
   # TODO: simplify the below stuff
   # On Cloud:
   #   tailscale up --login-server https://headscale.nkit.dev --ssh --advertise-exit-node
-  #   headscale nodes register ... --user <namespace>
+  #   headscale nodes register ... --user <user>
   #   headscale routes list
   #   headscale routes enable -r 1 
   #   headscale routes enable -r 2 
@@ -25,7 +24,7 @@ in {
   #   tailscale up --login-server https://headscale.nkit.dev 
   #   tailscale exit-node list
   #   tailscale up --login-server https://headscale.nkit.dev --exit-node crane
-  #   headscale nodes register ... --user <namespace>
+  #   headscale nodes register ... --user <user>
 
   services = {
     headscale = {

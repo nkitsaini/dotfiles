@@ -26,8 +26,9 @@
       nmap
       sd
       ripgrep
-      util-linux
+      util-linux # has cfdisk
       whois
+      gparted
     ];
   };
 

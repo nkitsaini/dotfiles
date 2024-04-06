@@ -29,6 +29,7 @@
       editor = {
         bufferline = "multiple";
         idle-timeout = 5;
+        copilot-auto-render = true;
         # undercurl = true;
         # true-color = true;
         soft-wrap.enable = true;
@@ -41,8 +42,6 @@
 
         lsp = {
           display-inlay-hints = true;
-          copilot-auto = true;
-          inline-diagnostics.other-lines = [ ];
         };
         cursor-shape.insert = "bar";
         insert-final-newline = false;
@@ -100,9 +99,8 @@
         };
 
         insert = {
-          "C-e" = "show_or_next_copilot_completion";
-          "C-f" = "hide_or_prev_copilot_completion";
-          "C-y" = "apply_copilot_completion";
+          "C-e" = "copilot_show_completion";
+          "C-y" = "copilot_apply_completion";
           "C-space" = "completion";
         };
 

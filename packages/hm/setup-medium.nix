@@ -16,6 +16,7 @@
     ./yt-dlp.nix
     ./vcs.nix
     ./yazi.nix
+    ./syncthing.nix
   ];
   # username and home directory are provided by the parent home.nix
 
@@ -311,6 +312,7 @@
     compsize
 
     sshfs
+    gparted
 
     binutils
     coreutils

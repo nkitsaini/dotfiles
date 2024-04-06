@@ -39,6 +39,7 @@
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
     in {
+      # ===== Home-manager only configs
       homeConfigurations."shifu" = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
 
@@ -52,6 +53,7 @@
         };
       };
 
+      # ===== Nixos configs
       nixosConfigurations.monkey = mkSystem "monkey";
       nixosConfigurations.iso = mkSystem "iso";
 
