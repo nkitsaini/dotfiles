@@ -10,6 +10,7 @@
       pkgs.nil
       pkgs.texlab
       pkgs.gopls
+      pkgs.golangci-lint-langserver
       pkgs.rust-analyzer
       pkgs.typst-lsp
       pkgs.biome
@@ -156,12 +157,12 @@
         {
           name = "css";
           language-servers =
-            [ "tailwindcss-ls" "vscode-css-language-server" "copilot" ];
+            [ "tailwindcss-ls" "vscode-css-language-server" ];
         }
         {
           name = "html";
           language-servers =
-            [ "tailwindcss-ls" "vscode-html-language-server" "copilot" ];
+            [ "tailwindcss-ls" "vscode-html-language-server" ];
         }
         {
           name = "caddyfile";
