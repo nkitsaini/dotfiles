@@ -117,10 +117,6 @@
 
     languages = {
       # Servers
-      language-server.copilot = {
-        command = "copilot";
-        ars = [ "--stdio" ];
-      };
       language-server.pyright = {
         command = "pyright-langserver";
         args = [ "--stdio" ];
@@ -141,12 +137,12 @@
       language = [
         {
           name = "python";
-          language-servers = [ "pyright" "copilot" ];
+          language-servers = [ "pyright" ];
         }
 
         {
           name = "c";
-          language-servers = [ "clangd" "copilot" ];
+          language-servers = [ "clangd" ];
           formatter = {
             command = "clang-format";
             args = [ "--style=google" ];
@@ -154,7 +150,7 @@
         }
         {
           name = "svelte";
-          language-servers = [ "svelteserver" "tailwindcss-ls" "copilot" ];
+          language-servers = [ "svelteserver" "tailwindcss-ls" ];
           block-comment-tokens = [{start="<!--"; end="-->";}];
         }
         {
@@ -174,7 +170,7 @@
           injection-regex = "caddyfile";
           file-types = [ "Caddyfile" ];
           comment-token = "#";
-          language-servers = [ "copilot" ];
+          language-servers = [ ];
           indent = {
             tab-width = 4;
             unit = "\\t";
@@ -192,7 +188,7 @@
             tab-width = 4;
             unit = "	";
           };
-          language-servers = [ "typst-lsp" "copilot" ];
+          language-servers = [ "typst-lsp" ];
         }
 
         {
@@ -201,7 +197,7 @@
             command = "biome";
             args = [ "format" "--stdin-file-path=x.js" ];
           };
-          language-servers = [ "typescript-language-server" "copilot" ];
+          language-servers = [ "typescript-language-server" ];
         }
         {
           name = "typescript";
@@ -209,16 +205,7 @@
             command = "biome";
             args = [ "format" "--stdin-file-path=x.ts" ];
           };
-          language-servers = [ "typescript-language-server" "copilot" ];
-        }
-
-        {
-          name = "go";
-          language-servers = [ "gopls" "copilot" ];
-        }
-        {
-          name = "dockerfile";
-          language-servers = [ "docker-langserver" "copilot" ];
+          language-servers = [ "typescript-language-server" ];
         }
         {
           name = "nix";
