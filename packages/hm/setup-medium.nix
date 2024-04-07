@@ -166,7 +166,7 @@
   home.file."mnt/.keep".text = ""; # mount points
   home.file."tmp/.keep".text = ""; # temporary directory
   home.file."music/.keep".text = ""; # temporary directory
-  home.file."video/.keep".text = ""; # temporary directory
+  home.file."videos/.keep".text = ""; # temporary directory
   home.file."downloads/.keep".text = ""; # downloads directory
 
   qt.enable = true;
