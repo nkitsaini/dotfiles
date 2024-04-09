@@ -114,6 +114,7 @@
 
       tp = "${pkgs.trashy}/bin/trash put";
       rm = "echo 'use `tp` or `rmforce`'";
+      mv = "mv -i";
       rmforce = "${pkgs.coreutils-full}/bin/rm";
     };
     shellInit = ''
