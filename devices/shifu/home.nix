@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ ... }:
 (let
   name = "Ankit Saini";
   email = "asaini@singlestore.com";
@@ -11,13 +11,7 @@ in {
   home.homeDirectory = homeDirectory;
   imports = [ ../../packages/hm/setup-full.nix ../../packages/hm/i3.nix ];
 
-  home.packages = with pkgs;
-    [
-      (writeScriptBin "rebuild-system" ''
-        #!/usr/bin/env bash
-        home-manager switch --flake ${homeDirectory}/code/dotfiles#shifu
-      '')
-    ];
-
+  programs.fish.shellAliases.rebuild-system =
+    "sudo nixos-rebuild switch --flake ${homeDirectory}/code/dotfiles/#shifu";
 })
 
