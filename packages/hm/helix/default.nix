@@ -5,23 +5,24 @@
     enable = true;
     package = inputs.nkitsaini_helix.packages.${system}.default;
     defaultEditor = true;
-    extraPackages = [
-      pkgs.marksman
-      pkgs.nil
-      pkgs.texlab
-      pkgs.gopls
-      pkgs.golangci-lint-langserver
-      pkgs.rust-analyzer
-      pkgs.typst-lsp
-      pkgs.biome
-      pkgs.nodePackages.pyright
-      pkgs.dockerfile-language-server-nodejs
-      pkgs.nodePackages.vscode-css-languageserver-bin
-      pkgs.nodePackages.vscode-json-languageserver-bin
-      pkgs.nodePackages.vscode-html-languageserver-bin
-      pkgs.nodePackages.typescript-language-server
-      pkgs.nodePackages.svelte-language-server
-      pkgs.tailwindcss-language-server
+    extraPackages = with pkgs; [
+      marksman
+      nil
+      texlab
+      gopls
+      golangci-lint-langserver
+      rust-analyzer
+      typst-lsp
+      biome
+      nodePackages.pyright
+      dockerfile-language-server-nodejs
+      nodePackages.vscode-css-languageserver-bin
+      nodePackages.vscode-json-languageserver-bin
+      nodePackages.vscode-html-languageserver-bin
+      nodePackages.typescript-language-server
+      nodePackages.svelte-language-server
+      nodePackages.graphql-language-service-cli
+      tailwindcss-language-server
     ];
 
     settings = {
