@@ -23,8 +23,8 @@
       nodePackages.vscode-json-languageserver-bin
       nodePackages.vscode-html-languageserver-bin
       nodePackages.typescript-language-server
-      nodePackages.svelte-language-server
       nodePackages.graphql-language-service-cli
+      # nodePackages.svelte-language-server # use this instead of custom once nixos-unstable has 0.16.8 or newer (required for svelte 5)
       nodeDependencies.svelte-language-server
       tailwindcss-language-server
     ];
