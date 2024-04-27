@@ -28,11 +28,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1711006105,
-        "narHash": "sha256-pvjqjx4L2Hx/NP3RWcwLjk+ABtMODAJ9+rgreU6fP6I=",
+        "lastModified": 1713406758,
+        "narHash": "sha256-kwZvhmx+hSZvjzemKxsAqzEqWmXZS47VVwQhNrINORQ=",
         "owner": "nix-community",
         "repo": "disko",
-        "rev": "a8c966ee117c278a5aabc6f00b00ef62eb7e28f6",
+        "rev": "1efd500e9805a9efbce401ed5999006d397b9f11",
         "type": "github"
       },
       "original": {
@@ -66,11 +66,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1709938482,
-        "narHash": "sha256-2Vw2WOFmEXWQH8ziFNOr0U48Guh5FacuD6BOEIcE99s=",
+        "lastModified": 1713707619,
+        "narHash": "sha256-g73hSx1osp8G7pbFQbiz7OCosAogf0WrLSOWyEF+F9M=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "17431970b4ebc75a92657101ccffcfc9e1f9d8f0",
+        "rev": "ad83c154bdfedad9807e86dd0633729ea3b116c5",
         "type": "github"
       },
       "original": {
@@ -81,11 +81,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1709703039,
-        "narHash": "sha256-6hqgQ8OK6gsMu1VtcGKBxKQInRLHtzulDo9Z5jxHEFY=",
+        "lastModified": 1713537308,
+        "narHash": "sha256-XtTSSIB2DA6tOv+l0FhvfDMiyCmhoRbNB+0SeInZkbk=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "9df3e30ce24fd28c7b3e2de0d986769db5d6225d",
+        "rev": "5c24cf2f0a12ad855f444c30b2421d044120c66f",
         "type": "github"
       },
       "original": {
@@ -105,27 +105,27 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1712463256,
-        "narHash": "sha256-Zws+mlqkBBuA5Cabexy5yIOQlEMewMf2gYcUZnYtt1Y=",
+        "lastModified": 1714247242,
+        "narHash": "sha256-ZmnTm6xgpsJ50PEA2p8gfqQytgFprnYUku1a0OZF1gQ=",
         "owner": "nkitsaini",
         "repo": "helix",
-        "rev": "3820a6b8ca57ff84526ff33b74286cf5a247c4fc",
+        "rev": "ac21aa05b5f0f31ab88069a3d1994c2bf2dab999",
         "type": "github"
       },
       "original": {
         "owner": "nkitsaini",
-        "ref": "nkit-driver",
+        "ref": "nkit-driver-backup-2024-04-28",
         "repo": "helix",
         "type": "github"
       }
     },
     "nur": {
       "locked": {
-        "lastModified": 1709986758,
-        "narHash": "sha256-rXcOordus62g8bGbNrWkWV/XDXZ6LhO9fCVl/LxI7tI=",
+        "lastModified": 1713707886,
+        "narHash": "sha256-eixmKYCzDqq0II8yOiuoQNmTE/lNCiIt71lh7V4PSvk=",
         "owner": "nix-community",
         "repo": "NUR",
-        "rev": "b8dc242a9cf5b85b798ac1ba235e7ced8323b760",
+        "rev": "e558232e47b407866c8e2974739fac7ccc17e452",
         "type": "github"
       },
       "original": {

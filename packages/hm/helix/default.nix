@@ -1,6 +1,9 @@
 { config, pkgs, inputs, system, ... }: {
   programs.helix = let
-    comment_binding = '':pipe ${config.home.homeDirectory}/code/commenter/target/release/commenter --start-comment-token="/*" --end-comment-token="*/"'';
+    comment_binding = '':pipe ${pkgs.python312}/bin/python3 ${config.home.homeDirectory}/code/hive/commenter/commenter.py --start-token="/*" --end-token="*/"'';
+    nodeDependencies = (pkgs.callPackage ./svelte_langauge_server/default.nix {
+      inherit pkgs system;
+    });
   in {
     enable = true;
     package = inputs.nkitsaini_helix.packages.${system}.default;
@@ -22,6 +25,7 @@
       nodePackages.typescript-language-server
       nodePackages.svelte-language-server
       nodePackages.graphql-language-service-cli
+      nodeDependencies.svelte-language-server
       tailwindcss-language-server
     ];
 

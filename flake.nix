@@ -10,7 +10,7 @@
     };
 
     nkitsaini_helix = {
-      url = "github:nkitsaini/helix/nkit-driver";
+      url = "github:nkitsaini/helix/nkit-driver-backup-2024-04-28";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nur.url = "github:nix-community/NUR";
