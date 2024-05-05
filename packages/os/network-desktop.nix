@@ -9,9 +9,8 @@
 
   services.resolved = {
     enable = true;
-
     dnssec = "false";
-    fallbackDns = [ "1.1.1.1#one.one.one.one" "1.0.0.1#one.one.one.one" ];
+    fallbackDns = [ "1.1.1.1" "8.8.8.8" ];
   };
 
   networking.useNetworkd = true;

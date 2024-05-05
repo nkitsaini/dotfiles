@@ -11,6 +11,7 @@
     trustedInterfaces = [ "tailscale0" ];
     allowedUDPPorts = [ config.services.tailscale.port ];
   };
+  networking.nameservers = lib.mkBefore ["100.100.100.100"];
   systemd.network.wait-online.ignoredInterfaces = [ "tailscale0" ];
 
   # Don't log to log.tailscale.io

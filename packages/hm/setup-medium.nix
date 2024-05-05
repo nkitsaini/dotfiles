@@ -95,6 +95,10 @@
       pkgs.vimPlugins.tokyonight-nvim
       pkgs.vimPlugins.diffview-nvim
       pkgs.vimPlugins.telescope-nvim
+      pkgs.vimPlugins.which-key-nvim
+      pkgs.vimPlugins.plenary-nvim
+      pkgs.vimPlugins.obsidian-nvim
+      # pkgs.vimPlugins.vim-markdown
     ];
     extraLuaConfig = ''
       local neogit = require('neogit')
@@ -109,7 +113,24 @@
       vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
       vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
       vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
+      vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
       vim.print("Config done")
+      vim.opt.number = true
+
+
+      -- Which Key
+      vim.o.timeout = true
+      vim.o.timeoutlen = 300
+      require("which-key").setup {}
+      require("obsidian").setup({
+        workspaces = {
+          {
+            name ="notes",
+            path="~/code/notes"
+          }
+        }
+      })
+
     '';
   };
   programs.tealdeer = {
@@ -143,15 +164,15 @@
       registry = [
         {
           insecure = true;
-          location = "oogway.lan:5000/";
+          location = "oogway:5000/";
         }
         {
           insecure = true;
-          location = "oogway.lan/containers";
+          location = "oogway/containers";
         }
         {
           insecure = true;
-          location = "oogway.lan/docker";
+          location = "oogway/docker";
         }
       ];
     };
