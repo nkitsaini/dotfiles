@@ -12,6 +12,6 @@ in {
   imports = [ ../../packages/hm/setup-full.nix ../../packages/hm/i3.nix ];
 
   programs.fish.shellAliases.rebuild-system =
-    "sudo nixos-rebuild switch --flake ${homeDirectory}/code/dotfiles/#shifu";
+    "home-manager switch --flake ${homeDirectory}/code/dotfiles/#shifu";
 })
 
