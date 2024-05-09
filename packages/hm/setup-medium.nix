@@ -266,6 +266,7 @@
     bun
     ncdu
     caddy
+    cmus
 
     # Code specific
     nixfmt
