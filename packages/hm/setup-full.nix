@@ -1,5 +1,5 @@
 {pkgs, ...}: {
-  imports = [./setup-medium.nix];
+  imports = [./setup-medium.nix ./vscode];
 
   home.packages = with pkgs; [
     obs-studio

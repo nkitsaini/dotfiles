@@ -22,7 +22,7 @@
         "network"
         "pulseaudio"
         "backlight"
-        "keyboard-state"
+        # "keyboard-state"
         "battery"
         "tray"
         "clock"

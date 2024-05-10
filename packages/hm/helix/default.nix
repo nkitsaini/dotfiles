@@ -57,6 +57,7 @@
         normal = {
           esc = [ "collapse_selection" "keep_primary_selection" ];
           Z = { Z = [ ":write-quit" ]; };
+          X = "extend_line_up";
           space = {
             F = "file_picker";
             f = "file_picker_in_current_directory";
