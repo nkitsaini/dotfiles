@@ -267,6 +267,18 @@
     ncdu
     caddy
     cmus
+    archivemount
+    ethtool
+    sioyek
+    gnome.eog
+    qimgv
+    uv
+    file
+    # busybox
+    lsof
+    ntfs3g
+    openssl
+    iperf
 
     # Code specific
     nixfmt
