@@ -138,8 +138,7 @@
     settings = { updates = { auto_update = true; }; };
   };
   programs.gitui.enable = true;
-  programs.gitui.keyConfig =
-    builtins.readFile ./gitui_keybindings.ron;
+  programs.gitui.keyConfig = builtins.readFile ./gitui_keybindings.ron;
 
   xsession.enable = true;
   programs.nix-index = { enable = true; };
@@ -280,6 +279,8 @@
     openssl
     iperf
 
+    # inputs.nkitsaini_notes_utils.packages.${system}.default
+
     # Code specific
     nixfmt
     ruff
@@ -288,6 +289,19 @@
     (writeScriptBin "copilot" ''
       #!/usr/bin/env bash
       exec ${nodejs_20}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
+    '')
+
+    (writeScriptBin "audiobook_generator" ''
+      #!/usr/bin/env bash
+      exec nix run ${config.home.homeDirectory}/code/hive/audiobook_generator --  "$@"
+    '')
+    (writeScriptBin "hh" ''
+      #!/usr/bin/env bash
+      exec nix run ${config.home.homeDirectory}/code/hive/helios_helper -- "$@"
+    '')
+    (writeScriptBin "notes_utils" ''
+      #!/usr/bin/env bash
+      exec nix run ${config.home.homeDirectory}/code/hive/notes_utils -- "$@"
     '')
 
     # I3 specific

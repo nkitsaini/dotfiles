@@ -13,6 +13,11 @@
       url = "github:nkitsaini/helix/nkit-driver-backup-2024-04-28";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # nkitsaini_notes_utils = {
+    #   # url = "git+ssh://git@github.com/nkitsaini/hive.git?ref=main&dir=notes_utils";
+    #   url = "git+file:///home/kit/code/hive?dir=notes_utils";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
     nur.url = "github:nix-community/NUR";
     disko.url = "github:nix-community/disko";
     disko.inputs.nixpkgs.follows = "nixpkgs";
