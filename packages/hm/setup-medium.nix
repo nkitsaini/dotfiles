@@ -287,22 +287,32 @@
     lazygit
     nodejs_20
     (writeScriptBin "copilot" ''
-      #!/usr/bin/env bash
+      #!${pkgs.dash}/bin/dash
       exec ${nodejs_20}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
     '')
 
     (writeScriptBin "audiobook_generator" ''
-      #!/usr/bin/env bash
+      #!${pkgs.dash}/bin/dash
       exec nix run ${config.home.homeDirectory}/code/hive/audiobook_generator --  "$@"
     '')
     (writeScriptBin "hh" ''
-      #!/usr/bin/env bash
+      #!${pkgs.dash}/bin/dash
       exec nix run ${config.home.homeDirectory}/code/hive/helios_helper -- "$@"
     '')
     (writeScriptBin "notes_utils" ''
-      #!/usr/bin/env bash
+      #!${pkgs.dash}/bin/dash
       exec nix run ${config.home.homeDirectory}/code/hive/notes_utils -- "$@"
     '')
+    (writeScriptBin "notes_utils" ''
+      #!${pkgs.dash}/bin/dash
+      exec nix run ${config.home.homeDirectory}/code/hive/notes_utils -- "$@"
+    '')
+    (writeShellApplication {
+      name = "bw-util";
+      text = ''
+      exec nix run ${config.home.homeDirectory}/code/hive/bitwarden_util -- "$@"
+      '';
+    })
 
     # I3 specific
     i3
