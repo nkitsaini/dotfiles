@@ -313,6 +313,18 @@
       exec nix run ${config.home.homeDirectory}/code/hive/bitwarden_util -- "$@"
       '';
     })
+    (writeShellApplication {
+      name = "audio_cleaner";
+      text = ''
+      exec nix run ${config.home.homeDirectory}/code/hive/audio_cleaner -- "$@"
+      '';
+    })
+    (writeShellApplication {
+      name = "mit_ocw_utils";
+      text = ''
+      exec nix run ${config.home.homeDirectory}/code/hive/mit_ocw_utils -- "$@"
+      '';
+    })
 
     # I3 specific
     i3
