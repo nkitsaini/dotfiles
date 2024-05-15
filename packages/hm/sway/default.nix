@@ -16,7 +16,7 @@ let
     tap = "enabled";
     dwt = "enabled"; # disable while typing
     scroll_method = "two_finger";
-    natural_scroll = "disabled";
+    natural_scroll = "enabled";
     scroll_factor = "0.75";
     accel_profile = "adaptive";
   };
