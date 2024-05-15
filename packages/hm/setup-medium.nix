@@ -183,6 +183,8 @@
 
   # Home Directories
   home.file."external/.keep".text = ""; # External repos
+  home.file."code/.keep".text = ""; # Personal repos
+  home.file."workspace/.keep".text = ""; # Work repos
   home.file."mnt/.keep".text = ""; # mount points
   home.file."tmp/.keep".text = ""; # temporary directory
   home.file."music/.keep".text = ""; # temporary directory

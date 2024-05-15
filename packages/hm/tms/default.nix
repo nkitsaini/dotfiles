@@ -21,9 +21,5 @@
     [[search_dirs]]
     path = "${config.home.homeDirectory}/workspace"
     depth = 5
-
-    [[search_dirs]]
-    path = "${config.home.homeDirectory}/exercism"
-    depth = 5
   '';
 }
