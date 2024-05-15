@@ -1,13 +1,19 @@
 { config, pkgs, inputs, system, ... }: {
+  # TODO: use config.home-files to reference files inside current home-manager generation instead of path from home-directory. Currently config.home-files gives infinite recursion.
+  home.sessionVariables = {
+    EDITOR = "${config.home.homeDirectory}/.nix-profile/bin/hx";
+  };
   programs.helix = let
-    comment_binding = '':pipe ${pkgs.python312}/bin/python3 ${config.home.homeDirectory}/code/hive/commenter/commenter.py --start-token="/*" --end-token="*/"'';
+    comment_binding = ''
+      :pipe ${pkgs.python312}/bin/python3 ${config.home.homeDirectory}/code/hive/commenter/commenter.py --start-token="/*" --end-token="*/"'';
     nodeDependencies = (pkgs.callPackage ./svelte_langauge_server/default.nix {
       inherit pkgs system;
     });
   in {
     enable = true;
     package = inputs.nkitsaini_helix.packages.${system}.default;
-    defaultEditor = true;
+    # defaultEditor = true; # does not provide absolute path so fails with sudo, but actually should it?, explicitly setting EDITOR for now
+
     extraPackages = with pkgs; [
       marksman
       nil
@@ -46,9 +52,7 @@
           hidden = false;
         };
 
-        lsp = {
-          display-inlay-hints = true;
-        };
+        lsp = { display-inlay-hints = true; };
         cursor-shape.insert = "bar";
         insert-final-newline = false;
       };
@@ -158,17 +162,18 @@
         {
           name = "svelte";
           language-servers = [ "svelteserver" "tailwindcss-ls" ];
-          block-comment-tokens = [{start="<!--"; end="-->";}];
+          block-comment-tokens = [{
+            start = "<!--";
+            end = "-->";
+          }];
         }
         {
           name = "css";
-          language-servers =
-            [ "tailwindcss-ls" "vscode-css-language-server" ];
+          language-servers = [ "tailwindcss-ls" "vscode-css-language-server" ];
         }
         {
           name = "html";
-          language-servers =
-            [ "tailwindcss-ls" "vscode-html-language-server" ];
+          language-servers = [ "tailwindcss-ls" "vscode-html-language-server" ];
         }
         {
           name = "caddyfile";
