@@ -4,6 +4,9 @@
   inputs = {
     # Specify the source of Home Manager and Nixpkgs.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixgl.url = "github:nix-community/nixGL";
+    nixgl.inputs.nixpkgs.follows = "nixpkgs";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -42,7 +45,11 @@
         };
 
       system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = import nixpkgs {
+        system = system;
+        overlays = [ inputs.nixgl.overlay ];
+      };
+
     in {
       # ===== Home-manager only configs
       homeConfigurations."shifu" = home-manager.lib.homeManagerConfiguration {
@@ -54,14 +61,13 @@
         extraSpecialArgs = {
           inherit inputs;
           inherit system;
-          enableNixGL = true;
+          nixGLCommandPrefix = "${pkgs.nixgl.nixGLMesa}/bin/nixGLMesa ";
         };
       };
 
       # ===== Nixos configs
       nixosConfigurations.monkey = mkSystem "monkey";
       nixosConfigurations.iso = mkSystem "iso";
-
 
       # TODO: disko config remaining
       nixosConfigurations.oogway = mkSystem "oogway";

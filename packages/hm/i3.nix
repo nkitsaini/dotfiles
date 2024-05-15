@@ -1,4 +1,4 @@
-{ config, pkgs, lib, enableNixGL ? false, ... }:
+{ config, pkgs, lib, nixGLCommandPrefix ? "", ... }:
 let
   left = "h";
   right = "l";
@@ -11,11 +11,13 @@ let
   text-color = "#f3f4f5";
   inactive-text-color = "#676E7D";
   urgent-bg-color = "#E53935";
-  nixGLCommandPrefix = if enableNixGL then "nixGL " else "";
   menu =
     "${pkgs.rofi}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 in {
   xsession.windowManager.i3.enable = true;
+  # xsession.profileExtra = ''
+  #   export $(${pkgs.gnome.gnome-keyring}/bin/gnome-keyring-daemon --start --components=gpg,pkcs11,secrets,ssh)
+  # '';
 
   xsession.initExtra = ''
     xset r rate 160 55

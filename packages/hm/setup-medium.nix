@@ -1,7 +1,7 @@
 # Has everything except for desktop manager.
 # It is good to be used in nixos or standalone home-manager for desktop setups.
 
-{ config, pkgs, inputs, ... }: ({
+{ config, pkgs, inputs, nixGLCommandPrefix ? "", ... }: ({
   # modules = [
   #   nur.hmModules.nur
   # ];
@@ -200,219 +200,230 @@
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
-  home.packages = with pkgs; [
-    # # Adds the 'hello' command to your environment. It prints a friendly
-    # # "Hello, world!" when run.
+  home.packages = with pkgs;
+    [
+      # # Adds the 'hello' command to your environment. It prints a friendly
+      # # "Hello, world!" when run.
 
-    # Nix specific
-    cached-nix-shell
+      # Nix specific
+      cached-nix-shell
 
-    difftastic
+      difftastic
 
-    # For yazi
-    yazi
-    unar
-    exiftool
-    # mpv
-    mediainfo
+      # For yazi
+      yazi
+      unar
+      exiftool
+      # mpv
+      mediainfo
 
-    # httpie in rust
-    xh
+      # httpie in rust
+      xh
 
-    # hello
-    # qbittorrent
-    deluge
-    xclip
-    jq
-    fd
-    killall
-    jless
-    hexyl
-    zip
-    unzip
-    gnutar
-    rustup
-    obsidian
-    vlc
-    xorg.xset # I see a vlc warning reguarding xset missing. Just in case.
-    pavucontrol
-    qrencode
-    qpdf
-    gcc
-    python312
-    kubectl
-    kubectl-tree
-    kubectx
-    sd
-    rsync
-    nmap
-    minio-client
-    ffmpeg
-    xfce.thunar
-    kopia
-    xdragon
-    ddcutil
-    tmux
-    zellij
-    tmuxp
-    just
-    grc
-    fzf
-    cargo-cross
-    hyperfine
-    alacritty-theme
-    wezterm
-    bun
-    ncdu
-    caddy
-    cmus
-    archivemount
-    ethtool
-    sioyek
-    gnome.eog
-    qimgv
-    uv
-    file
-    # busybox
-    lsof
-    ntfs3g
-    openssl
-    iperf
+      # hello
+      # qbittorrent
+      deluge
+      xclip
+      jq
+      fd
+      killall
+      jless
+      hexyl
+      zip
+      unzip
+      gnutar
+      rustup
+      obsidian
+      vlc
+      xorg.xset # I see a vlc warning reguarding xset missing. Just in case.
+      pavucontrol
+      qrencode
+      qpdf
+      gcc
+      python312
+      kubectl
+      kubectl-tree
+      kubectx
+      sd
+      rsync
+      nmap
+      minio-client
+      ffmpeg
+      xfce.thunar
+      kopia
+      xdragon
+      ddcutil
+      tmux
+      zellij
+      tmuxp
+      just
+      grc
+      fzf
+      cargo-cross
+      hyperfine
+      alacritty-theme
+      wezterm
+      bun
+      ncdu
+      caddy
+      cmus
+      archivemount
+      ethtool
+      sioyek
+      gnome.eog
+      qimgv
+      uv
+      file
+      # busybox
+      lsof
+      ntfs3g
+      openssl
+      iperf
 
-    # inputs.nkitsaini_notes_utils.packages.${system}.default
+      # inputs.nkitsaini_notes_utils.packages.${system}.default
 
-    # Code specific
-    nixfmt
-    ruff
-    lazygit
-    nodejs_20
-    (writeScriptBin "copilot" ''
-      #!${pkgs.dash}/bin/dash
-      exec ${nodejs_20}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
-    '')
+      # Code specific
+      nixfmt
+      ruff
+      lazygit
+      nodejs_20
+      (writeScriptBin "copilot" ''
+        #!${pkgs.dash}/bin/dash
+        exec ${nodejs_20}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
+      '')
 
-    (writeScriptBin "audiobook_generator" ''
-      #!${pkgs.dash}/bin/dash
-      exec nix run ${config.home.homeDirectory}/code/hive/audiobook_generator --  "$@"
-    '')
-    (writeScriptBin "hh" ''
-      #!${pkgs.dash}/bin/dash
-      exec nix run ${config.home.homeDirectory}/code/hive/helios_helper -- "$@"
-    '')
-    (writeScriptBin "notes_utils" ''
-      #!${pkgs.dash}/bin/dash
-      exec nix run ${config.home.homeDirectory}/code/hive/notes_utils -- "$@"
-    '')
-    (writeScriptBin "notes_utils" ''
-      #!${pkgs.dash}/bin/dash
-      exec nix run ${config.home.homeDirectory}/code/hive/notes_utils -- "$@"
-    '')
-    (writeShellApplication {
-      name = "bw-util";
-      text = ''
-      exec nix run ${config.home.homeDirectory}/code/hive/bitwarden_util -- "$@"
-      '';
-    })
-    (writeShellApplication {
-      name = "audio_cleaner";
-      text = ''
-      exec nix run ${config.home.homeDirectory}/code/hive/audio_cleaner -- "$@"
-      '';
-    })
-    (writeShellApplication {
-      name = "mit_ocw_utils";
-      text = ''
-      exec nix run ${config.home.homeDirectory}/code/hive/mit_ocw_utils -- "$@"
-      '';
-    })
+      (writeScriptBin "audiobook_generator" ''
+        #!${pkgs.dash}/bin/dash
+        exec nix run ${config.home.homeDirectory}/code/hive/audiobook_generator --  "$@"
+      '')
+      (writeScriptBin "hh" ''
+        #!${pkgs.dash}/bin/dash
+        exec nix run ${config.home.homeDirectory}/code/hive/helios_helper -- "$@"
+      '')
+      (writeScriptBin "notes_utils" ''
+        #!${pkgs.dash}/bin/dash
+        exec nix run ${config.home.homeDirectory}/code/hive/notes_utils -- "$@"
+      '')
+      (writeScriptBin "notes_utils" ''
+        #!${pkgs.dash}/bin/dash
+        exec nix run ${config.home.homeDirectory}/code/hive/notes_utils -- "$@"
+      '')
+      (writeShellApplication {
+        name = "bw-util";
+        text = ''
+          exec nix run ${config.home.homeDirectory}/code/hive/bitwarden_util -- "$@"
+        '';
+      })
+      (writeShellApplication {
+        name = "audio_cleaner";
+        text = ''
+          exec nix run ${config.home.homeDirectory}/code/hive/audio_cleaner -- "$@"
+        '';
+      })
+      (writeShellApplication {
+        name = "mit_ocw_utils";
+        text = ''
+          exec nix run ${config.home.homeDirectory}/code/hive/mit_ocw_utils -- "$@"
+        '';
+      })
 
-    # I3 specific
-    i3
-    rofi
-    trashy
-    pulseaudio
-    playerctl
-    brightnessctl
+      # I3 specific
+      i3
+      rofi
+      trashy
+      pulseaudio
+      playerctl
+      brightnessctl
 
-    # Xorg
-    xorg.xev
+      # Xorg
+      xorg.xev
 
-    # MTP
-    jmtpfs
+      # MTP
+      jmtpfs
 
-    # From old fish history
-    acpi
-    aria2
-    asciinema
-    bandwhich
-    bc
-    bear
-    biome
-    bitwarden-cli
-    dig
-    delve
-    dolphin
-    duckdb
-    fortune
-    gdb
-    gen-license
-    hexyl
-    htop
-    httpie
-    iperf3
-    gnumake
-    hwatch
-    hyperfine
-    mold
-    tmate
-    tailscale
-    libnotify
-    iptables
-    bruno
-    tree
-    podman
-    podman-compose
-    sqlite
-    litecli
-    pgcli
-    tokei
-    valgrind
-    wget
+      # From old fish history
+      acpi
+      aria2
+      asciinema
+      bandwhich
+      bc
+      bear
+      biome
+      bitwarden-cli
+      dig
+      delve
+      dolphin
+      duckdb
+      fortune
+      gdb
+      gen-license
+      hexyl
+      htop
+      httpie
+      iperf3
+      gnumake
+      hwatch
+      hyperfine
+      mold
+      tmate
+      tailscale
+      libnotify
+      iptables
+      bruno
+      tree
+      podman
+      podman-compose
+      sqlite
+      litecli
+      pgcli
+      tokei
+      valgrind
+      wget
 
-    # btrfs
-    compsize
+      # btrfs
+      compsize
 
-    sshfs
-    gparted
+      sshfs
+      gparted
 
-    binutils
-    coreutils
-    curl
-    dnsutils
-    dosfstools
-    powertop
-    iputils
-    # moreutils
-    nmap
-    util-linux
-    whois
-    # Kernel modules
-    # TODO: enable when on NixOS
-    # linuxKernel.packages.linux_6_7.ddcci-driver
+      binutils
+      coreutils
+      curl
+      dnsutils
+      dosfstools
+      powertop
+      iputils
+      # moreutils
+      nmap
+      util-linux
+      whois
+      # Kernel modules
+      # TODO: enable when on NixOS
+      # linuxKernel.packages.linux_6_7.ddcci-driver
 
-    # # It is sometimes useful to fine-tune packages, for example, by applying
-    # # overrides. You can do that directly here, just don't forget the
-    # # parentheses. Maybe you want to install Nerd Fonts with a limited number of
-    # # fonts?
-    # (nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
+      # # It is sometimes useful to fine-tune packages, for example, by applying
+      # # overrides. You can do that directly here, just don't forget the
+      # # parentheses. Maybe you want to install Nerd Fonts with a limited number of
+      # # fonts?
+      # (nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
 
-    # # You can also create simple shell scripts directly inside your
-    # # configuration. For example, this adds a command 'my-hello' to your
-    # # environment:
-    # (writeShellScriptBin "my-hello" ''
-    #   echo "Hello, ${config.home.username}!"
-    # '')
-  ];
+      # # You can also create simple shell scripts directly inside your
+      # # configuration. For example, this adds a command 'my-hello' to your
+      # # environment:
+      # (writeShellScriptBin "my-hello" ''
+      #   echo "Hello, ${config.home.username}!"
+      # '')
+    ] ++ (if nixGLCommandPrefix != "" then
+      [
+        (writeShellApplication {
+          name = "nixgl-run";
+          text = ''
+            exec ${nixGLCommandPrefix} -- "$@"
+          '';
+        })
+      ]
+    else
+      [ ]);
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
@@ -444,7 +455,11 @@
   #
   #  /etc/profiles/per-user/ankit/etc/profile.d/hm-session-vars.sh
   #
-  home.sessionVariables = { };
+  home.sessionVariables = {
+    LC_ALL = "en_IN.UTF-8";
+    LANG = "en_IN.UTF-8";
+    NIXPKGS_ALLOW_UNFREE = "1";
+  };
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
