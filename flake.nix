@@ -4,8 +4,12 @@
   inputs = {
     # Specify the source of Home Manager and Nixpkgs.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nixgl.url = "github:nix-community/nixGL";
-    nixgl.inputs.nixpkgs.follows = "nixpkgs";
+    flake-utils.url = "github:numtide/flake-utils";
+    nixgl = {
+      url = "github:nix-community/nixGL";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -15,15 +19,18 @@
     nkitsaini_helix = {
       url = "github:nkitsaini/helix/nkit-driver-backup-2024-04-28";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
     };
     # nkitsaini_notes_utils = {
     #   # url = "git+ssh://git@github.com/nkitsaini/hive.git?ref=main&dir=notes_utils";
     #   url = "git+file:///home/kit/code/hive?dir=notes_utils";
     #   inputs.nixpkgs.follows = "nixpkgs";
     # };
-    nur.url = "github:nix-community/NUR";
-    disko.url = "github:nix-community/disko";
-    disko.inputs.nixpkgs.follows = "nixpkgs";
+    nur = { url = "github:nix-community/NUR"; };
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = { nixpkgs, home-manager, nkitsaini_helix, nur, disko, ... }@inputs:
