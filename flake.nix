@@ -92,7 +92,7 @@
             home-manager.extraSpecialArgs = {
               inherit system;
               inherit nkitsaini_helix;
-              enableNixGL = false;
+              nixGLCommandPrefix = "";
             };
           }
         ];

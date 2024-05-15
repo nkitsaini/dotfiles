@@ -456,8 +456,8 @@
   #  /etc/profiles/per-user/ankit/etc/profile.d/hm-session-vars.sh
   #
   home.sessionVariables = {
-    LC_ALL = "en_IN.UTF-8";
-    LANG = "en_IN.UTF-8";
+    LC_ALL = "en_US.UTF-8";
+    LANG = "en_US.UTF-8";
     NIXPKGS_ALLOW_UNFREE = "1";
   };
 

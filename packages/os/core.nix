@@ -53,7 +53,7 @@
   home-manager.extraSpecialArgs = {
     inherit inputs;
     inherit system;
-    enableNixGL = false;
+    nixGLCommandPrefix = "";
   };
 
   nixpkgs.config.allowUnfree = true;
