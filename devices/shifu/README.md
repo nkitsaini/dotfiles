@@ -17,5 +17,8 @@ Steps:
 
 - install packages from `packages/os/sway/sway-knobs.nix` (to support screen sharing and stuff)
   - `sudo apt install xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk`
+  - `sudo apt install slurp` (to allow selecting monitor while sharing screen)
+      - We also install it in home-manager, but the systemd service xdg-desktop-portal-wlr can't access it unless it's installed globally in /usr/bin or something
+
 
 - restart to let things like .desktop discovery take effect
