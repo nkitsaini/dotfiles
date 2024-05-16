@@ -8,9 +8,22 @@ let
   down = "j";
   terminal_cmd = "${pkgs.wezterm}/bin/wezterm";
 
+  sway_display_control = pkgs.writeShellApplication {
+    name = "sway-display-control";
+    runtimeInputs = with pkgs; [sway jq findutils];
+    text = ''
+    # usage: sway-disable-control off
+    # usage: sway-disable-control on
+    # usage: sway-disable-control toggle
+    swaymsg -t get_outputs | jq '.[].name' | xargs -I _ swaymsg "output _ dpms $1"
+    '';
+  };
+
+  turn_off_output_cmd = "${sway_display_control}/bin/sway-display-control off";
+  turn_on_output_cmd = "${sway_display_control}/bin/sway-display-control on";
   # Can't get PAM to work on non-nixos (ubuntu) with swaylock
   # It seems like the solution but didn't bother: https://github.com/NixOS/nixpkgs/issues/158025#issuecomment-1616807870
-  swaylock_cmd = if disableSwayLock then ''${pkgs.sway}/bin/swaymsg "output * dpms off"'' else "${pkgs.swaylock}/bin/swaylock --color '#100B1B' -fF";
+  swaylock_cmd = if disableSwayLock then turn_off_output_cmd else "${pkgs.swaylock}/bin/swaylock --color '#100B1B' -fF";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
@@ -42,6 +55,7 @@ in {
     wl-clipboard
     swaylock
     swayidle
+    sway_display_control
     xwayland
     grim
     slurp
@@ -88,10 +102,6 @@ in {
       {
         event = "lock";
         command = swaylock_cmd;
-      }
-      {
-        event = "resume";
-        command = ''${pkgs.sway}/bin/swaymsg "output * dpms on"'';
       }
     ];
     timeouts = [
@@ -233,6 +243,8 @@ in {
       "${modifier}+space" = "focus mode_toggle";
 
       "${modifier}+r" = "mode resize";
+      "${modifier}+o" = "exec ${turn_on_output_cmd}";
+      "${modifier}+Shift+O" = "exec ${turn_off_output_cmd}";
 
       "XF86MonBrightnessUp" =
         "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5+%";
