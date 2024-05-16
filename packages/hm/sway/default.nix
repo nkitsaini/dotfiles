@@ -10,7 +10,7 @@ let
 
   # Can't get PAM to work on non-nixos (ubuntu) with swaylock
   # It seems like the solution but didn't bother: https://github.com/NixOS/nixpkgs/issues/158025#issuecomment-1616807870
-  swaylock_cmd = if disableSwayLock then "echo 'Swaylock is disabled'" else "${pkgs.swaylock}/bin/swaylock --color '#100B1B' -fF";
+  swaylock_cmd = if disableSwayLock then ''${pkgs.sway}/bin/swaymsg "output * dpms off"'' else "${pkgs.swaylock}/bin/swaylock --color '#100B1B' -fF";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
@@ -88,6 +88,10 @@ in {
       {
         event = "lock";
         command = swaylock_cmd;
+      }
+      {
+        event = "resume";
+        command = ''${pkgs.sway}/bin/swaymsg "output * dpms on"'';
       }
     ];
     timeouts = [
