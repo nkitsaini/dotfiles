@@ -69,6 +69,7 @@
           inherit inputs;
           inherit system;
           nixGLCommandPrefix = "${pkgs.nixgl.nixGLMesa}/bin/nixGLMesa ";
+          disableSwayLock = true;
         };
       };
 
@@ -100,6 +101,7 @@
               inherit system;
               inherit nkitsaini_helix;
               nixGLCommandPrefix = "";
+              disableSwayLock = true;
             };
           }
         ];

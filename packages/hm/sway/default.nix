@@ -1,5 +1,5 @@
 # This is a nixos package (not home-manager)
-{ pkgs, config, nixGLCommandPrefix ? "", ... }:
+{ pkgs, config, nixGLCommandPrefix ? "", disableSwayLock ? false, ... }:
 let
 
   left = "h";
@@ -8,7 +8,9 @@ let
   down = "j";
   terminal_cmd = "${pkgs.wezterm}/bin/wezterm";
 
-  swaylock_cmd = "${pkgs.swaylock}/bin/swaylock --color '#100B1B' -fF";
+  # Can't get PAM to work on non-nixos (ubuntu) with swaylock
+  # It seems like the solution but didn't bother: https://github.com/NixOS/nixpkgs/issues/158025#issuecomment-1616807870
+  swaylock_cmd = if disableSwayLock then "echo 'Swaylock is disabled'" else "${pkgs.swaylock}/bin/swaylock --color '#100B1B' -fF";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 

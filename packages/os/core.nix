@@ -54,6 +54,7 @@
     inherit inputs;
     inherit system;
     nixGLCommandPrefix = "";
+    disableSwayLock = false;
   };
 
   nixpkgs.config.allowUnfree = true;
