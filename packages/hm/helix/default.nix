@@ -25,9 +25,11 @@
       biome
       nodePackages.pyright
       dockerfile-language-server-nodejs
-      nodePackages.vscode-css-languageserver-bin
-      nodePackages.vscode-json-languageserver-bin
-      nodePackages.vscode-html-languageserver-bin
+      # nodePackages.vscode-css-languageserver-bin
+      # nodePackages.vscode-json-languageserver-bin
+      # nodePackages.vscode-html-languageserver-bin
+      vscode-langservers-extracted
+      # nodePackages.vscode-eslint-language-server
       nodePackages.typescript-language-server
       nodePackages.graphql-language-service-cli
       # nodePackages.svelte-language-server # use this instead of custom once nixos-unstable has 0.16.8 or newer (required for svelte 5)
@@ -136,6 +138,24 @@
           venvPath = ".";
         };
       };
+      language-server.vscode-eslint-language-server = {
+        command = "vscode-eslint-language-server";
+        args = [ "--stdio" ];
+        config = {
+          provideFormatter = true;
+          nodePath = "";
+          onIgnoredFiles = "off";
+          quiet = false;
+          rulesCustomizations = [ ];
+          run = "onType";
+          validate = "on";
+          codeActionOnSave = { mode = "all"; };
+          experimental = { };
+          problems = { shortenToSingleLine = false; };
+          workingDirectory = { mode = "auto"; };
+
+        };
+      };
       language-server.gopls = {
         environment = { "GOFLAGS" = "-tags=cluster"; };
       };
@@ -161,19 +181,36 @@
         }
         {
           name = "svelte";
-          language-servers = [ "svelteserver" "tailwindcss-ls" ];
+          language-servers =
+            [ "svelteserver" "tailwindcss-ls" "vscode-eslint-language-server" ];
           block-comment-tokens = [{
             start = "<!--";
             end = "-->";
           }];
         }
         {
+          name = "jsx";
+          language-servers = [
+            "tailwindcss-ls"
+            "typescript-language-server"
+            "vscode-eslint-language-server"
+          ];
+        }
+        {
           name = "css";
-          language-servers = [ "tailwindcss-ls" "vscode-css-language-server" ];
+          language-servers = [
+            "tailwindcss-ls"
+            "vscode-css-language-server"
+            "vscode-eslint-language-server"
+          ];
         }
         {
           name = "html";
-          language-servers = [ "tailwindcss-ls" "vscode-html-language-server" ];
+          language-servers = [
+            "tailwindcss-ls"
+            "vscode-html-language-server"
+            "vscode-eslint-language-server"
+          ];
         }
         {
           name = "caddyfile";
@@ -209,7 +246,8 @@
             command = "biome";
             args = [ "format" "--stdin-file-path=x.js" ];
           };
-          language-servers = [ "typescript-language-server" ];
+          language-servers =
+            [ "typescript-language-server" "vscode-eslint-language-server" ];
         }
         {
           name = "typescript";
@@ -217,7 +255,8 @@
             command = "biome";
             args = [ "format" "--stdin-file-path=x.ts" ];
           };
-          language-servers = [ "typescript-language-server" ];
+          language-servers =
+            [ "typescript-language-server" "vscode-eslint-language-server" ];
         }
         {
           name = "nix";
