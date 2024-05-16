@@ -8,6 +8,7 @@ let
   down = "j";
   terminal_cmd = "${pkgs.wezterm}/bin/wezterm";
 
+  swaylock_cmd = "${pkgs.swaylock}/bin/swaylock --color '#100B1B' -fF";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
@@ -47,7 +48,7 @@ in {
 
     '')
   ];
-  imports = [ ../../hm/waybar ../wlsunset];
+  imports = [ ../../hm/waybar ../wlsunset ];
   home.file = {
     ".home-manager-extras/README.md".text = ''
       Generated files to use to configure home-manager without nixos environment.
@@ -71,7 +72,33 @@ in {
   };
 
   services.copyq = { enable = true; };
-  # programs.swaylock.enable = true;
+  services.swayidle = {
+    enable = true;
+    events = [
+      {
+        event = "before-sleep";
+        command = "${pkgs.playerctl}/bin/playerctl pause";
+      }
+      {
+        event = "before-sleep";
+        command = swaylock_cmd;
+      }
+      {
+        event = "lock";
+        command = swaylock_cmd;
+      }
+    ];
+    timeouts = [
+      {
+        timeout = 1200; # I'll hate this while watching movies I guess
+        command = swaylock_cmd;
+      }
+      {
+        timeout = 3600;
+        command = "${pkgs.systemd}/bin/systemctl suspend";
+      }
+    ];
+  };
   services.mako = {
     enable = true;
     padding = "15,20";
@@ -103,6 +130,11 @@ in {
     gtk = true;
   };
 
+  wayland.windowManager.sway.extraConfig = ''
+    # https://stackoverflow.com/a/68787102
+    for_window [class=".*"] inhibit_idle fullscreen
+    for_window [app_id=".*"] inhibit_idle fullscreen
+  '';
   wayland.windowManager.sway.config = rec {
     modifier = "Mod1";
     focus.followMouse = "always";

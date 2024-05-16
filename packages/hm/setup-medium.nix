@@ -336,6 +336,7 @@
       pulseaudio
       playerctl
       brightnessctl
+      jc # convert common command outputs to json
 
       # Xorg
       xorg.xev
