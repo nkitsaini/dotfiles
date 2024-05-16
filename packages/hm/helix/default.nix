@@ -149,6 +149,13 @@
           rulesCustomizations = [ ];
           run = "onType";
           validate = "on";
+          codeAction = {
+            disableRuleComment = {
+              enable = true;
+              location = "separateLine";
+            };
+            showDocumentation = { enable = true; };
+          };
           codeActionOnSave = { mode = "all"; };
           experimental = { };
           problems = { shortenToSingleLine = false; };
@@ -190,6 +197,14 @@
         }
         {
           name = "jsx";
+          language-servers = [
+            "tailwindcss-ls"
+            "typescript-language-server"
+            "vscode-eslint-language-server"
+          ];
+        }
+        {
+          name = "tsx";
           language-servers = [
             "tailwindcss-ls"
             "typescript-language-server"
