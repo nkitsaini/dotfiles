@@ -106,6 +106,10 @@
               };
             };
 
+            e = {
+              "f"=":eslint-fix-all";
+            };
+
             m = comment_binding;
 
           };
