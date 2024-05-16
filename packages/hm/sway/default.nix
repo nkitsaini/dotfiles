@@ -35,7 +35,6 @@ let
     "${nixGLCommandPrefix}${pkgs.rofi-wayland}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 
 in {
-
   home.packages = with pkgs; [
     wl-clipboard
     swaylock
@@ -48,7 +47,7 @@ in {
 
     '')
   ];
-  imports = [ ../../hm/waybar ];
+  imports = [ ../../hm/waybar ../wlsunset];
   home.file = {
     ".home-manager-extras/README.md".text = ''
       Generated files to use to configure home-manager without nixos environment.
