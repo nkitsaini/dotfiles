@@ -23,7 +23,7 @@ let
   turn_on_output_cmd = "${sway_display_control}/bin/sway-display-control on";
   # Can't get PAM to work on non-nixos (ubuntu) with swaylock
   # It seems like the solution but didn't bother: https://github.com/NixOS/nixpkgs/issues/158025#issuecomment-1616807870
-  swaylock_cmd = if disableSwayLock then turn_off_output_cmd else "${pkgs.swaylock}/bin/swaylock --color '#100B1B' -fF";
+  swaylock_cmd = if disableSwayLock then turn_off_output_cmd else "${pkgs.swaylock}/bin/swaylock --color '#100B1B' -fF --indicator-idle-visible";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
