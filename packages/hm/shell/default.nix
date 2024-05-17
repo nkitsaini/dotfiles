@@ -9,6 +9,9 @@
         . "$HOME/.bash_env"
       fi
 
+      export PATH="${config.home.homeDirectory}/.local/bin:$PATH"
+      export PATH="${config.home.homeDirectory}/bin/:$PATH"
+
       if [[ $(${pkgs.procps}/bin/ps --no-header --pid=$PPID --format=comm) != "fish" && -z ''${BASH_EXECUTION_STRING} ]]
       then
         shopt -q login_shell && LOGIN_OPTION='--login' || LOGIN_OPTION=""
@@ -132,7 +135,6 @@
       # Start vim mode
       set -g fish_key_bindings fish_vi_key_bindings
 
-      set PATH "${config.home.homeDirectory}/bin/:$PATH"
 
       # Could've sworn this was already the default
       fzf_configure_bindings  --directory=\ct

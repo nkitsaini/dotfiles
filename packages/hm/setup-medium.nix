@@ -243,6 +243,7 @@
       qpdf
       gcc
       python312
+      python312Packages.pipx
       kubectl
       kubectl-tree
       kubectx
