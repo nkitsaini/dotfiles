@@ -5,7 +5,7 @@
     latitude = "78.9";
     temperature = {
       day = 6000;
-      night = 4000;
+      night = 2300;
     };
   };
 }

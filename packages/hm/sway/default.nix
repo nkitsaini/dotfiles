@@ -114,7 +114,7 @@ in {
     ];
     timeouts = [
       {
-        timeout = 1200; # I'll hate this while watching movies I guess
+        timeout = 1200; # Use idlelock on waybar while watching long videos etc.
         command = swaylock_cmd;
       }
       {
@@ -154,11 +154,6 @@ in {
     gtk = true;
   };
 
-  wayland.windowManager.sway.extraConfig = ''
-    # https://stackoverflow.com/a/68787102
-    for_window [class=".*"] inhibit_idle fullscreen
-    for_window [app_id=".*"] inhibit_idle fullscreen
-  '';
   wayland.windowManager.sway.config = rec {
     modifier = "Mod1";
     focus.followMouse = "always";
