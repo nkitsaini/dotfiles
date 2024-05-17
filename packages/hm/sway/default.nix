@@ -103,6 +103,14 @@ in {
         event = "lock";
         command = swaylock_cmd;
       }
+      {
+        event = "after-resume";
+        command = turn_on_output_cmd;
+      }
+      {
+        event = "unlock";
+        command = turn_on_output_cmd;
+      }
     ];
     timeouts = [
       {
