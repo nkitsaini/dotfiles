@@ -26,7 +26,7 @@
   ];
 
   home-manager.users.${import ../../users/kit/username.nix} = {
-    imports = [ ../../packages/hm/setup-full.nix ];
+    imports = [ ../../packages/hm/setup-full.nix ../../packages/hm/notes-git-push ];
   };
 
   
