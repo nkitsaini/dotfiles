@@ -1,6 +1,7 @@
 # https://nixos.wiki/wiki/Sway
 # I think most of this is unnecesary, but some variation makes screen sharing work on firefox. 
-{pkgs, ...}: let
+{ pkgs, ... }:
+let
   # bash script to let dbus know about important env variables and
   # propagate them to relevent services run at the end of sway config
   # see
@@ -45,13 +46,24 @@ in {
   security.pam.services.swaylock = { };
   programs.dconf.enable = true;
 
-  hardware.opengl.enable = true; # Should check for amd?
+  hardware.opengl = {
+    enable = true;
+    # Added by nixos-hardware
+    # driSupport = true;
+    # driSupport32Bit = true;
+    # extraPackages = with pkgs; [ rocmPackages.clr.icd ];
+  }; # Should check for amd?
+
+  ######### Not Part of sway-knobs
+  # hardware.amdgpu.opencl = true;
+  # hardware.amdgpu.loadInInitrd = true;
+  ######### non-sway-knob end
 
   services.dbus.enable = true;
   services.gnome.gnome-keyring.enable = true;
 
-  environment.systemPackages =  with pkgs; [
-    dbus   # make dbus-update-activation-environment available in the path
+  environment.systemPackages = with pkgs; [
+    dbus # make dbus-update-activation-environment available in the path
     dbus-sway-environment
     configure-gtk
 
@@ -60,5 +72,9 @@ in {
   xdg.portal.config.common.default = "*";
   xdg.portal.enable = true;
   xdg.portal.wlr.enable = true;
-  xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk pkgs.xdg-desktop-portal pkgs.xdg-desktop-portal-wlr ];
+  xdg.portal.extraPortals = [
+    pkgs.xdg-desktop-portal-gtk
+    pkgs.xdg-desktop-portal
+    pkgs.xdg-desktop-portal-wlr
+  ];
 }

@@ -17,6 +17,7 @@
     ./vcs.nix
     ./yazi.nix
     ./syncthing.nix
+    ./mpv
   ];
   # username and home directory are provided by the parent home.nix
 
@@ -237,6 +238,7 @@
       rustup
       obsidian
       vlc
+      # mpv
       xorg.xset # I see a vlc warning reguarding xset missing. Just in case.
       pavucontrol
       qrencode

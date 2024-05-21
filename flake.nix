@@ -5,6 +5,7 @@
     # Specify the source of Home Manager and Nixpkgs.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     nixgl = {
       url = "github:nix-community/nixGL";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -33,9 +34,9 @@
     };
   };
 
-  outputs = { nixpkgs, home-manager, nkitsaini_helix, nur, disko, ... }@inputs:
+  outputs = { nixpkgs, nixos-hardware, home-manager, nkitsaini_helix, nur, disko, ... }@inputs:
     let
-      mkSystem = hostname:
+      mkSystem = {hostname, extraModules?[]}:
         nixpkgs.lib.nixosSystem {
           # NOTE: Change this to aarch64-linux if you are on ARM
           inherit system;
@@ -48,7 +49,7 @@
             ./devices/${hostname}
             home-manager.nixosModules.home-manager
             disko.nixosModules.disko
-          ];
+          ] ++ extraModules;
         };
 
       system = "x86_64-linux";
@@ -74,11 +75,11 @@
       };
 
       # ===== Nixos configs
-      nixosConfigurations.monkey = mkSystem "monkey";
-      nixosConfigurations.iso = mkSystem "iso";
+      nixosConfigurations.monkey = mkSystem {hostname= "monkey"; extraModules=[nixos-hardware.nixosModules.lenovo-thinkpad-e14-amd];};
+      nixosConfigurations.iso = mkSystem {hostname= "iso";};
 
       # TODO: disko config remaining
-      nixosConfigurations.oogway = mkSystem "oogway";
+      nixosConfigurations.oogway = mkSystem {hostname= "oogway";};
 
       # TODO: following configs to be in similar fashion as `monkey`
       # i.e.

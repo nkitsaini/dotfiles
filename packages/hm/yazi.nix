@@ -10,8 +10,8 @@
   programs.yazi.enable = true;
   programs.yazi.settings = {
     opener = {
-      video = [{ exec = ''vlc -d "$1"''; }];
-      audio = [{ exec = ''vlc -d "$1"''; }];
+      video = [{ exec = ''mpv -d "$1"''; }];
+      audio = [{ exec = ''mpv -d "$1"''; }];
     };
     open = {
       rules = [
