@@ -55,7 +55,7 @@ in {
 	    	action="accept";
 	    	src=["*"]; # TODO: fix once headscale 0.23.0 is available on nixos (that finally has non-experimental support for ssh I guess)
 	    	dst=["*:*"];
-		users=["root" "autogroup:nonroot" "*"];
+		users=["root" "autogroup:nonroot" "ayush" "*"];
 	    }
 	    ];
 
