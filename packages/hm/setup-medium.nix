@@ -243,6 +243,7 @@
       pavucontrol
       qrencode
       qpdf
+      s3fs
       gcc
       python312
       python312Packages.pipx

@@ -92,7 +92,7 @@
         # NOTE: Change this to aarch64-linux if you are on ARM
         inherit system;
         modules = [
-          ./devices/crane/configuration.nix
+          ./devices/crane
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
