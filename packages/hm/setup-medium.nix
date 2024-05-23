@@ -289,7 +289,7 @@
       # inputs.nkitsaini_notes_utils.packages.${system}.default
 
       # Code specific
-      nixfmt
+      alejandra
       ruff
       lazygit
       nodejs_20
@@ -386,6 +386,7 @@
       tokei
       valgrind
       wget
+      duf # better df
 
       # btrfs
       compsize

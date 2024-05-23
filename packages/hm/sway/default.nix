@@ -248,6 +248,7 @@ in {
       "${modifier}+r" = "mode resize";
       "${modifier}+o" = "exec ${turn_on_output_cmd}";
       "${modifier}+Shift+O" = "exec ${turn_off_output_cmd}";
+      # "${modifier}+." = "exec ${pkgs.bemoji}/bin/bemoji";
 
       "XF86MonBrightnessUp" =
         "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5+%";

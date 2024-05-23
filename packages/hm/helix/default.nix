@@ -43,6 +43,7 @@
       editor = {
         bufferline = "multiple";
         idle-timeout = 5;
+        completion-timeout = 5;
         copilot-auto-render = true;
         # undercurl = true;
         # true-color = true;
@@ -279,7 +280,7 @@
         }
         {
           name = "nix";
-          formatter = { command = "nixfmt"; };
+          formatter = { command = "${pkgs.alejandra}/bin/alejandra"; };
         }
       ];
 
