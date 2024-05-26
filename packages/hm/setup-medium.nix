@@ -31,6 +31,8 @@
   home.stateVersion = "23.11"; # Please read the comment before changing.
 
   nixpkgs.config.allowUnfree = true;
+  systemd.user.enable = true;
+  systemd.user.startServices = true;
 
   gtk = {
     enable = true;
@@ -188,9 +190,10 @@
   home.file."workspace/.keep".text = ""; # Work repos
   home.file."mnt/.keep".text = ""; # mount points
   home.file."tmp/.keep".text = ""; # temporary directory
-  home.file."music/.keep".text = ""; # temporary directory
+  home.file."Music/.keep".text = ""; # temporary directory
   home.file."videos/.keep".text = ""; # temporary directory
-  home.file."downloads/.keep".text = ""; # downloads directory
+  home.file."Downloads/.keep".text = ""; # downloads directory
+  home.file."pictures/.keep".text = ""; # downloads directory
 
   qt.enable = true;
   qt.platformTheme = "qtct";
@@ -248,6 +251,7 @@
       python312
       python312Packages.pipx
       kubectl
+      k9s
       kubectl-tree
       kubectx
       sd

@@ -1,6 +1,7 @@
 { pkgs, ... }: {
 
   xdg.enable = true;
+  xdg.configFile."mimeapps.list".force = true;
   xdg.mimeApps = let
     browser_mimes = [
       "x-scheme-handler/http"
@@ -22,6 +23,8 @@
       value = "firefox.desktop";
     }) browser_mimes) // {
       "inode/directory" = "yazi.desktop";
+      "image/jpeg" = "qimgv.desktop";
+      "image/jpg" = "qimgv.desktop";
     };
     associations.added = builtins.listToAttrs (builtins.map (x: {
       name = x;
@@ -29,6 +32,8 @@
       value = [ "firefox.desktop" ];
     }) browser_mimes) // {
       "inode/directory" = [ "yazi.desktop" ];
+      "image/jpeg" = ["qimgv.desktop"];
+      "image/jpg" = ["qimgv.desktop"];
     };
   };
 
@@ -47,13 +52,13 @@
   xdg.userDirs = {
     enable = true;
     createDirectories = true;
-    desktop = "desktop";
+    desktop = "Desktop";
     publicShare = "share";
-    documents = "documents";
-    download = "downloads";
-    music = "music";
+    documents = "Documents";
+    download = "Downloads"; # firefox doesn't respect this, so using upper case stuff!
+    music = "Music"; # I think some one doesn't respect this
     videos = "videos";
-    pictures = "tmp";
+    pictures = "pictures";
     templates = "tmp";
   };
 }

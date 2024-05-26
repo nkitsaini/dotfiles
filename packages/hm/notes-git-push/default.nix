@@ -10,7 +10,6 @@ let
     '';
   });
 in {
-  systemd.user.enable = true;
   systemd.user.services.notes-git-push = {
     Unit = { Description = "Periodically pushes notes to git"; };
     Install = { WantedBy = [ "default.target" ]; };

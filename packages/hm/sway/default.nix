@@ -23,7 +23,7 @@ let
   turn_on_output_cmd = "${sway_display_control}/bin/sway-display-control on";
   # Can't get PAM to work on non-nixos (ubuntu) with swaylock
   # It seems like the solution but didn't bother: https://github.com/NixOS/nixpkgs/issues/158025#issuecomment-1616807870
-  swaylock_cmd = if disableSwayLock then turn_off_output_cmd else "${pkgs.swaylock}/bin/swaylock --color '#100B1B' -fF --indicator-idle-visible";
+  swaylock_cmd = if disableSwayLock then turn_off_output_cmd else "${pkgs.swaylock}/bin/swaylock -i ${(import ../../shared/wallpapers.nix).wallpaper2} --color '#100B1B' -fF";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
@@ -49,6 +49,8 @@ let
 
   menu =
     "${nixGLCommandPrefix}${pkgs.rofi-wayland}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
+
+  wallpaper = (import ../../shared/wallpapers.nix).wallpaper1;
 
 in {
   home.packages = with pkgs; [
@@ -291,6 +293,16 @@ in {
         "Escape" = "mode default";
         "Return" = "mode default";
       };
+    };
+  };
+
+  # wallpaper
+  systemd.user.services.sway-bg = {
+    Unit = { Description = "Set sway background"; };
+    Install = { WantedBy = [ "default.target" ]; };
+    Service = {
+      ExecStart = "${pkgs.swaybg}/bin/swaybg -i ${wallpaper}";
+      Restart = "on-failure";
     };
   };
 }
