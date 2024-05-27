@@ -21,6 +21,7 @@
     ../../packages/os/ssh.nix
 
     ../../packages/os/network-desktop.nix
+    ../../packages/os/bluetooth.nix
     ../../packages/os/battery.nix
     ../../packages/os/sound.nix
     ../../packages/os/keyboard.nix

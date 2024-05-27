@@ -310,18 +310,16 @@
         #!${pkgs.dash}/bin/dash
         exec nix run ${config.home.homeDirectory}/code/hive/helios_helper -- "$@"
       '')
-      (writeScriptBin "notes_utils" ''
-        #!${pkgs.dash}/bin/dash
-        exec nix run ${config.home.homeDirectory}/code/hive/notes_utils -- "$@"
-      '')
-      (writeScriptBin "notes_utils" ''
-        #!${pkgs.dash}/bin/dash
-        exec nix run ${config.home.homeDirectory}/code/hive/notes_utils -- "$@"
-      '')
       (writeShellApplication {
         name = "bw-util";
         text = ''
           exec nix run ${config.home.homeDirectory}/code/hive/bitwarden_util -- "$@"
+        '';
+      })
+      (writeShellApplication {
+        name = "notes-util";
+        text = ''
+          exec nix run ${config.home.homeDirectory}/code/hive/notes_utils/rs -- "$@"
         '';
       })
       (writeShellApplication {

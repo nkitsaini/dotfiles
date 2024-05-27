@@ -6,6 +6,7 @@
     ./headscale.nix
     ../../packages/os/ssh.nix
     ../../packages/os/tailscale.nix
+    ../../packages/os/bluetooth.nix
 
   ];
   networking.firewall.allowedTCPPorts = [80 443];

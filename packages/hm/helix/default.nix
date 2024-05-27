@@ -25,6 +25,8 @@
       biome
       nodePackages.pyright
       dockerfile-language-server-nodejs
+      docker-compose-language-service
+      yaml-language-server
       # nodePackages.vscode-css-languageserver-bin
       # nodePackages.vscode-json-languageserver-bin
       # nodePackages.vscode-html-languageserver-bin
