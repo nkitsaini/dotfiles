@@ -368,6 +368,7 @@
       gen-license
       hexyl
       htop
+      kooha # dead simple (and functional) screen recorder
       httpie
       iperf3
       gnumake
