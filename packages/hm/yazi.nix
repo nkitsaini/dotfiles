@@ -10,8 +10,8 @@
   programs.yazi.enable = true;
   programs.yazi.settings = {
     opener = {
-      video = [{ exec = ''mpv -d "$1"''; }];
-      audio = [{ exec = ''mpv -d "$1"''; }];
+      video = [{ run = ''mpv -d "$1"''; }];
+      audio = [{ run = ''mpv -d "$1"''; }];
     };
     open = {
       rules = [

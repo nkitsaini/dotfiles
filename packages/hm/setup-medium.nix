@@ -19,6 +19,7 @@
     ./syncthing.nix
     ./mpv
     ./k9s
+    ./cmus
   ];
   # username and home directory are provided by the parent home.nix
 
@@ -276,7 +277,6 @@
       bun
       ncdu
       caddy
-      cmus
       archivemount
       ethtool
       sioyek
