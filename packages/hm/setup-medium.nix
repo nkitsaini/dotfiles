@@ -18,6 +18,7 @@
     ./yazi.nix
     ./syncthing.nix
     ./mpv
+    ./k9s
   ];
   # username and home directory are provided by the parent home.nix
 
@@ -251,7 +252,6 @@
       python312
       python312Packages.pipx
       kubectl
-      k9s
       kubectl-tree
       kubectx
       sd
