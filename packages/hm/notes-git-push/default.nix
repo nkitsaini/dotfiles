@@ -16,6 +16,7 @@ in {
     Service = {
       ExecStart = "${notesGitPush}/bin/notes-git-push";
       Restart = "on-failure";
+      RuntimeMaxSec="5h";
     };
   };
 }
