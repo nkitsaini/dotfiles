@@ -26,15 +26,6 @@
       "image/jpeg" = "qimgv.desktop";
       "image/jpg" = "qimgv.desktop";
     };
-    associations.added = builtins.listToAttrs (builtins.map (x: {
-      name = x;
-      # value = [ "${pkgs.firefox}/share/applications/firefox.desktop" ];
-      value = [ "firefox.desktop" ];
-    }) browser_mimes) // {
-      "inode/directory" = [ "yazi.desktop" ];
-      "image/jpeg" = ["qimgv.desktop"];
-      "image/jpg" = ["qimgv.desktop"];
-    };
   };
 
   xdg.desktopEntries = {

@@ -136,16 +136,20 @@ in {
     defaultTimeout = 5000;
     markup = true;
     format = "<b>%s</b>\\n\\n%b";
+    # urgency
+    extraConfig = "
+    [urgency=high]
+    text-color=#CFFFF6
+    border-color=#000000
+    background-color=#FF0F0F
+    border-size=4
+    ";
 
     # TODO:
     # [hidden]
     # format=(and %h more)
     # text-color=#999999
 
-    # [urgency=high]
-    # text-color=#F22C86
-    # border-color=#F22C86
-    # border-size=4
   };
 
   wayland.windowManager.sway.enable = true;
