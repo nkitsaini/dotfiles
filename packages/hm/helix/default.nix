@@ -57,7 +57,7 @@
           hidden = false;
         };
 
-        lsp = { display-inlay-hints = true; };
+        lsp = { display-inlay-hints = false; };
         cursor-shape.insert = "bar";
         insert-final-newline = false;
       };

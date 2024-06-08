@@ -137,13 +137,13 @@ in {
     markup = true;
     format = "<b>%s</b>\\n\\n%b";
     # urgency
-    extraConfig = "
+    extraConfig = ''
     [urgency=high]
-    text-color=#CFFFF6
+    text-color=#EEFEFE
     border-color=#000000
-    background-color=#FF0F0F
+    background-color=#cc3636
     border-size=4
-    ";
+    '';
 
     # TODO:
     # [hidden]
