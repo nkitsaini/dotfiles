@@ -36,7 +36,7 @@
 
   outputs = { nixpkgs, nixos-hardware, home-manager, nkitsaini_helix, nur, disko, ... }@inputs:
     let
-      mkSystem = {hostname, extraModules?[]}:
+      mkSystem = {hostname, extraModules?[], username?"kit"}:
         nixpkgs.lib.nixosSystem {
           # NOTE: Change this to aarch64-linux if you are on ARM
           inherit system;
@@ -44,6 +44,7 @@
             inherit inputs;
             inherit system;
             inherit hostname;
+            inherit username;
           };
           modules = [
             ./devices/${hostname}
@@ -77,6 +78,8 @@
       # ===== Nixos configs
       nixosConfigurations.monkey = mkSystem {hostname= "monkey"; extraModules=[nixos-hardware.nixosModules.lenovo-thinkpad-e14-amd];};
       nixosConfigurations.iso = mkSystem {hostname= "iso";};
+
+      nixosConfigurations.deepak = mkSystem {hostname= "deepak"; username="deepak";};
 
       # TODO: disko config remaining
       nixosConfigurations.oogway = mkSystem {hostname= "oogway";};

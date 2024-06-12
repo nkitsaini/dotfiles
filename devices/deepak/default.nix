@@ -5,16 +5,15 @@
 { hostname, pkgs, username, ... }: {
   imports = [ # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    ./wireguard.nix
+    # ./wireguard.nix
 
     # sudo nix run github:nix-community/disko --extra-experimental-features flakes --extra=experimental-features nix-command -- --mode disko --flake github:nkitsaini/dotfiles#monkey
     ./disko.nix
 
     ../../packages/os/core.nix
     ../../packages/os/kernel.nix
-    ../../packages/os/fhs_tools.nix
 
-    ../../packages/os/tailscale.nix
+    # ../../packages/os/tailscale.nix
 
     ../../packages/os/podman.nix
     ../../packages/os/virtualbox.nix
@@ -30,8 +29,8 @@
 
     ../../packages/os/sway
 
-    ../../users/kit
-    ../../users/root
+    ../../users/deepak
+    ../../users/root_deepak
   ];
 
   home-manager.users.${username} = {

@@ -49,6 +49,8 @@
       #!${pkgs.coreutils-full}/bin/cat
       Use commands starting with `nixc` to manage stuff.
 
+      # BEWARE: Network is currently broken
+      # TODO: Fix network issue
       # Use iwctl to manage network
       # Make sure to stop wpa (sudo systemctl stop wpa_supplicant.service) and keep NetworkManager running.
       # If it doesn't work play around with NetworkManager off/on and update this document about whichever works :)
@@ -57,13 +59,13 @@
       > station wlan0 connect xyz
 
       # Apply file partition
-      sudo nix run github:nix-community/disko --extra-experimental-features flakes --extra=experimental-features nix-command -- --mode disko --flake github:nkitsaini/dotfiles#<hostname, eg. monkey>
+      sudo nix run github:nix-community/disko --extra-experimental-features flakes --extra-experimental-features nix-command -- --mode disko --flake github:nkitsaini/dotfiles#<hostname, eg. monkey>
 
 
       # Clone the dotfiles
       nixc-clone-dotfiles
       cd ~/code/dotfiles
-      nixos-generate-config --show-hardware-config --no-filesystems > devices/<hostname>/hardware-configuration.nix
+      sudo nixos-generate-config --show-hardware-config --no-filesystems > devices/<hostname>/hardware-configuration.nix
       git diff # Verify if changes look okay. possibly there will be none. but if there are copy this to /mnt/tmp_dotfiles/... so that it can later be pushed to github 
 
       # Do nix install

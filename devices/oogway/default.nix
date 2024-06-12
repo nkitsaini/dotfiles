@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ pkgs, hostname, ... }:
+{ pkgs, hostname, username, ... }:
 
 {
   imports = [ # Include the results of the hardware scan.
@@ -25,7 +25,7 @@
     ../../users/kit
   ];
 
-  home-manager.users.${import ../../users/kit/username.nix} = {
+  home-manager.users.${username} = {
     imports = [ ../../packages/hm/setup-full.nix ../../packages/hm/notes-git-push ];
   };
 

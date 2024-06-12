@@ -1,9 +1,5 @@
 # This is a nixos package (not home-manager)
-{ ... }:
-let
-  username = import ../../../users/kit/username.nix;
-
-in {
+{ username, ... }: {
 
   # Random configuration required to make sway work
   imports = [ ./sway-knobs.nix ];
