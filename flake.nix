@@ -80,6 +80,7 @@
       nixosConfigurations.iso = mkSystem {hostname= "iso";};
 
       nixosConfigurations.deepak = mkSystem {hostname= "deepak"; username="deepak";};
+      nixosConfigurations.akanksha = mkSystem {hostname= "akanksha"; username="akanksha";};
 
       # TODO: disko config remaining
       nixosConfigurations.oogway = mkSystem {hostname= "oogway";};
