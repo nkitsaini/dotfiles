@@ -1,7 +1,11 @@
 # This is a nixos package (not home-manager)
-{ pkgs, config, nixGLCommandPrefix ? "", disableSwayLock ? false, ... }:
-let
-
+{
+  pkgs,
+  config,
+  nixGLCommandPrefix ? "",
+  disableSwayLock ? false,
+  ...
+}: let
   left = "h";
   right = "l";
   up = "k";
@@ -12,18 +16,24 @@ let
     name = "sway-display-control";
     runtimeInputs = with pkgs; [sway jq findutils];
     text = ''
-    # usage: sway-disable-control off
-    # usage: sway-disable-control on
-    # usage: sway-disable-control toggle
-    swaymsg -t get_outputs | jq '.[].name' | xargs -I _ swaymsg "output _ dpms $1"
+      # usage: sway-disable-control off
+      # usage: sway-disable-control on
+      # usage: sway-disable-control toggle
+      swaymsg -t get_outputs | jq '.[].name' | xargs -I _ swaymsg "output _ dpms $1"
     '';
   };
+  # screenshot_tool =  (pkgs.writeScriptBin "screenshot" ''
+  # #!${pkgs.python312}/bin/python3
+  # '')
 
   turn_off_output_cmd = "${sway_display_control}/bin/sway-display-control off";
   turn_on_output_cmd = "${sway_display_control}/bin/sway-display-control on";
   # Can't get PAM to work on non-nixos (ubuntu) with swaylock
   # It seems like the solution but didn't bother: https://github.com/NixOS/nixpkgs/issues/158025#issuecomment-1616807870
-  swaylock_cmd = if disableSwayLock then turn_off_output_cmd else "${pkgs.swaylock}/bin/swaylock -i ${(import ../../shared/wallpapers.nix).wallpaper2} --color '#100B1B' -fF";
+  swaylock_cmd =
+    if disableSwayLock
+    then turn_off_output_cmd
+    else "${pkgs.swaylock}/bin/swaylock -i ${(import ../../shared/wallpapers.nix).wallpaper2} --color '#100B1B' -fF";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
@@ -47,11 +57,9 @@ let
     repeat_delay = "160";
   };
 
-  menu =
-    "${nixGLCommandPrefix}${pkgs.rofi-wayland}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
+  menu = "${nixGLCommandPrefix}${pkgs.rofi-wayland}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 
   wallpaper = (import ../../shared/wallpapers.nix).wallpaper1;
-
 in {
   home.packages = with pkgs; [
     wl-clipboard
@@ -61,12 +69,8 @@ in {
     xwayland
     grim
     slurp
-    (pkgs.writeScriptBin "screenshot" ''
-      #!${pkgs.bash}/bin/bash
-
-    '')
   ];
-  imports = [ ../../hm/waybar ../wlsunset ];
+  imports = [../../hm/waybar ../wlsunset];
   home.file = {
     ".home-manager-extras/README.md".text = ''
       Generated files to use to configure home-manager without nixos environment.
@@ -89,7 +93,7 @@ in {
     '';
   };
 
-  services.copyq = { enable = true; };
+  services.copyq = {enable = true;};
   services.swayidle = {
     enable = true;
     events = [
@@ -138,18 +142,17 @@ in {
     format = "<b>%s</b>\\n\\n%b";
     # urgency
     extraConfig = ''
-    [urgency=high]
-    text-color=#EEFEFE
-    border-color=#000000
-    background-color=#cc3636
-    border-size=4
+      [urgency=high]
+      text-color=#EEFEFE
+      border-color=#000000
+      background-color=#cc3636
+      border-size=4
     '';
 
     # TODO:
     # [hidden]
     # format=(and %h more)
     # text-color=#999999
-
   };
 
   wayland.windowManager.sway.enable = true;
@@ -171,7 +174,7 @@ in {
 
     output = {
       # Can't use negative indexes due to https://github.com/swaywm/sway/wiki#mouse-events-clicking-scrolling-arent-working-on-some-of-my-workspaces
-      "${out_laptop}" = { position = "0,1080"; };
+      "${out_laptop}" = {position = "0,1080";};
       "${out_monitor}" = {
         resolution = "2560x1080";
         position = "0,0";
@@ -181,7 +184,6 @@ in {
     inherit left up right down;
 
     keybindings = {
-
       # Focus
       "${modifier}+${left}" = "focus left";
       "${modifier}+${down}" = "focus down";
@@ -205,8 +207,7 @@ in {
 
       # TODO: remove nixGL ones moved to NixOS
       "${modifier}+Return" = "exec ${terminal}";
-      "${modifier}+d" =
-        "exec ${menu}"; # run rofi with nixGL so all program opened inherit it
+      "${modifier}+d" = "exec ${menu}"; # run rofi with nixGL so all program opened inherit it
 
       "${modifier}+Shift+c" = "reload";
       "${modifier}+Shift+r" = "restart";
@@ -256,20 +257,20 @@ in {
       "${modifier}+Shift+O" = "exec ${turn_off_output_cmd}";
       # "${modifier}+." = "exec ${pkgs.bemoji}/bin/bemoji";
 
-      "XF86MonBrightnessUp" =
-        "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5+%";
-      "XF86MonBrightnessDown" =
-        "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5-%";
+      # Brightness
+      "XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5+%";
+      "XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5-%";
+
+      # Screenshot
+      "Print" = "exec ${pkgs.grim}/bin/grim -c && ${pkgs.libnotify}/bin/notify-send 'Screenshot saved'";
+      "Shift+Print" = "exec ${pkgs.grim}/bin/grim -c -g $(${pkgs.slurp}/bin/slurp) && ${pkgs.libnotify}/bin/notify-send 'Screenshot saved'";
+      "Ctrl+Shift+Print" = "exec ${pkgs.grim}/bin/grim -c -g $(${pkgs.slurp}/bin/slurp) - | ${pkgs.wl-clipboard}/bin/wl-copy";
 
       ## Pulse Audio controls
-      "XF86AudioRaiseVolume" =
-        "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-volume @DEFAULT_SINK@ +5%"; # increase sound volume
-      "XF86AudioLowerVolume" =
-        "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-volume @DEFAULT_SINK@ -5%"; # decrease sound volume
-      "XF86AudioMute" =
-        "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; # mute sound
-      "XF86AudioMicMute" =
-        "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle"; # mute mic audio
+      "XF86AudioRaiseVolume" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-volume @DEFAULT_SINK@ +5%"; # increase sound volume
+      "XF86AudioLowerVolume" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-volume @DEFAULT_SINK@ -5%"; # decrease sound volume
+      "XF86AudioMute" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; # mute sound
+      "XF86AudioMicMute" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle"; # mute mic audio
 
       "XF86AudioPlay" = "exec ${pkgs.playerctl}/bin/playerctl play-pause";
       "XF86AudioPause" = "exec ${pkgs.playerctl}/bin/playerctl play-pause";
@@ -282,7 +283,7 @@ in {
       border = 2;
     };
 
-    bars = [ ];
+    bars = [];
 
     modes = {
       resize = {
@@ -302,8 +303,13 @@ in {
 
   # wallpaper
   systemd.user.services.sway-bg = {
-    Unit = { Description = "Set sway background"; };
-    Install = { WantedBy = [ "default.target" ]; };
+    # Reference: https://github.com/nix-community/home-manager/blob/8d5e27b4807d25308dfe369d5a923d87e7dbfda3/modules/programs/waybar.nix#L305
+    Unit = {
+      Description = "Set sway background";
+      PartOf = ["graphical-session.target"];
+      After = ["graphical-session-pre.target"];
+    };
+    Install = {WantedBy = ["graphical-session.target"];};
     Service = {
       ExecStart = "${pkgs.swaybg}/bin/swaybg -i ${wallpaper}";
       Restart = "on-failure";

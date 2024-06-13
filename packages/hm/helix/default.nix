@@ -40,7 +40,7 @@
     ];
 
     settings = {
-      # theme = "gruvbox_dark_hard";
+      # theme = "amberwood";
       theme = "gruvbox_light_soft";
       editor = {
         bufferline = "multiple";

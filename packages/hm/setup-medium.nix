@@ -149,6 +149,7 @@
   programs.nix-index = { enable = true; };
 
   services.batsignal = { enable = true; };
+   services.network-manager-applet.enable = true; 
 
   xdg.configFile."nixpkgs/config.nix".text = ''
      {

@@ -51,12 +51,14 @@
 
       # BEWARE: Network is currently broken
       # TODO: Fix network issue
+      # First try `nmtui connect` to manage networks. Failing that:
       # Use iwctl to manage network
       # Make sure to stop wpa (sudo systemctl stop wpa_supplicant.service) and keep NetworkManager running.
       # If it doesn't work play around with NetworkManager off/on and update this document about whichever works :)
       iwctl
-      > station wlan0 get-networks
-      > station wlan0 connect xyz
+      > iwctl station wlan0 scan
+      > iwctl station wlan0 get-networks
+      > iwctl station wlan0 connect xyz
 
       # Apply file partition
       sudo nix run github:nix-community/disko --extra-experimental-features flakes --extra-experimental-features nix-command -- --mode disko --flake github:nkitsaini/dotfiles#<hostname, eg. monkey>
@@ -70,9 +72,15 @@
 
       # Do nix install
       cd /mnt
+
+
+      # Install nixos, 
+      # Pass `--extra-substituters http://<ip>:8004?trusted=1`  to re-use cache from another machine. Run `nix-serve -p 8004` on the other machine. 
+      # FYI: the order of substituters does not matter, as nix uses <server-domain>/nix-cache-info endpoint to get priority of cache. `cache.nixos.org` has priority=40, and `nix-serve` has priority=30. Lower means higher priority. So `nix-serve` will be preferred over `cache.nixos.org`. It can also be changed by adding `?priority=<value>` to the cache url.
       sudo nixos-install --flake ~/code/dotfiles#<hostname> 
 
 
+      # Make sure to save any changes from `hardware-configuration.nix`.
       # Should be good to restart now
     '')
   ];

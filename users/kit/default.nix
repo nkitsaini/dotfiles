@@ -31,6 +31,6 @@ in {
     hashedPassword = "$6$Z1Ak/SkICKwL2tLN$THztROB935o87EQUkRzZlD0xrszPx5L/X5SA6ePv0v0bgGzJN2PnLbJ8FJe.iqXtb8BPl1kj/8N7OGblvY5sY1";
 
     openssh.authorizedKeys.keys = import ../../packages/authorized_keys.nix;
-    extraGroups = [ "wheel" "input" "docker" "video" ];
+    extraGroups = [ "wheel" "input" "docker" "video" "networkmanager" ];
   };
 }
