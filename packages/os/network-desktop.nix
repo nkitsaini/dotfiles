@@ -13,20 +13,22 @@
     fallbackDns = [ "1.1.1.1" "8.8.8.8" ];
   };
 
-  networking.useNetworkd = true;
 
   # otherwise blocks nixos-rebuild if wired is unplugged.
   systemd.network.wait-online.enable = false;
 
-  systemd.network.networks."30-wired" = {
-    matchConfig = { Name = lib.mkForce "enp* eth*"; };
-    DHCP = "yes";
-    networkConfig = {
-      IPv6PrivacyExtensions = "yes";
-      LinkLocalAddressing ="yes";
-      # Address = "192.168.10.2/24";
-    };
-  };
+  # TODO: need to use nmtui and applet from networkmanager
+  #       need to use dhcp fallback to link-local using systemd
+  # networking.useNetworkd = true;
+  # systemd.network.networks."30-wired" = {
+  #   matchConfig = { Name = lib.mkForce "enp* eth*"; };
+  #   DHCP = "yes";
+  #   networkConfig = {
+  #     IPv6PrivacyExtensions = "yes";
+  #     LinkLocalAddressing ="yes";
+  #     # Address = "192.168.10.2/24";
+  #   };
+  # };
 
   networking.wireless.enable = false;
   networking.wireless.iwd.enable = true;
