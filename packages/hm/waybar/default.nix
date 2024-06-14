@@ -1,6 +1,9 @@
 {
   programs.waybar = {
     enable = true;
+
+    # TODO: known issues. waybar systemd doesn't stop quickly enough. Which means the next systemd start fails. 
+    # So, if you close sway and reopen by running `sway` command quick enough, waybar will be missing. But if you wait some time it'll work.
     systemd.enable = true;
     settings.mainBar = {
       "layer" = "top"; # Waybar at top layer
@@ -99,6 +102,9 @@
       "tray" = {
         # "icon-size"= 21;
         "spacing" = 10;
+      };
+      "clock" = {
+         "format"= "{:%Y-%m-%d %H:%M}";
       };
       # "clock" = {
       #   # "timezone"= "America/New_York";

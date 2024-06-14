@@ -199,7 +199,7 @@
   home.file."pictures/.keep".text = ""; # downloads directory
 
   qt.enable = true;
-  qt.platformTheme = "qtct";
+  qt.platformTheme.name = "qtct";
   xdg.configFile."qt5ct/qt5ct.conf".text = ''
     [Appearance]
     icon_theme=breeze

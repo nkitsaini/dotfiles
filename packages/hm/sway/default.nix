@@ -158,6 +158,13 @@ in {
   wayland.windowManager.sway.enable = true;
   wayland.windowManager.sway.systemd.enable = true;
   wayland.windowManager.sway.xwayland = true;
+  wayland.windowManager.sway.extraSessionCommands = ''
+    # For some reason, this script is also run while `nixos-rebuild`, when the ~/.xsession is not available (different fs). So conditional execution.
+    # $HOME at that time is /homeless-shelter, which builder uses
+    if [ "$HOME" == "${config.home.homeDirectory}" ]; then
+      source ${config.home.homeDirectory}/.xsession
+    fi
+  '';
   wayland.windowManager.sway.wrapperFeatures = {
     base = true;
     gtk = true;
