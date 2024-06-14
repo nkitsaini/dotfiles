@@ -11,3 +11,11 @@
   - nixos-install ... --substituters http://<ip>:8004?trusted=1
 4. Start sway automatically
 5. GUI for bluetooth, GUI for iwctl, GUI for screenshot
+
+
+
+nmtui-connect:
+  secrets were required but not provided (but worked through applet)
+
+~/.xsession got stuck, but worked after starting hm-session-manager.service
+
