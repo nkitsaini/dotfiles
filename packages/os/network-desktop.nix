@@ -17,23 +17,41 @@
   # otherwise blocks nixos-rebuild if wired is unplugged.
   systemd.network.wait-online.enable = false;
 
-  # TODO: need to use nmtui and applet from networkmanager
-  #       need to use dhcp fallback to link-local using systemd
-  # networking.useNetworkd = true;
-  # systemd.network.networks."30-wired" = {
-  #   matchConfig = { Name = lib.mkForce "enp* eth*"; };
-  #   DHCP = "yes";
-  #   networkConfig = {
-  #     IPv6PrivacyExtensions = "yes";
-  #     LinkLocalAddressing ="yes";
-  #     # Address = "192.168.10.2/24";
-  #   };
-  # };
+  # need to use nmtui and applet from networkmanager
+  # need to use dhcp fallback to link-local using systemd
+  networking.useNetworkd = true;
+  systemd.network.networks."30-wired" = {
+    matchConfig = { Type = "ether"; };
+    DHCP = "yes";
+    networkConfig = {
+      IPv6PrivacyExtensions = "yes";
+      LinkLocalAddressing ="yes";
+      # Address = "192.168.10.2/24";
+    };
+  };
+
+  #### 90-disable-non-wired seems to be effective in blocking, but just securing both ends.
+  systemd.network.networks."10-disable-non-wired" = {
+    matchConfig = { Type = "!ether"; };
+    linkConfig = {
+      Unmanaged = "yes";
+    };
+  };
+  systemd.network.networks."90-disable-non-wired" = {
+    matchConfig = { Type = "!ether"; };
+    linkConfig = {
+      Unmanaged = "yes";
+    };
+  };
 
   networking.wireless.enable = false;
-  networking.wireless.iwd.enable = true;
-  networking.networkmanager.enable = true;
-  networking.networkmanager.wifi.backend = "iwd";
+  networking.networkmanager = {
+    enable = true;
+    wifi.backend = "iwd";
+    # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/configuring-networkmanager-to-ignore-certain-devices_configuring-and-managing-networking
+    unmanaged = ["type:ethernet"];
+  };
+
   networking.wireless.iwd.settings = {
     Network = { NameResolvingService = "systemd"; };
   };
