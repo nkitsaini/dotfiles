@@ -49,7 +49,15 @@
     enable = true;
     wifi.backend = "iwd";
     # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/configuring-networkmanager-to-ignore-certain-devices_configuring-and-managing-networking
+    wifi.powersave = false;
+
     unmanaged = ["type:ethernet"];
+
+      # To debug Network Manager, first check: /var/lib/NetworkManager/NetworkManager.state
+    # and see all values are `true`. Use `nmcli networking on` to turn on networking if required.
+    # And enable following option. use: `journalctl -xe -f -u  NetworkManager.service` to see the logs
+    # 
+    # logLevel = "TRACE";
   };
 
   networking.wireless.iwd.settings = {

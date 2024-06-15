@@ -243,6 +243,7 @@
       gnutar
       rustup
       obsidian
+      wl-screenrec
       vlc
       # mpv
       xorg.xset # I see a vlc warning reguarding xset missing. Just in case.
