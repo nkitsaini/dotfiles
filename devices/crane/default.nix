@@ -7,6 +7,7 @@
     ../../packages/os/ssh.nix
     ../../packages/os/tailscale.nix
     ../../packages/os/bluetooth.nix
+    ../../packages/os/podman.nix
 
   ];
   networking.firewall.allowedTCPPorts = [80 443];
