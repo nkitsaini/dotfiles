@@ -5,10 +5,10 @@
   virtualisation.docker.liveRestore = false;
   services.caddy.virtualHosts = {
     ":80".extraConfig = ''
-      reverse_proxy localhost:9080
+      reverse_proxy 127.0.0.1:9080
     '';
     ":443".extraConfig = ''
-      reverse_proxy localhost:9443
+      reverse_proxy 127.0.0.1:9443
     '';
   };
 }

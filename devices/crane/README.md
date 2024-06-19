@@ -1,4 +1,11 @@
-# Docker swarm:
+# nixos-rebuild
+Use --target-host to build locally and deploy on crane. This is much faster.
+
+Run on local machine: `nixos-rebuild switch --flake .#crane --target-host user@ip`
+
+
+
+## Docker swarm:
 
 ```
 # On server
@@ -11,7 +18,7 @@ docker context create prod --docker "host=ssh://user@host"
 docker --context prod service --help
 ```
 
-## Caddy setup
+### Caddy setup
 - https://github.com/lucaslorentz/caddy-docker-proxy
 ```
 # as docker context `prod`
