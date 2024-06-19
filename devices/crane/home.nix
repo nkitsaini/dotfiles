@@ -12,7 +12,7 @@
     [
       (writeScriptBin "rebuild-system" ''
         #!/usr/bin/env bash
-        sudo nixos-rebuild switch --flake ${config.home.homeDirectory}/code/home-manager#crane
+        sudo nixos-rebuild switch --flake ${config.home.homeDirectory}/code/dotfiles#crane
       '')
 
     ];
