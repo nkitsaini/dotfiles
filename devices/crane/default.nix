@@ -1,4 +1,4 @@
-{ ... }: {
+{pkgs, ...}: {
   imports = [
     ./hardware-configuration.nix
     # TODO: clean the files too
@@ -9,15 +9,15 @@
     ../../packages/os/bluetooth.nix
     ../../packages/os/podman.nix
     ../../packages/os/docker_swarm.nix
-
   ];
   networking.firewall.allowedTCPPorts = [80 443];
+
+
   services.caddy = {
     enable = true;
   };
 
-
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features = ["nix-command" "flakes"];
   documentation.nixos.enable =
     false; # Takes too much ram causing failures on small machines. https://discourse.nixos.org/t/sudo-nixos-rebuild-switch-does-nothing/9273/14
 
