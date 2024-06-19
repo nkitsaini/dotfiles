@@ -8,6 +8,7 @@
     ../../packages/os/tailscale.nix
     ../../packages/os/bluetooth.nix
     ../../packages/os/podman.nix
+    ../../packages/os/docker_swarm.nix
 
   ];
   networking.firewall.allowedTCPPorts = [80 443];
