@@ -25,6 +25,21 @@
     config = { global = { hide_env_diff = true; }; };
   };
 
+  programs.atuin = {
+    enable = true;
+    enableBashIntegration = true;
+    enableFishIntegration = true;
+    flags = [
+      "--disable-up-arrow"
+    ];
+    settings = {
+      # Maybe later.
+      auto_sync = false;
+      enter_accept = true;
+      inline_height = 20;
+    };
+  };
+
   programs.starship = {
     enable = true;
     enableFishIntegration = true;
