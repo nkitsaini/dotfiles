@@ -12,7 +12,9 @@
 
   ];
   networking.firewall.allowedTCPPorts = [80 443];
-  services.caddy = { enable = true; };
+  services.caddy = {
+    enable = true;
+  };
 
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
