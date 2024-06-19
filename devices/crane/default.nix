@@ -10,7 +10,13 @@
     ../../packages/os/podman.nix
     ../../packages/os/docker_swarm.nix
   ];
-  networking.firewall.allowedTCPPorts = [80 443];
+  networking.firewall.allowedTCPPorts = [
+  80
+  443
+  9080
+  9443
+  
+  ];
 
 
   services.caddy = {
