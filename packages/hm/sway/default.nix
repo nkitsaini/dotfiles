@@ -143,9 +143,9 @@ in {
     # urgency
     extraConfig = ''
       [urgency=high]
-      text-color=#EEFEFE
+      text-color=#CFFFF6
       border-color=#000000
-      background-color=#cc3636
+      background-color=#FF0F0F
       border-size=4
     '';
 
