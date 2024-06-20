@@ -22,9 +22,14 @@
       swaymsg -t get_outputs | jq '.[].name' | xargs -I _ swaymsg "output _ dpms $1"
     '';
   };
-  # screenshot_tool =  (pkgs.writeScriptBin "screenshot" ''
-  # #!${pkgs.python312}/bin/python3
-  # '')
+  volume_control_no_deps = pkgs.writeScriptBin "wireplumber-volume-control-deps-missing" (builtins.readFile ../../scripts/volume_control.py);
+  volume_control = pkgs.writeShellApplication {
+    name = "volume-control";
+    runtimeInputs = with pkgs; [python312 wireplumber];
+    text = ''
+      exec ${volume_control_no_deps}/bin/wireplumber-volume-control-deps-missing "$@"
+    '';
+  };
 
   turn_off_output_cmd = "${sway_display_control}/bin/sway-display-control off";
   turn_on_output_cmd = "${sway_display_control}/bin/sway-display-control on";
@@ -275,8 +280,8 @@ in {
 
       ## Pulse Audio controls
       # TODO: limit max volume to 200%
-      "XF86AudioRaiseVolume" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-volume @DEFAULT_SINK@ +5%"; # increase sound volume
-      "XF86AudioLowerVolume" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-volume @DEFAULT_SINK@ -5%"; # decrease sound volume
+      "XF86AudioRaiseVolume" = "exec --no-startup-id ${volume_control}/bin/volume-control +0.05"; # increase sound volume
+      "XF86AudioLowerVolume" = "exec --no-startup-id ${volume_control}/bin/volume-control -0.05"; # decrease sound volume
       "XF86AudioMute" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; # mute sound
       "XF86AudioMicMute" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle"; # mute mic audio
 
