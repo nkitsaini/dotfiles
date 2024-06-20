@@ -111,7 +111,7 @@
         "format-icons" = [" " " " " " " " " "];
       };
       "network" = {
-        "format-wifi" = "{essid} ({signalStrength}%)  ";
+        "format-wifi" = "  {essid} ({signalStrength}%)";
         "format-ethernet" = "  {ifname}";
         "tooltip-format" = "  {ifname} via {gwaddr}";
         "format-linked" = "  {ifname} (No IP)";
@@ -120,7 +120,7 @@
       };
 
       "wireplumber" = {
-        "format" = "{volume}% {icon} ";
+        "format" = "{icon}  {volume}%";
         "format-muted" = "";
         "on-click" = "helvum";
         "format-icons" = ["" "" ""];
