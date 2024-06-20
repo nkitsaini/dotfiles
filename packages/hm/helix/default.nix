@@ -23,10 +23,11 @@
       rust-analyzer
       typst-lsp
       biome
-      nodePackages.pyright
+      pyright
       dockerfile-language-server-nodejs
       docker-compose-language-service
       yaml-language-server
+      ruff
       # nodePackages.vscode-css-languageserver-bin
       # nodePackages.vscode-json-languageserver-bin
       # nodePackages.vscode-html-languageserver-bin
@@ -184,6 +185,10 @@
         {
           name = "python";
           language-servers = [ "pyright" ];
+          formatter = {
+            command = "ruff";
+            args = [ "--stdin-filename=x.py" ];
+          };
         }
 
         {

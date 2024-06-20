@@ -336,6 +336,12 @@
           exec nix run ${config.home.homeDirectory}/code/hive/mit_ocw_utils -- "$@"
         '';
       })
+      (writeShellApplication {
+        name = "make_public";
+        text = ''
+          exec nix run ${config.home.homeDirectory}/code/hive/make_public -- "$@"
+        '';
+      })
 
       # I3 specific
       i3
