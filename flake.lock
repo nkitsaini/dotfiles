@@ -79,6 +79,25 @@
         "type": "github"
       }
     },
+    "naersk": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1718727675,
+        "narHash": "sha256-uFsCwWYI2pUpt0awahSBorDUrUfBhaAiyz+BPTS2MHk=",
+        "owner": "nix-community",
+        "repo": "naersk",
+        "rev": "941ce6dc38762a7cfb90b5add223d584feed299b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "ref": "master",
+        "repo": "naersk",
+        "type": "github"
+      }
+    },
     "nixgl": {
       "inputs": {
         "flake-utils": [
@@ -134,6 +153,18 @@
         "type": "github"
       }
     },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 0,
+        "narHash": "sha256-pup6cYwtgvzDpvpSCFh1TEUjw2zkNpk8iolbKnyFmmU=",
+        "path": "/nix/store/5w7nhyvrgsa81h0kyifmbl6j97hvlzh5-source",
+        "type": "path"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
     "nkitsaini_helix": {
       "inputs": {
         "crane": "crane",
@@ -184,7 +215,8 @@
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs",
         "nkitsaini_helix": "nkitsaini_helix",
-        "nur": "nur"
+        "nur": "nur",
+        "volume_control_rs": "volume_control_rs"
       }
     },
     "rust-overlay": {
@@ -224,6 +256,32 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "volume_control_rs": {
+      "inputs": {
+        "naersk": "naersk",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "utils": [
+          "flake-utils"
+        ]
+      },
+      "locked": {
+        "dir": "volume_control",
+        "lastModified": 1718902597,
+        "narHash": "sha256-SgVcrY7fFY2VMemRbMbzCXQIeXjL2q7IXzmKEY9Q2Zs=",
+        "owner": "nkitsaini",
+        "repo": "shoal",
+        "rev": "7e97e3849dc3bbb2c6202c99415c8251c0b66d1c",
+        "type": "github"
+      },
+      "original": {
+        "dir": "volume_control",
+        "owner": "nkitsaini",
+        "repo": "shoal",
         "type": "github"
       }
     }

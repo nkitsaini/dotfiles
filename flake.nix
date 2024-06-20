@@ -22,19 +22,26 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
-    # nkitsaini_notes_utils = {
-    #   # url = "git+ssh://git@github.com/nkitsaini/hive.git?ref=main&dir=notes_utils";
-    #   url = "git+file:///home/kit/code/hive?dir=notes_utils";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
     nur = { url = "github:nix-community/NUR"; };
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # TODO: these belong in dotfiles repo itself.
+    # But nix doesn't have good support for importing flakes within same repo.
+    # if imported using path:... syntax, it uses narHash which might be missing
+    # from other developers machine.
+    # The way of merging inputs together and calling `outputs` directly works *until* inputs have duplicates
+    # So using seperate repo for this stuff. Ideally `dotfiles` repo can be used where you first push than nix flake update, but that seems confusing.
+    volume_control_rs = {
+      url = "github:nkitsaini/shoal?dir=volume_control";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.utils.follows = "flake-utils";
+    };
   };
 
-  outputs = { nixpkgs, nixos-hardware, home-manager, nkitsaini_helix, nur, disko, ... }@inputs:
+  outputs = {self, nixpkgs, nixos-hardware, home-manager, nkitsaini_helix, nur, disko, ... }@inputs:
     let
       mkSystem = {hostname, extraModules?[], username?"kit"}:
         nixpkgs.lib.nixosSystem {
