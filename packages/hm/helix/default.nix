@@ -187,7 +187,7 @@
           language-servers = [ "pyright" ];
           formatter = {
             command = "ruff";
-            args = [ "--stdin-filename=x.py" ];
+            args = [ "format" "--stdin-filename=x.py" ];
           };
         }
 
