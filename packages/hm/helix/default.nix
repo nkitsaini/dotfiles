@@ -5,7 +5,7 @@
   };
   programs.helix = let
     comment_binding = ''
-      :pipe ${pkgs.python312}/bin/python3 ${config.home.homeDirectory}/code/hive/commenter/commenter.py --start-token="/*" --end-token="*/"'';
+      :pipe ${pkgs.python312}/bin/python3 ${config.home.homeDirectory}/code/shoal/commenter/commenter.py --start-token="/*" --end-token="*/"'';
     nodeDependencies = (pkgs.callPackage ./svelte_langauge_server/default.nix {
       inherit pkgs system;
     });

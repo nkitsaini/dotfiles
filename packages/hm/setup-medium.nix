@@ -306,34 +306,34 @@
 
       (writeScriptBin "audiobook_generator" ''
         #!${pkgs.dash}/bin/dash
-        exec nix run ${config.home.homeDirectory}/code/hive/audiobook_generator --  "$@"
+        exec nix run ${config.home.homeDirectory}/code/shoal/audiobook_generator --  "$@"
       '')
       (writeScriptBin "hh" ''
         #!${pkgs.dash}/bin/dash
-        exec nix run ${config.home.homeDirectory}/code/hive/helios_helper -- "$@"
+        exec nix run ${config.home.homeDirectory}/code/shoal/helios_helper -- "$@"
       '')
       (writeShellApplication {
         name = "bw-util";
         text = ''
-          exec nix run ${config.home.homeDirectory}/code/hive/bitwarden_util -- "$@"
+          exec nix run ${config.home.homeDirectory}/code/shoal/bitwarden_util -- "$@"
         '';
       })
       (writeShellApplication {
         name = "notes-util";
         text = ''
-          exec nix run ${config.home.homeDirectory}/code/hive/notes_utils/rs -- "$@"
+          exec nix run ${config.home.homeDirectory}/code/shoal/notes_utils/rs -- "$@"
         '';
       })
       (writeShellApplication {
         name = "audio_cleaner";
         text = ''
-          exec nix run ${config.home.homeDirectory}/code/hive/audio_cleaner -- "$@"
+          exec nix run ${config.home.homeDirectory}/code/shoal/audio_cleaner -- "$@"
         '';
       })
       (writeShellApplication {
         name = "mit_ocw_utils";
         text = ''
-          exec nix run ${config.home.homeDirectory}/code/hive/mit_ocw_utils -- "$@"
+          exec nix run ${config.home.homeDirectory}/code/shoal/mit_ocw_utils -- "$@"
         '';
       })
       (writeShellApplication {
