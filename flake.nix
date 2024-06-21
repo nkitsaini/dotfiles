@@ -35,7 +35,7 @@
     # The way of merging inputs together and calling `outputs` directly works *until* inputs have duplicates
     # So using seperate repo for this stuff. Ideally `dotfiles` repo can be used where you first push than nix flake update, but that seems confusing.
     volume_control_rs = {
-      url = "github:nkitsaini/shoal?dir=volume_control";
+      url = "github:nkitsaini/hive?dir=volume_control";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.utils.follows = "flake-utils";
     };

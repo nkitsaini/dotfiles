@@ -274,14 +274,14 @@
         "lastModified": 1718902597,
         "narHash": "sha256-SgVcrY7fFY2VMemRbMbzCXQIeXjL2q7IXzmKEY9Q2Zs=",
         "owner": "nkitsaini",
-        "repo": "shoal",
+        "repo": "hive",
         "rev": "7e97e3849dc3bbb2c6202c99415c8251c0b66d1c",
         "type": "github"
       },
       "original": {
         "dir": "volume_control",
         "owner": "nkitsaini",
-        "repo": "shoal",
+        "repo": "hive",
         "type": "github"
       }
     }
