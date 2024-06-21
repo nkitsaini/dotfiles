@@ -271,11 +271,11 @@
       },
       "locked": {
         "dir": "volume_control",
-        "lastModified": 1718902597,
-        "narHash": "sha256-SgVcrY7fFY2VMemRbMbzCXQIeXjL2q7IXzmKEY9Q2Zs=",
+        "lastModified": 1718949468,
+        "narHash": "sha256-gPTDMdbxaO6EOK+1chwypI9XE2DqMC1gkcIvPHYFdNc=",
         "owner": "nkitsaini",
         "repo": "hive",
-        "rev": "7e97e3849dc3bbb2c6202c99415c8251c0b66d1c",
+        "rev": "16455892ee351d975631143be622c868aa5004f7",
         "type": "github"
       },
       "original": {
