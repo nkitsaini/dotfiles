@@ -339,7 +339,7 @@
       (writeShellApplication {
         name = "make_public";
         text = ''
-          exec nix run ${config.home.homeDirectory}/code/hive/make_public -- "$@"
+          exec nix run ${config.home.homeDirectory}/code/shoal/make_public -- "$@"
         '';
       })
 
