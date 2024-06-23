@@ -9,6 +9,7 @@
     ../../packages/os/bluetooth.nix
     ../../packages/os/podman.nix
     ../../packages/os/docker_swarm.nix
+    ../../packages/os/syncthing.nix
   ];
   networking.firewall.allowedTCPPorts = [
   80

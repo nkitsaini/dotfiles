@@ -253,6 +253,7 @@
       s3fs
       gcc
       python312
+      python312Packages.ipython
       python312Packages.pipx
       kubectl
       kubectl-tree
