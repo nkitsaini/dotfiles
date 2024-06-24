@@ -5,6 +5,8 @@
   home.homeDirectory = "/root";
   programs.home-manager.enable = true;
   programs.git.enable = true;
+  programs.git.userName = "cranekit";
+  programs.git.userEmail = "cranekit@example.com";
   programs.bash.enable = true;
   programs.neovim.enable = true;
   programs.tmux.enable = true;

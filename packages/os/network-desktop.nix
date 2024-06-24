@@ -21,7 +21,8 @@
   # need to use dhcp fallback to link-local using systemd
   networking.useNetworkd = true;
   systemd.network.networks."30-wired" = {
-    matchConfig = { Type = "ether"; };
+    # Do not use `Type = 'ether'`, it'll mess with docker
+    matchConfig = { Name = "eth* enp*"; };
     DHCP = "yes";
     networkConfig = {
       IPv6PrivacyExtensions = "yes";

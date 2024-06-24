@@ -1,6 +1,7 @@
 { ... }: {
   virtualisation = {
     docker.enable = true;
+    # docker.extraOptions="--iptables=true --ip-masq=true --bip=172.17.0.1/1";
     podman = {
       enable = true;
 
