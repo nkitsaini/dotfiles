@@ -4,6 +4,7 @@
     # TODO: clean the files too
     # ./wireguard.nix
     ./headscale.nix
+    ./notes-git-push.nix
     ../../packages/os/ssh.nix
     ../../packages/os/tailscale.nix
     ../../packages/os/bluetooth.nix
