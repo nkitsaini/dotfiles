@@ -16,6 +16,7 @@
 
     extraPackages = with pkgs; [
       marksman
+      markdown-oxide
       nil
       texlab
       gopls
@@ -182,6 +183,10 @@
 
       # Language config
       language = [
+        {
+          name = "markdown";
+          language-servers = [ "markdown-oxide" ];
+        }
         {
           name = "python";
           language-servers = [ "pyright" ];
