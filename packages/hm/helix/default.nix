@@ -216,32 +216,32 @@
         {
           name = "jsx";
           language-servers = [
-            "tailwindcss-ls"
             "typescript-language-server"
+            "tailwindcss-ls"
             "vscode-eslint-language-server"
           ];
         }
         {
           name = "tsx";
           language-servers = [
-            "tailwindcss-ls"
             "typescript-language-server"
+            "tailwindcss-ls"
             "vscode-eslint-language-server"
           ];
         }
         {
           name = "css";
           language-servers = [
-            "tailwindcss-ls"
             "vscode-css-language-server"
+            "tailwindcss-ls"
             "vscode-eslint-language-server"
           ];
         }
         {
           name = "html";
           language-servers = [
-            "tailwindcss-ls"
             "vscode-html-language-server"
+            "tailwindcss-ls"
             "vscode-eslint-language-server"
           ];
         }
