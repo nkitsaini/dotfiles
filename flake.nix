@@ -100,24 +100,6 @@
       # 3. have home-manager config imported through default.nix
       # 4. manage disk through disko
       # ... or something I missed
-      nixosConfigurations.crane = nixpkgs.lib.nixosSystem {
-        # NOTE: Change this to aarch64-linux if you are on ARM
-        inherit system;
-        modules = [
-          ./devices/crane
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.root = import ./devices/crane/home.nix;
-            home-manager.extraSpecialArgs = {
-              inherit system;
-              inherit nkitsaini_helix;
-              nixGLCommandPrefix = "";
-              disableSwayLock = true;
-            };
-          }
-        ];
-      };
+      nixosConfigurations.crane = mkSystem {hostname = "crane"; };
     };
 }

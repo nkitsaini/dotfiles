@@ -3,21 +3,33 @@
     ./hardware-configuration.nix
     # TODO: clean the files too
     # ./wireguard.nix
+    ./disco.nix
+
+    ../../packages/os/core.nix
+    ../../packages/os/kernel.nix
+    ../../packages/os/fhs_tools.nix
+
+    ../../packages/os/tailscale.nix
+
+    ../../packages/os/podman.nix
+
+    ../../packages/os/ssh.nix
+
+    ../../packages/os/network-desktop.nix
+
+    ../../packages/os/docker_swarm.nix
+    
     ./headscale.nix
     ./notes-git-push.nix
-    ../../packages/os/ssh.nix
-    ../../packages/os/tailscale.nix
-    ../../packages/os/bluetooth.nix
-    ../../packages/os/podman.nix
-    ../../packages/os/docker_swarm.nix
-    ../../packages/os/syncthing.nix
+    ../../users/kit
+    ../../users/root
   ];
+
   networking.firewall.allowedTCPPorts = [
-  80
-  443
-  9080
-  9443
-  
+    80
+    443
+    9080
+    9443
   ];
 
 
