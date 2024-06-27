@@ -25,6 +25,10 @@
     ../../users/root
   ];
 
+  home-manager.users.${username} = {
+    home.stateVersion = "23.11";
+  };
+
   networking.firewall.allowedTCPPorts = [
     80
     443
