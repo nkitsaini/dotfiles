@@ -26,7 +26,7 @@
   ];
 
   home-manager.users.${username} = {
-    home.stateVersion = "23.11";
+    imports = [ ../../packages/hm/setup-minimal.nix ];
   };
 
   networking.firewall.allowedTCPPorts = [
