@@ -380,6 +380,7 @@
       httpie
       iperf3
       gnumake
+      pkg-config
       hwatch
       hyperfine
       mold

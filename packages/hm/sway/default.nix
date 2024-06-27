@@ -155,11 +155,6 @@ in {
       background-color=#FF0F0F
       border-size=4
     '';
-
-    # TODO:
-    # [hidden]
-    # format=(and %h more)
-    # text-color=#999999
   };
 
   wayland.windowManager.sway.enable = true;
@@ -219,7 +214,6 @@ in {
       "${modifier}+semicolon" = "split h";
       "${modifier}+Shift+e" = "exec i3-msg exit";
 
-      # TODO: remove nixGL ones moved to NixOS
       "${modifier}+Return" = "exec ${terminal}";
       "${modifier}+d" = "exec ${menu}"; # run rofi with nixGL so all program opened inherit it
 
@@ -281,8 +275,6 @@ in {
       "Ctrl+Shift+Print" = "exec ${pkgs.grim}/bin/grim -c -g $(${pkgs.slurp}/bin/slurp) - | ${pkgs.wl-clipboard}/bin/wl-copy";
 
       ## Pulse Audio controls
-      # TODO: limit max volume to 200%
-      # "XF86AudioRaiseVolume" = "exec --no-startup-id ${volume_control}/bin/volume-control +0.05"; # increase sound volume
       "XF86AudioRaiseVolume" = "exec --no-startup-id ${inputs.volume_control_rs.defaultPackage.${system}}/bin/volume_control -- +0.05"; # increase sound volume
       "XF86AudioLowerVolume" = "exec --no-startup-id ${inputs.volume_control_rs.defaultPackage.${system}}/bin/volume_control -- -0.05"; # decrease sound volume
       "XF86AudioMute" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; # mute sound

@@ -9,10 +9,23 @@
     nodeDependencies = (pkgs.callPackage ./svelte_langauge_server/default.nix {
       inherit pkgs system;
     });
+    markdown_table_formatter_stdin = pkgs.writeShellApplication {
+      name = "markdown-table-formatter-stdin";
+      runtimeInputs = [pkgs.bun pkgs.coreutils];
+      text = ''
+        TEMPFILE=$(mktemp --suffix .markdown-table-formatter.md)
+        cp /dev/stdin "$TEMPFILE"
+        bunx markdown-table-formatter -- "$TEMPFILE" > /dev/null
+        cat "$TEMPFILE"
+        rm "$TEMPFILE"
+      '';
+    };
   in {
     enable = true;
     package = inputs.nkitsaini_helix.packages.${system}.default;
     # defaultEditor = true; # does not provide absolute path so fails with sudo, but actually should it?, explicitly setting EDITOR for now
+
+    
 
     extraPackages = with pkgs; [
       marksman
@@ -186,6 +199,10 @@
         {
           name = "markdown";
           language-servers = [ "markdown-oxide" ];
+          formatter = {
+            command = "${markdown_table_formatter_stdin}/bin/markdown-table-formatter-stdin";
+            args = [];
+          };
         }
         {
           name = "python";
