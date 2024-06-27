@@ -10,7 +10,7 @@
       # Next time use ID
       device = "/dev/sda";
       content = {
-        type = "gpt";
+        type = "mbr";
         partitions = {
           ESP = {
             label = "boot";
