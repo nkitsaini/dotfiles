@@ -68,6 +68,9 @@
       nixc-clone-dotfiles
       cd ~/code/dotfiles
       sudo nixos-generate-config --show-hardware-config --no-filesystems > devices/<hostname>/hardware-configuration.nix
+
+      # Comment out all the lines from hardware-configuration.nix starting with `fileSystems` (we use disco for this)
+      
       git diff # Verify if changes look okay. possibly there will be none. but if there are copy this to /mnt/tmp_dotfiles/... so that it can later be pushed to github 
 
       # Do nix install
