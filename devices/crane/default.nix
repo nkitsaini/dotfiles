@@ -44,8 +44,9 @@
     # enable = true;
     efiSupport = true;
     efiInstallAsRemovable = true;
-    device = "nodev";
+    device = "/dev/sda";
   };
+  boot.loader.efi.efiSysMountPoint = "/boot/efi";
 
   # boot.loader.grub.enable = true;
   # boot.loader.efi.canTouchEfiVariables = true;
