@@ -23,6 +23,15 @@ in {
   #   tailscale up --login-server https://headscale.nkit.dev --exit-node crane
   #   headscale nodes register ... --user <user>
 
+  # To switch hosts:
+  #    Stop headscale on both: sudo systemctl stop headscale
+  #    Just copy /var/lib/headscale from one machine to another (while headscale is stopped.)
+  #    Start headscale on new host
+  #    
+  #    ON clients restart tailscale via systemd and run
+  #    sudo tailscale down
+  #    sudo tailscale up --force-reauth
+
   services = {
     headscale = {
       enable = true;
@@ -46,7 +55,7 @@ in {
                 action = "accept";
                 src = [ "autogroup:member" ];
                 dst = [ "autogroup:self" ];
-                users = [ "root" "autogroup:nonroot" ];
+                users = [ "root" "autogroup:nonroot" "kit" ];
               }
               {
                 action = "accept";
@@ -54,7 +63,7 @@ in {
                   "*"
                 ]; # TODO: fix once headscale 0.23.0 is available on nixos (that finally has non-experimental support for ssh I guess)
                 dst = [ "*:*" ];
-                users = [ "root" "autogroup:nonroot" "ayush" "*" ];
+                users = [ "root" "autogroup:nonroot" "kit" "ayush" "*" ];
               }
             ];
 

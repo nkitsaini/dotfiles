@@ -4,8 +4,8 @@
 
   # systemd-resolved instead of dhcpcd
   # TODO: this currently does not work with iwd
-  # networking.useDHCP = false;
-  # networking.dhcpcd.enable = false;
+  networking.useDHCP = false;
+  networking.dhcpcd.enable = false;
 
   services.resolved = {
     enable = true;

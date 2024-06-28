@@ -22,7 +22,7 @@ docker --context prod service --help
 - https://github.com/lucaslorentz/caddy-docker-proxy
 ```
 # as docker context `prod`
-docker network create caddy
+docker network create caddy --scope swarm
 
 # deploy caddy service
 docker stack deploy -c docker_swarm_setup/caddy/docker-compose.yml caddy
