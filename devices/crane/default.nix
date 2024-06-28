@@ -26,7 +26,7 @@
   ];
 
   home-manager.users.${username} = {
-    imports = [ ../../packages/hm/setup-minimal.nix ];
+    imports = [ ../../packages/hm/setup-minimal.nix ../../packages/hm/notes-git-push ];
   };
 
   networking.firewall.allowedTCPPorts = [
