@@ -322,6 +322,7 @@
       coreutils
       curl
       dnsutils
+      usbutils # lsusb
       dosfstools
       powertop
       iputils
