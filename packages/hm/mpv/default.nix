@@ -29,7 +29,7 @@
       mpvScripts.mpv-cheatsheet # ? for help[]
       # mpvScripts.visualizer
       mpvScripts.cutter # c to start cut, c to end cut -> file in same directory
-      mpvScripts.autoload # load files from directory
+      # mpvScripts.autoload # load files from directory
       mpvScripts.vr-reversal
       mpvScripts.webtorrent-mpv-hook
       mpvScripts.quality-menu # change yt-dlp quality on fly

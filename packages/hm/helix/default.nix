@@ -6,9 +6,6 @@
   programs.helix = let
     comment_binding = ''
       :pipe ${pkgs.python312}/bin/python3 ${config.home.homeDirectory}/code/shoal/commenter/commenter.py --start-token="/*" --end-token="*/"'';
-    nodeDependencies = (pkgs.callPackage ./svelte_langauge_server/default.nix {
-      inherit pkgs system;
-    });
     markdown_table_formatter_stdin = pkgs.writeShellApplication {
       name = "markdown-table-formatter-stdin";
       runtimeInputs = [pkgs.bun pkgs.coreutils];
@@ -49,8 +46,7 @@
       # nodePackages.vscode-eslint-language-server
       nodePackages.typescript-language-server
       nodePackages.graphql-language-service-cli
-      # nodePackages.svelte-language-server # use this instead of custom once nixos-unstable has 0.16.8 or newer (required for svelte 5)
-      nodeDependencies.svelte-language-server
+      svelte-language-server
       tailwindcss-language-server
     ];
 
