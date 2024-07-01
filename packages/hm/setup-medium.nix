@@ -70,6 +70,7 @@
 
       sioyek
       gnome.eog
+      gnome.seahorse # for keyring
       qimgv
 
       # inputs.nkitsaini_notes_utils.packages.${system}.default

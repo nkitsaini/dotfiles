@@ -1,13 +1,29 @@
-{ config, system, pkgs, inputs, ... }: {
+{
+  config,
+  system,
+  pkgs,
+  inputs,
+  ...
+}: let
+  # Allow key overrides like <Ctrl+t> in firefox for default
+  # bindings
+  firefox_patched = pkgs.firefox.overrideAttrs (oldAttrs: {
+    buildInputs = oldAttrs.buildInputs ++ [pkgs.perl];
+    buildCommand =
+      oldAttrs.buildCommand
+      + ''
+        perl -i -pne 's/reserved="true"/               /g' $out/lib/firefox/browser/omni.ja
+      '';
+  });
+in {
   programs.firefox.enable = true;
 
   home.packages = with pkgs; [
     xdg-desktop-portal-xapp
     xdg-desktop-portal-gtk
-
   ];
 
-  programs.firefox.package = pkgs.firefox.override {
+  programs.firefox.package = firefox_patched.override {
     # See nixpkgs' firefox/wrapper.nix to check which options you can use
     nativeMessagingHosts = [
       # Tridactyl native connector
