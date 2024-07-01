@@ -77,7 +77,7 @@
         "spacing" = 10;
       };
       "clock" = {
-        "format" = "{:%Y-%m-%d %H:%M}";
+        "format" = "{:%Y-%m-%d %H:%M %a}";
       };
       "cpu" = {
         "format" = "  {usage}%";
