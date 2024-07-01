@@ -303,6 +303,7 @@
       iptables
       bruno
       tree
+      broot
       podman
       podman-compose
       sqlite
