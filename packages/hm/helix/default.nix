@@ -61,7 +61,11 @@
         bufferline = "multiple";
         idle-timeout = 5;
         completion-timeout = 5;
-        copilot-auto-render = true;
+        auto-save.after-delay = {
+          enable = true;
+          timeout = 300;
+        };
+        # copilot-auto-render = true;
         # undercurl = true;
         # true-color = true;
         soft-wrap.enable = true;
@@ -125,9 +129,9 @@
               };
             };
 
-            e = {
-              "f"=":eslint-fix-all";
-            };
+            # e = {
+            #   "f"=":eslint-fix-all";
+            # };
 
             m = comment_binding;
 
@@ -135,9 +139,9 @@
         };
 
         insert = {
-          "C-e" = "copilot_show_completion";
-          "C-y" = "copilot_apply_completion";
-          "C-space" = "completion";
+          # "C-e" = "copilot_show_completion";
+          # "C-y" = "copilot_apply_completion";
+          # "C-space" = "completion"; # C-. is already bind
         };
 
         select = {

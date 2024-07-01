@@ -177,16 +177,16 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1715831880,
-        "narHash": "sha256-/n00CaOtetN62McEYvk1BJSDv4sISz3sqQldrOcbD80=",
+        "lastModified": 1719826898,
+        "narHash": "sha256-JVDS/hXlqOkMNzjkPk9qe7MijqgWR59/fnPT6cWRDbM=",
         "owner": "nkitsaini",
         "repo": "helix",
-        "rev": "21b22d266ebf96b37e49312c3797d8b7f98fda2f",
+        "rev": "75f9c7bbaaa021c75cf54e16bdc660a2a233ad73",
         "type": "github"
       },
       "original": {
         "owner": "nkitsaini",
-        "ref": "nkit-driver-backup-2024-05-16",
+        "ref": "nkit-driver-2024-07-01",
         "repo": "helix",
         "type": "github"
       }
