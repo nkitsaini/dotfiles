@@ -1,4 +1,10 @@
-{ config, pkgs, inputs, system, ... }: {
+{
+  config,
+  pkgs,
+  inputs,
+  system,
+  ...
+}: {
   # TODO: use config.home-files to reference files inside current home-manager generation instead of path from home-directory. Currently config.home-files gives infinite recursion.
   home.sessionVariables = {
     EDITOR = "${config.home.homeDirectory}/.local/state/nix/profiles/home-manager/home-path/bin/hx";
@@ -21,8 +27,6 @@
     enable = true;
     package = inputs.nkitsaini_helix.packages.${system}.default;
     # defaultEditor = true; # does not provide absolute path so fails with sudo, but actually should it?, explicitly setting EDITOR for now
-
-    
 
     extraPackages = with pkgs; [
       marksman
@@ -65,6 +69,11 @@
         # undercurl = true;
         # true-color = true;
         soft-wrap.enable = true;
+        end-of-line-diagnostics = "hint";
+        inline-diagnostics = {
+          cursor-line = "info";
+          other-lines = "disable";
+        };
 
         file-picker = {
           git-exclude = false;
@@ -72,15 +81,15 @@
           hidden = false;
         };
 
-        lsp = { display-inlay-hints = false; };
+        lsp = {display-inlay-hints = false;};
         cursor-shape.insert = "bar";
         insert-final-newline = false;
       };
 
       keys = {
         normal = {
-          esc = [ "collapse_selection" "keep_primary_selection" ];
-          Z = { Z = [ ":write-quit" ]; };
+          esc = ["collapse_selection" "keep_primary_selection"];
+          Z = {Z = [":write-quit"];};
           X = "extend_line_up";
           space = {
             F = "file_picker";
@@ -108,21 +117,6 @@
 
             t = {
               h = ":toggle-option lsp.display-inlay-hints";
-              e = ":toggle-option lsp.inline-diagnostics.enabled";
-              l = {
-
-                # https://github.com/helix-editor/helix/pull/6417#issuecomment-1740819264
-                n = ":set-option lsp.inline-diagnostics.other-lines []";
-                e =
-                  '':set-option lsp.inline-diagnostics.other-lines ["error"]'';
-                w = ''
-                  :set-option lsp.inline-diagnostics.other-lines ["warning","error"]'';
-                i = ''
-                  :set-option lsp.inline-diagnostics.other-lines ["info","warning","error"]'';
-                h = ''
-                  :set-option lsp.inline-diagnostics.other-lines ["hint","info","warning","error"]'';
-                o = ":set-option lsp.inline-diagnostics.enabled false";
-              };
             };
 
             # e = {
@@ -130,7 +124,6 @@
             # };
 
             m = comment_binding;
-
           };
         };
 
@@ -155,7 +148,7 @@
       # Servers
       language-server.pyright = {
         command = "pyright-langserver";
-        args = [ "--stdio" ];
+        args = ["--stdio"];
         config = {
           venv = "./.venv";
           venvPath = ".";
@@ -163,13 +156,13 @@
       };
       language-server.vscode-eslint-language-server = {
         command = "vscode-eslint-language-server";
-        args = [ "--stdio" ];
+        args = ["--stdio"];
         config = {
           provideFormatter = true;
           nodePath = "";
           onIgnoredFiles = "off";
           quiet = false;
-          rulesCustomizations = [ ];
+          rulesCustomizations = [];
           run = "onType";
           validate = "on";
           codeAction = {
@@ -177,17 +170,16 @@
               enable = true;
               location = "separateLine";
             };
-            showDocumentation = { enable = true; };
+            showDocumentation = {enable = true;};
           };
-          codeActionOnSave = { mode = "all"; };
-          experimental = { };
-          problems = { shortenToSingleLine = false; };
-          workingDirectory = { mode = "auto"; };
-
+          codeActionOnSave = {mode = "all";};
+          experimental = {};
+          problems = {shortenToSingleLine = false;};
+          workingDirectory = {mode = "auto";};
         };
       };
       language-server.gopls = {
-        environment = { "GOFLAGS" = "-tags=cluster"; };
+        environment = {"GOFLAGS" = "-tags=cluster";};
       };
       language-server.typst-lsp = {
         language-id = "typst";
@@ -198,7 +190,7 @@
       language = [
         {
           name = "markdown";
-          language-servers = [ "markdown-oxide" ];
+          language-servers = ["markdown-oxide"];
           formatter = {
             command = "${markdown_table_formatter_stdin}/bin/markdown-table-formatter-stdin";
             args = [];
@@ -206,29 +198,30 @@
         }
         {
           name = "python";
-          language-servers = [ "pyright" ];
+          language-servers = ["pyright"];
           formatter = {
             command = "ruff";
-            args = [ "format" "--stdin-filename=x.py" ];
+            args = ["format" "--stdin-filename=x.py"];
           };
         }
 
         {
           name = "c";
-          language-servers = [ "clangd" ];
+          language-servers = ["clangd"];
           formatter = {
             command = "clang-format";
-            args = [ "--style=google" ];
+            args = ["--style=google"];
           };
         }
         {
           name = "svelte";
-          language-servers =
-            [ "svelteserver" "tailwindcss-ls" "vscode-eslint-language-server" ];
-          block-comment-tokens = [{
-            start = "<!--";
-            end = "-->";
-          }];
+          language-servers = ["svelteserver" "tailwindcss-ls" "vscode-eslint-language-server"];
+          block-comment-tokens = [
+            {
+              start = "<!--";
+              end = "-->";
+            }
+          ];
         }
         {
           name = "jsx";
@@ -264,56 +257,53 @@
         }
         {
           name = "caddyfile";
-          roots = [ ];
+          roots = [];
           scope = "source.caddyfile";
           injection-regex = "caddyfile";
-          file-types = [ "Caddyfile" ];
+          file-types = ["Caddyfile"];
           comment-token = "#";
-          language-servers = [ ];
+          language-servers = [];
           indent = {
             tab-width = 4;
             unit = "\\t";
           };
-          formatter = { command = "caddy-fmt"; };
+          formatter = {command = "caddy-fmt";};
         }
         {
           name = "typst";
-          roots = [ ];
+          roots = [];
           scope = "source.typst";
           injection-regex = "typst";
-          file-types = [ "typ" ];
+          file-types = ["typ"];
           comment-token = "//";
           indent = {
             tab-width = 4;
             unit = "	";
           };
-          language-servers = [ "typst-lsp" ];
+          language-servers = ["typst-lsp"];
         }
 
         {
           name = "javascript";
           formatter = {
             command = "biome";
-            args = [ "format" "--stdin-file-path=x.js" ];
+            args = ["format" "--stdin-file-path=x.js"];
           };
-          language-servers =
-            [ "typescript-language-server" "vscode-eslint-language-server" ];
+          language-servers = ["typescript-language-server" "vscode-eslint-language-server"];
         }
         {
           name = "typescript";
           formatter = {
             command = "biome";
-            args = [ "format" "--stdin-file-path=x.ts" ];
+            args = ["format" "--stdin-file-path=x.ts"];
           };
-          language-servers =
-            [ "typescript-language-server" "vscode-eslint-language-server" ];
+          language-servers = ["typescript-language-server" "vscode-eslint-language-server"];
         }
         {
           name = "nix";
-          formatter = { command = "${pkgs.alejandra}/bin/alejandra"; };
+          formatter = {command = "${pkgs.alejandra}/bin/alejandra";};
         }
       ];
-
     };
   };
 }
