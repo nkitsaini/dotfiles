@@ -68,6 +68,10 @@
       ls = "log --stat --oneline";
       pf = "push --force-with-lease";
       p = "push";
+      wa = "worktree add";
+      wl = "worktree list";
+      wp = "worktree prune";
+      wr = "worktree remove";
     };
   };
 }
