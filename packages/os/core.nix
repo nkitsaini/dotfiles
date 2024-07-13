@@ -12,7 +12,6 @@
       binutils
       coreutils
       curl
-      direnv
       dnsutils
       dosfstools
       fd
@@ -65,6 +64,8 @@
 
   # For ddcutil
   hardware.i2c.enable = true;
+
+  programs.fuse.userAllowOther = true;
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

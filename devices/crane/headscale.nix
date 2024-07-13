@@ -3,6 +3,18 @@ let
   domain = "headscale.nkit.dev";
   derpPort = 3478;
 in {
+  # MIGRATION/BACKUP GUIDE:
+  #    Stop headscale on both: sudo systemctl stop headscale
+  #    Just copy /var/lib/headscale from one machine to another (while headscale is stopped.)
+  #    Start headscale on new host
+  #
+  #    ON clients restart tailscale via systemd and re-auth.
+  #    sudo systemctl restart tailscale
+  #    sudo tailscale down
+  #    sudo tailscale up --force-reauth
+
+
+  
   # ref:
   #  - https://headscale.net/exit-node/
   #  - https://headscale.net/android-client/
@@ -22,15 +34,6 @@ in {
   #   tailscale exit-node list
   #   tailscale up --login-server https://headscale.nkit.dev --exit-node crane
   #   headscale nodes register ... --user <user>
-
-  # To switch hosts:
-  #    Stop headscale on both: sudo systemctl stop headscale
-  #    Just copy /var/lib/headscale from one machine to another (while headscale is stopped.)
-  #    Start headscale on new host
-  #    
-  #    ON clients restart tailscale via systemd and run
-  #    sudo tailscale down
-  #    sudo tailscale up --force-reauth
 
   services = {
     headscale = {

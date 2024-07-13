@@ -218,7 +218,7 @@
       iperf
 
       # Code specific
-      alejandra
+      nixfmt
       ruff
       lazygit
       nodejs_20

@@ -18,9 +18,11 @@
     ../../packages/os/network-desktop.nix
 
     ../../packages/os/docker_swarm.nix
+    ../../packages/os/caddy
     
     ./headscale.nix
     ./notes-git-push.nix
+    ./docker-registry.nix
     ../../users/${username}
     ../../users/root
   ];
@@ -36,9 +38,6 @@
     9443
   ];
 
-  services.caddy = {
-    enable = true;
-  };
 
   boot.loader.grub = {
     enable = true;

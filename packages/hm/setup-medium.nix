@@ -82,6 +82,10 @@
       playerctl
       brightnessctl
 
+
+      # shows cp etc. progress
+      progress
+
       # Xorg
       xorg.xev
 

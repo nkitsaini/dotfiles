@@ -62,6 +62,9 @@
       commit = { verbose = true; };
       core = { excludeFiles = "${config.home.homeDirectory}/.gitignore"; };
     };
+    attributes = [
+      "*.lockb binary diff=lockb"
+    ];
     aliases = {
       l =
         "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset %C(yellow)%an%Creset' --all --abbrev-commit --date=relative";

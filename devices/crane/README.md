@@ -1,11 +1,21 @@
 # nixos-rebuild
-Use --target-host to build locally and deploy on crane. This is much faster.
+Use --target-host to build locally and deploy on crane. This is much faster if the remote host is slower.
 
 Run on local machine: `nixos-rebuild switch --flake .#crane --target-host user@ip`
 
+## Migration
+If migrating from one host to other, following services should be taken care of.
+- just general backup of downloads etc.
+- headscale (need to preserve keys/auth)
+- docker registry (might need to preserve images)
+- docker swarm - this is harder, but generally
+  - Backup all the docker volumes (named/unnamed)
+  - see which services are running and follow there specific guides
 
 
-## Docker swarm:
+
+## Services
+### Docker swarm:
 
 ```
 # On server
@@ -18,7 +28,7 @@ docker context create prod --docker "host=ssh://user@host"
 docker --context prod service --help
 ```
 
-### Caddy setup
+#### Caddy setup
 - https://github.com/lucaslorentz/caddy-docker-proxy
 ```
 # as docker context `prod`

@@ -256,6 +256,13 @@
           ];
         }
         {
+          name = "yaml";
+          indent = {
+            tab-width = 2;
+            unit = "  ";
+          };
+        }
+        {
           name = "caddyfile";
           roots = [];
           scope = "source.caddyfile";
@@ -301,7 +308,7 @@
         }
         {
           name = "nix";
-          formatter = {command = "${pkgs.alejandra}/bin/alejandra";};
+          formatter = {command = "${pkgs.nixfmt}/bin/nixfmt";};
         }
       ];
     };
