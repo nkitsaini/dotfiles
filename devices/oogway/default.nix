@@ -29,7 +29,6 @@
     imports = [ ../../packages/hm/setup-full.nix ];
   };
 
-  
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -40,7 +39,6 @@
   services.logind.lidSwitchDocked = "ignore";
   services.logind.lidSwitchExternalPower = "ignore";
 
-  
   # For ddcutil
   hardware.i2c.enable = true;
 

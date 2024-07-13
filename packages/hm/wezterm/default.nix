@@ -1,4 +1,4 @@
-{pkgs, ...}: {
+{ pkgs, ... }: {
   home.packages = [
     pkgs.glib # to fix cusor issue in hyprland, see ./wezterm.lua
   ];

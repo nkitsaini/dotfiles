@@ -1,9 +1,4 @@
-{
-  config,
-  lib,
-  ...
-}: 
-{
+{ config, lib, ... }: {
   services.tailscale.enable = true;
   # services.tailscale.extraUpFlags = ["--ssh" "--no-logs-no-support"]; # TODO: these actually need to be specified with `tailscale up`
   networking.firewall = {
@@ -11,12 +6,11 @@
     trustedInterfaces = [ "tailscale0" ];
     allowedUDPPorts = [ config.services.tailscale.port ];
   };
-  networking.nameservers = lib.mkBefore ["100.100.100.100"];
+  networking.nameservers = lib.mkBefore [ "100.100.100.100" ];
   systemd.network.wait-online.ignoredInterfaces = [ "tailscale0" ];
 
   # Don't log to log.tailscale.io
-  systemd.services.tailscaled.serviceConfig.Environment = lib.mkAfter [
-    "TS_NO_LOGS_NO_SUPPORT=true"
-  ];
+  systemd.services.tailscaled.serviceConfig.Environment =
+    lib.mkAfter [ "TS_NO_LOGS_NO_SUPPORT=true" ];
 }
 

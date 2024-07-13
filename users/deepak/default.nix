@@ -28,9 +28,10 @@ in {
     isNormalUser = true;
 
     # mkpasswd -m sha-512 <password>
-    hashedPassword = "$6$8fsjkjSExwsNGZ/M$1qdlgwGpbX8mkJh8EPCJx5VI.A0tN0tSVeV5HaAo6f76EJjxzJ/OhXX4Aa5uBSEogHBU7c4oQ3qGjbxABDBSg/";
+    hashedPassword =
+      "$6$8fsjkjSExwsNGZ/M$1qdlgwGpbX8mkJh8EPCJx5VI.A0tN0tSVeV5HaAo6f76EJjxzJ/OhXX4Aa5uBSEogHBU7c4oQ3qGjbxABDBSg/";
 
     openssh.authorizedKeys.keys = import ../../packages/authorized_keys.nix;
-    extraGroups = [ "wheel" "input" "docker" "video" "networkmanager"];
+    extraGroups = [ "wheel" "input" "docker" "video" "networkmanager" ];
   };
 }

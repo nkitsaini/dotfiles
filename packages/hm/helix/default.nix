@@ -1,20 +1,15 @@
-{
-  config,
-  pkgs,
-  inputs,
-  system,
-  ...
-}: {
+{ config, pkgs, inputs, system, ... }: {
   # TODO: use config.home-files to reference files inside current home-manager generation instead of path from home-directory. Currently config.home-files gives infinite recursion.
   home.sessionVariables = {
-    EDITOR = "${config.home.homeDirectory}/.local/state/nix/profiles/home-manager/home-path/bin/hx";
+    EDITOR =
+      "${config.home.homeDirectory}/.local/state/nix/profiles/home-manager/home-path/bin/hx";
   };
   programs.helix = let
     comment_binding = ''
       :pipe ${pkgs.python312}/bin/python3 ${config.home.homeDirectory}/code/shoal/commenter/commenter.py --start-token="/*" --end-token="*/"'';
     markdown_table_formatter_stdin = pkgs.writeShellApplication {
       name = "markdown-table-formatter-stdin";
-      runtimeInputs = [pkgs.bun pkgs.coreutils];
+      runtimeInputs = [ pkgs.bun pkgs.coreutils ];
       text = ''
         TEMPFILE=$(mktemp --suffix .markdown-table-formatter.md)
         cp /dev/stdin "$TEMPFILE"
@@ -81,15 +76,15 @@
           hidden = false;
         };
 
-        lsp = {display-inlay-hints = false;};
+        lsp = { display-inlay-hints = false; };
         cursor-shape.insert = "bar";
         insert-final-newline = false;
       };
 
       keys = {
         normal = {
-          esc = ["collapse_selection" "keep_primary_selection"];
-          Z = {Z = [":write-quit"];};
+          esc = [ "collapse_selection" "keep_primary_selection" ];
+          Z = { Z = [ ":write-quit" ]; };
           X = "extend_line_up";
           space = {
             F = "file_picker";
@@ -104,7 +99,7 @@
               :pipe-to python3 -c "import shlex, os, sys;a=sys.stdin.read();a += '\\n'; os.system(shlex.join(['tmux', 'send-keys', '-t', '1', a]));"'';
 
             L = ":run-shell-command tmux send-keys -t 1 C-c";
-            n = ["select_all" ":pipe notes-util" "goto_file_start"];
+            n = [ "select_all" ":pipe notes-util" "goto_file_start" ];
 
             o = {
               l = ":open ~/.config/helix/languages.toml";
@@ -115,9 +110,7 @@
               X = ":quit-all!";
             };
 
-            t = {
-              h = ":toggle-option lsp.display-inlay-hints";
-            };
+            t = { h = ":toggle-option lsp.display-inlay-hints"; };
 
             # e = {
             #   "f"=":eslint-fix-all";
@@ -148,7 +141,7 @@
       # Servers
       language-server.pyright = {
         command = "pyright-langserver";
-        args = ["--stdio"];
+        args = [ "--stdio" ];
         config = {
           venv = "./.venv";
           venvPath = ".";
@@ -156,13 +149,13 @@
       };
       language-server.vscode-eslint-language-server = {
         command = "vscode-eslint-language-server";
-        args = ["--stdio"];
+        args = [ "--stdio" ];
         config = {
           provideFormatter = true;
           nodePath = "";
           onIgnoredFiles = "off";
           quiet = false;
-          rulesCustomizations = [];
+          rulesCustomizations = [ ];
           run = "onType";
           validate = "on";
           codeAction = {
@@ -170,16 +163,16 @@
               enable = true;
               location = "separateLine";
             };
-            showDocumentation = {enable = true;};
+            showDocumentation = { enable = true; };
           };
-          codeActionOnSave = {mode = "all";};
-          experimental = {};
-          problems = {shortenToSingleLine = false;};
-          workingDirectory = {mode = "auto";};
+          codeActionOnSave = { mode = "all"; };
+          experimental = { };
+          problems = { shortenToSingleLine = false; };
+          workingDirectory = { mode = "auto"; };
         };
       };
       language-server.gopls = {
-        environment = {"GOFLAGS" = "-tags=cluster";};
+        environment = { "GOFLAGS" = "-tags=cluster"; };
       };
       language-server.typst-lsp = {
         language-id = "typst";
@@ -190,38 +183,38 @@
       language = [
         {
           name = "markdown";
-          language-servers = ["markdown-oxide"];
+          language-servers = [ "markdown-oxide" ];
           formatter = {
-            command = "${markdown_table_formatter_stdin}/bin/markdown-table-formatter-stdin";
-            args = [];
+            command =
+              "${markdown_table_formatter_stdin}/bin/markdown-table-formatter-stdin";
+            args = [ ];
           };
         }
         {
           name = "python";
-          language-servers = ["pyright"];
+          language-servers = [ "pyright" ];
           formatter = {
             command = "ruff";
-            args = ["format" "--stdin-filename=x.py"];
+            args = [ "format" "--stdin-filename=x.py" ];
           };
         }
 
         {
           name = "c";
-          language-servers = ["clangd"];
+          language-servers = [ "clangd" ];
           formatter = {
             command = "clang-format";
-            args = ["--style=google"];
+            args = [ "--style=google" ];
           };
         }
         {
           name = "svelte";
-          language-servers = ["svelteserver" "tailwindcss-ls" "vscode-eslint-language-server"];
-          block-comment-tokens = [
-            {
-              start = "<!--";
-              end = "-->";
-            }
-          ];
+          language-servers =
+            [ "svelteserver" "tailwindcss-ls" "vscode-eslint-language-server" ];
+          block-comment-tokens = [{
+            start = "<!--";
+            end = "-->";
+          }];
         }
         {
           name = "jsx";
@@ -264,51 +257,53 @@
         }
         {
           name = "caddyfile";
-          roots = [];
+          roots = [ ];
           scope = "source.caddyfile";
           injection-regex = "caddyfile";
-          file-types = ["Caddyfile"];
+          file-types = [ "Caddyfile" ];
           comment-token = "#";
-          language-servers = [];
+          language-servers = [ ];
           indent = {
             tab-width = 4;
             unit = "\\t";
           };
-          formatter = {command = "caddy-fmt";};
+          formatter = { command = "caddy-fmt"; };
         }
         {
           name = "typst";
-          roots = [];
+          roots = [ ];
           scope = "source.typst";
           injection-regex = "typst";
-          file-types = ["typ"];
+          file-types = [ "typ" ];
           comment-token = "//";
           indent = {
             tab-width = 4;
             unit = "	";
           };
-          language-servers = ["typst-lsp"];
+          language-servers = [ "typst-lsp" ];
         }
 
         {
           name = "javascript";
           formatter = {
             command = "biome";
-            args = ["format" "--stdin-file-path=x.js"];
+            args = [ "format" "--stdin-file-path=x.js" ];
           };
-          language-servers = ["typescript-language-server" "vscode-eslint-language-server"];
+          language-servers =
+            [ "typescript-language-server" "vscode-eslint-language-server" ];
         }
         {
           name = "typescript";
           formatter = {
             command = "biome";
-            args = ["format" "--stdin-file-path=x.ts"];
+            args = [ "format" "--stdin-file-path=x.ts" ];
           };
-          language-servers = ["typescript-language-server" "vscode-eslint-language-server"];
+          language-servers =
+            [ "typescript-language-server" "vscode-eslint-language-server" ];
         }
         {
           name = "nix";
-          formatter = {command = "${pkgs.nixfmt}/bin/nixfmt";};
+          formatter = { command = "${pkgs.nixfmt}/bin/nixfmt"; };
         }
       ];
     };

@@ -13,8 +13,6 @@ in {
   #    sudo tailscale down
   #    sudo tailscale up --force-reauth
 
-
-  
   # ref:
   #  - https://headscale.net/exit-node/
   #  - https://headscale.net/android-client/

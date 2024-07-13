@@ -1,11 +1,5 @@
 # non-gui stuff
-{
-  config,
-  pkgs,
-  inputs,
-  nixGLCommandPrefix ? "",
-  ...
-}: {
+{ config, pkgs, inputs, nixGLCommandPrefix ? "", ... }: {
   imports = [
     inputs.nur.hmModules.nur
     ./shell
@@ -40,16 +34,17 @@
   programs.zathura.enable = true;
 
   # Stores configs I don't want to be in Nix
-  programs.ssh.extraConfig = "Include ${config.home.homeDirectory}/.ssh/user_config";
+  programs.ssh.extraConfig =
+    "Include ${config.home.homeDirectory}/.ssh/user_config";
 
   programs.ripgrep = {
     enable = true;
-    arguments = ["-S"];
+    arguments = [ "-S" ];
   };
 
   programs.bottom = {
     enable = true;
-    settings = {flags = {color = "gruvbox-light";};};
+    settings = { flags = { color = "gruvbox-light"; }; };
   };
 
   programs.bat = {
@@ -110,14 +105,14 @@
   };
   programs.tealdeer = {
     enable = true;
-    settings = {updates = {auto_update = true;};};
+    settings = { updates = { auto_update = true; }; };
   };
   programs.gitui.enable = true;
   programs.gitui.keyConfig = builtins.readFile ./gitui_keybindings.ron;
 
-  programs.nix-index = {enable = true;};
+  programs.nix-index = { enable = true; };
 
-  services.batsignal = {enable = true;};
+  services.batsignal = { enable = true; };
   services.network-manager-applet.enable = true;
 
   xdg.configFile."nixpkgs/config.nix".text = ''
@@ -146,7 +141,7 @@
   home.file."Downloads/.keep".text = ""; # downloads directory
   home.file."pictures/.keep".text = ""; # downloads directory
 
-  programs.eza = {enable = true;};
+  programs.eza = { enable = true; };
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
@@ -347,10 +342,8 @@
       # (writeShellScriptBin "my-hello" ''
       #   echo "Hello, ${config.home.username}!"
       # '')
-    ]
-    ++ (
-      if nixGLCommandPrefix != ""
-      then [
+    ] ++ (if nixGLCommandPrefix != "" then
+      [
         (writeShellApplication {
           name = "nixgl-run";
           text = ''
@@ -358,8 +351,8 @@
           '';
         })
       ]
-      else []
-    );
+    else
+      [ ]);
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.

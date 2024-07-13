@@ -42,9 +42,10 @@
     };
   };
 
-  outputs = {self, nixpkgs, nixos-hardware, home-manager, nkitsaini_helix, nur, disko, ... }@inputs:
+  outputs = { self, nixpkgs, nixos-hardware, home-manager, nkitsaini_helix, nur
+    , disko, ... }@inputs:
     let
-      mkSystem = {hostname, extraModules?[], username?"kit"}:
+      mkSystem = { hostname, extraModules ? [ ], username ? "kit" }:
         nixpkgs.lib.nixosSystem {
           # NOTE: Change this to aarch64-linux if you are on ARM
           inherit system;
@@ -84,14 +85,23 @@
       };
 
       # ===== Nixos configs
-      nixosConfigurations.monkey = mkSystem {hostname= "monkey"; extraModules=[nixos-hardware.nixosModules.lenovo-thinkpad-e14-amd];};
-      nixosConfigurations.iso = mkSystem {hostname= "iso";};
+      nixosConfigurations.monkey = mkSystem {
+        hostname = "monkey";
+        extraModules = [ nixos-hardware.nixosModules.lenovo-thinkpad-e14-amd ];
+      };
+      nixosConfigurations.iso = mkSystem { hostname = "iso"; };
 
-      nixosConfigurations.deepak = mkSystem {hostname= "deepak"; username="deepak";};
-      nixosConfigurations.akanksha = mkSystem {hostname= "akanksha"; username="akanksha";};
+      nixosConfigurations.deepak = mkSystem {
+        hostname = "deepak";
+        username = "deepak";
+      };
+      nixosConfigurations.akanksha = mkSystem {
+        hostname = "akanksha";
+        username = "akanksha";
+      };
 
       # TODO: disko config remaining
-      nixosConfigurations.oogway = mkSystem {hostname= "oogway";};
+      nixosConfigurations.oogway = mkSystem { hostname = "oogway"; };
 
       # TODO: following configs to be in similar fashion as `monkey`
       # i.e.
@@ -100,6 +110,6 @@
       # 3. have home-manager config imported through default.nix
       # 4. manage disk through disko
       # ... or something I missed
-      nixosConfigurations.crane = mkSystem {hostname = "crane"; };
+      nixosConfigurations.crane = mkSystem { hostname = "crane"; };
     };
 }

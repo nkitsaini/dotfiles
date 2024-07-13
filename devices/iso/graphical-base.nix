@@ -7,8 +7,7 @@
 with lib;
 
 {
-  imports = [ "${modulesPath}/installer/cd-dvd/installation-cd-base.nix"
-  ];
+  imports = [ "${modulesPath}/installer/cd-dvd/installation-cd-base.nix" ];
 
   # Whitelist wheel users to do anything
   # This is useful for things like pkexec

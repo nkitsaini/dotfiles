@@ -1,4 +1,4 @@
-{...}: {
+{ ... }: {
   # This can be moved inside k3s, but more reliable here until kubenix is stable I guess.
   services.dockerRegistry = {
     enable = true;

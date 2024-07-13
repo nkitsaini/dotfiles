@@ -12,9 +12,9 @@
 
         partitions = {
           boot = {
-            size="512M";
-            type="EF02";
-            priority=1;
+            size = "512M";
+            type = "EF02";
+            priority = 1;
           };
           swap = {
             label = "swap";
@@ -29,20 +29,20 @@
             size = "100%";
             content = {
               type = "btrfs";
-              extraArgs = ["-f"]; # Override existing partition
+              extraArgs = [ "-f" ]; # Override existing partition
               # Subvolumes must set a mountpoint in order to be mounted,
               # unless their parent is mounted
               subvolumes = {
                 "/rootfs" = {
-                  mountOptions = ["compress=zstd:1" "noatime"];
+                  mountOptions = [ "compress=zstd:1" "noatime" ];
                   mountpoint = "/";
                 };
                 "/home" = {
-                  mountOptions = ["compress=zstd:1" "noatime"];
+                  mountOptions = [ "compress=zstd:1" "noatime" ];
                   mountpoint = "/home";
                 };
                 "/nix" = {
-                  mountOptions = ["compress=zstd:1" "noatime"];
+                  mountOptions = [ "compress=zstd:1" "noatime" ];
                   mountpoint = "/nix";
                 };
               };

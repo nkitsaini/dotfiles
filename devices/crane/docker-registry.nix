@@ -1,5 +1,5 @@
-{config, ...}: let
-  domain = "dr.nkit.dev";
+{ config, ... }:
+let domain = "dr.nkit.dev";
 in {
 
   # MIGRATION/BACKUP GUIDE:
@@ -20,7 +20,9 @@ in {
          # hint: Everything is same but louder
       	kit $2a$14$iA29aDdzx.ORB//9orpdr.1QsvjmafjnGmbgZ7U/aggI5jqXuAwEK
       }
-       reverse_proxy http://localhost:${toString config.services.dockerRegistry.port}
+       reverse_proxy http://localhost:${
+         toString config.services.dockerRegistry.port
+       }
     '';
   };
 }

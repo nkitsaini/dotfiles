@@ -1,16 +1,13 @@
 # This is a nixos package (not home-manager)
-{
-  username,
-  pkgs,
-  ...
-}: let
+{ username, pkgs, ... }:
+let
   start_desktop_script = pkgs.writeScriptBin "start_desktop" ''
     #!${pkgs.dash}/bin/dash
     exec sway
   '';
 in {
   # Random configuration required to make sway work
-  imports = [./sway-knobs.nix];
+  imports = [ ./sway-knobs.nix ];
 
   # services.xserver.enable = true;
   environment.systemPackages = [
@@ -29,19 +26,19 @@ in {
       };
     })
     (pkgs.where-is-my-sddm-theme.override {
-      variants = ["qt5"];
+      variants = [ "qt5" ];
       themeConfig.General = {
         # ref: https://github.com/stepanzubkov/where-is-my-sddm-theme/blob/main/where_is_my_sddm_theme/example_configs/tree.conf
         background = (import ../../shared/wallpapers.nix).wallpaper2;
-        backgroundFillMode="aspect";
-        passwordInputRadius=10;
+        backgroundFillMode = "aspect";
+        passwordInputRadius = 10;
         blurRadius = 0;
         usersFontSize = 16;
-        basicTextColor="#ffffff";
-        passwordInputBackground="#60ffffff";
-        passwordInputWidth=0.20;
-        passwordFontSize=14;
-        sessionsFontSize=14;
+        basicTextColor = "#ffffff";
+        passwordInputBackground = "#60ffffff";
+        passwordInputWidth = 0.2;
+        passwordFontSize = 14;
+        sessionsFontSize = 14;
         showUsersByDefault = true;
         showSessionsByDefault = true;
         # AvatarPixelSize = 0;
@@ -51,18 +48,16 @@ in {
 
   # services.xserver.displayManager.setupCommands = ''$HOME/.xsession'';
 
-  services.displayManager.sessionPackages = [pkgs.sway];
+  services.displayManager.sessionPackages = [ pkgs.sway ];
 
   # ref: https://github.com/teto/home/blob/25aae4d91222b45c173e01f0744bca96c0858af3/nixos/profiles/xserver.nix#L75
 
+  services.xserver.enable = true;
+  services.xserver.displayManager.lightdm = {
+    enable = true;
+    background = (import ../../shared/wallpapers.nix).wallpaper2;
+  };
 
-services.xserver.enable = true;
-services.xserver.displayManager.lightdm = {
-  enable = true;
-  background = (import ../../shared/wallpapers.nix).wallpaper2;
-};
-
-  
   # services.displayManager.sddm = {
   #   enable = true;
   #   wayland.enable = true;

@@ -44,16 +44,11 @@
 
   networking.hostName = hostname; # Define your hostname.
 
-  
-  environment.systemPackages = [
-    pkgs.cups-filters
-  ];
+  environment.systemPackages = [ pkgs.cups-filters ];
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
-  services.gvfs = {
-    enable = true;
-  };
+  services.gvfs = { enable = true; };
   services.printing.drivers = [
     pkgs.gutenprint # — Drivers for many different printers from many different vendors.
     pkgs.gutenprintBin # — Additional, binary-only drivers for some printers.

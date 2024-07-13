@@ -1,11 +1,7 @@
-{...}: {
+{ ... }: {
   programs.k9s = {
     enable = true;
-    settings = {
-      ui = {
-        skin="gruvbox_light";
-      };
-    };
+    settings = { ui = { skin = "gruvbox_light"; }; };
     skins = {
       gruvbox_light = {
         foreground = "#3c3735";
@@ -86,8 +82,8 @@
           views = {
             charts = {
               bgColor = "background";
-              defaultDialColors = ["#448488" "#cc231c"];
-              defaultChartColors = ["#448488" "#cc231c"];
+              defaultDialColors = [ "#448488" "#cc231c" ];
+              defaultChartColors = [ "#448488" "#cc231c" ];
             };
             table = {
               fgColor = "#3c3735";

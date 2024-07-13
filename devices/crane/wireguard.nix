@@ -14,19 +14,15 @@
 # AllowedIPs = 0.0.0.0/0, ::/0
 # Endpoint = <host>:51820
 
-
-{pkgs, ...}: 
-let 
-  interface = "enp1s0";
-  in { 
+{ pkgs, ... }:
+let interface = "enp1s0";
+in {
 
   # enable NAT
   networking.nat.enable = true;
   networking.nat.externalInterface = interface;
   networking.nat.internalInterfaces = [ "wg0" ];
-  networking.firewall = {
-    allowedUDPPorts = [ 51820 ];
-  };
+  networking.firewall = { allowedUDPPorts = [ 51820 ]; };
 
   networking.wireguard.interfaces = {
     # "wg0" is the network interface name. You can name the interface arbitrarily.

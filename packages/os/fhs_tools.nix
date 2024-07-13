@@ -1,18 +1,17 @@
 # Installs tools helpful for trying to run binaries/code meant for FHS-complaint systems. nix-ld should be silently helping in background. In rare-cases just run `fhs` and be dropped in fhs shell
-{pkgs, ...}: rec {
+{ pkgs, ... }: rec {
   environment.systemPackages = [
-  # TODO: use all libs from nix-ld.libraries definition
-    (let
-      base = pkgs.appimageTools.defaultFhsEnvArgs;
-    in
-      pkgs.buildFHSUserEnv (base
-        // {
-          name = "fhs";
-          targetPkgs = pkgs: (base.targetPkgs pkgs) ++ [pkgs.pkg-config] ++ programs.nix-ld.libraries;
-          profile = "export FHS=1";
-          runScript = "fish";
-          extraOutputsToInstall = ["dev"];
-        }))
+    # TODO: use all libs from nix-ld.libraries definition
+    (let base = pkgs.appimageTools.defaultFhsEnvArgs;
+    in pkgs.buildFHSUserEnv (base // {
+      name = "fhs";
+      targetPkgs = pkgs:
+        (base.targetPkgs pkgs) ++ [ pkgs.pkg-config ]
+        ++ programs.nix-ld.libraries;
+      profile = "export FHS=1";
+      runScript = "fish";
+      extraOutputsToInstall = [ "dev" ];
+    }))
   ];
 
   programs.nix-ld.enable = true;

@@ -1,16 +1,7 @@
 # Has everything except for desktop manager.
 # It is good to be used in nixos or standalone home-manager for desktop setups.
-{
-  pkgs,
-  nixGLCommandPrefix ? "",
-  ...
-}: {
-  imports = [
-    ./setup-minimal.nix
-    ./wezterm
-    ./firefox.nix
-    ./mpv
-  ];
+{ pkgs, nixGLCommandPrefix ? "", ... }: {
+  imports = [ ./setup-minimal.nix ./wezterm ./firefox.nix ./mpv ];
 
   gtk = {
     enable = true;
@@ -27,14 +18,14 @@
   programs.alacritty = {
     enable = true;
     settings = {
-      import = ["${pkgs.alacritty-theme}/gruvbox_dark.toml"];
-      env = {XTERM_VERION = "9999";};
-      font = {size = 16;};
+      import = [ "${pkgs.alacritty-theme}/gruvbox_dark.toml" ];
+      env = { XTERM_VERION = "9999"; };
+      font = { size = 16; };
       font.normal = {
         family = "Noto Sans Mono";
         style = "Regular";
       };
-      scrolling = {history = 10000;};
+      scrolling = { history = 10000; };
     };
   };
 
@@ -82,7 +73,6 @@
       playerctl
       brightnessctl
 
-
       # shows cp etc. progress
       progress
 
@@ -92,10 +82,8 @@
       # From old fish history
       dolphin
       gparted
-    ]
-    ++ (
-      if nixGLCommandPrefix != ""
-      then [
+    ] ++ (if nixGLCommandPrefix != "" then
+      [
         (writeShellApplication {
           name = "nixgl-run";
           text = ''
@@ -103,6 +91,6 @@
           '';
         })
       ]
-      else []
-    );
+    else
+      [ ]);
 }

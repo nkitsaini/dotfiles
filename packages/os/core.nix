@@ -5,9 +5,7 @@
   time.timeZone = lib.mkDefault "Asia/Kolkata";
 
   environment = {
-    variables = {
-      DO_NOT_TRACK = "1"; 
-    };
+    variables = { DO_NOT_TRACK = "1"; };
     systemPackages = with pkgs; [
       binutils
       coreutils

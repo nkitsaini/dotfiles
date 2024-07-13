@@ -1,4 +1,4 @@
-{pkgs, hostname, username, ...}: {
+{ pkgs, hostname, username, ... }: {
   imports = [
     ./hardware-configuration.nix
     # TODO: clean the files too
@@ -19,7 +19,7 @@
 
     ../../packages/os/docker_swarm.nix
     ../../packages/os/caddy
-    
+
     ./headscale.nix
     ./notes-git-push.nix
     ./docker-registry.nix
@@ -28,16 +28,11 @@
   ];
 
   home-manager.users.${username} = {
-    imports = [ ../../packages/hm/setup-minimal.nix ../../packages/hm/notes-git-push ];
+    imports =
+      [ ../../packages/hm/setup-minimal.nix ../../packages/hm/notes-git-push ];
   };
 
-  networking.firewall.allowedTCPPorts = [
-    80
-    443
-    9080
-    9443
-  ];
-
+  networking.firewall.allowedTCPPorts = [ 80 443 9080 9443 ];
 
   boot.loader.grub = {
     enable = true;
@@ -49,7 +44,6 @@
 
   # boot.loader.grub.enable = true;
   # boot.loader.efi.canTouchEfiVariables = true;
-
 
   documentation.nixos.enable =
     false; # Takes too much ram causing failures on small machines. https://discourse.nixos.org/t/sudo-nixos-rebuild-switch-does-nothing/9273/14

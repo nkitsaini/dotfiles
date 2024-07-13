@@ -28,8 +28,10 @@
     };
     extraConfig = {
       include.path = builtins.fetchurl {
-        url = "https://raw.githubusercontent.com/dandavison/delta/2f76c56d91d3d49feb170b89d7526e0272634998/themes.gitconfig";
-        sha256 = "06d6a1dafb5df353b2de52558bc17cf78b0fbd31da7186f41eb0489b2bcd6e26";
+        url =
+          "https://raw.githubusercontent.com/dandavison/delta/2f76c56d91d3d49feb170b89d7526e0272634998/themes.gitconfig";
+        sha256 =
+          "06d6a1dafb5df353b2de52558bc17cf78b0fbd31da7186f41eb0489b2bcd6e26";
       };
       diff = {
         algorithm = "histogram";
@@ -62,9 +64,7 @@
       commit = { verbose = true; };
       core = { excludeFiles = "${config.home.homeDirectory}/.gitignore"; };
     };
-    attributes = [
-      "*.lockb binary diff=lockb"
-    ];
+    attributes = [ "*.lockb binary diff=lockb" ];
     aliases = {
       l =
         "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset %C(yellow)%an%Creset' --all --abbrev-commit --date=relative";

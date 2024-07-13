@@ -29,9 +29,7 @@
     enable = true;
     enableBashIntegration = true;
     enableFishIntegration = true;
-    flags = [
-      "--disable-up-arrow"
-    ];
+    flags = [ "--disable-up-arrow" ];
     settings = {
       # Maybe later.
       auto_sync = false;

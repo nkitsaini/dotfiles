@@ -13,7 +13,6 @@
     fallbackDns = [ "1.1.1.1" "8.8.8.8" ];
   };
 
-
   # otherwise blocks nixos-rebuild if wired is unplugged.
   systemd.network.wait-online.enable = false;
 
@@ -26,7 +25,7 @@
     DHCP = "yes";
     networkConfig = {
       IPv6PrivacyExtensions = "yes";
-      LinkLocalAddressing ="yes";
+      LinkLocalAddressing = "yes";
       # Address = "192.168.10.2/24";
     };
   };
@@ -34,15 +33,11 @@
   #### 90-disable-non-wired seems to be effective in blocking, but just securing both ends.
   systemd.network.networks."10-disable-non-wired" = {
     matchConfig = { Type = "!ether"; };
-    linkConfig = {
-      Unmanaged = "yes";
-    };
+    linkConfig = { Unmanaged = "yes"; };
   };
   systemd.network.networks."90-disable-non-wired" = {
     matchConfig = { Type = "!ether"; };
-    linkConfig = {
-      Unmanaged = "yes";
-    };
+    linkConfig = { Unmanaged = "yes"; };
   };
 
   networking.wireless.enable = false;
@@ -52,9 +47,9 @@
     # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/configuring-networkmanager-to-ignore-certain-devices_configuring-and-managing-networking
     wifi.powersave = false;
 
-    unmanaged = ["type:ethernet"];
+    unmanaged = [ "type:ethernet" ];
 
-      # To debug Network Manager, first check: /var/lib/NetworkManager/NetworkManager.state
+    # To debug Network Manager, first check: /var/lib/NetworkManager/NetworkManager.state
     # and see all values are `true`. Use `nmcli networking on` to turn on networking if required.
     # And enable following option. use: `journalctl -xe -f -u  NetworkManager.service` to see the logs
     # 
