@@ -183,6 +183,7 @@
       python312
       python312Packages.ipython
       python312Packages.pipx
+      python312Packages.tkinter # for turtle
       kubectl
       kubectl-tree
       kubectx
