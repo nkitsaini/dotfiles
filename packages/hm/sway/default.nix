@@ -172,7 +172,7 @@ in {
   };
 
   wayland.windowManager.sway.config = rec {
-    modifier = "Mod1";
+    modifier = "Mod4";
     focus.followMouse = "always";
     terminal = "${terminal_cmd}";
     input = {
