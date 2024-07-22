@@ -3,7 +3,7 @@
     "crane": {
       "inputs": {
         "nixpkgs": [
-          "nkitsaini_helix",
+          "helix_master",
           "nixpkgs"
         ]
       },
@@ -56,6 +56,31 @@
       "original": {
         "owner": "numtide",
         "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "helix_master": {
+      "inputs": {
+        "crane": "crane",
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "rust-overlay": "rust-overlay"
+      },
+      "locked": {
+        "lastModified": 1721268519,
+        "narHash": "sha256-9DTQZDUKdoUNohsOLT/sN9dp5WNvqWlpwn+ME84J/3A=",
+        "owner": "helix-editor",
+        "repo": "helix",
+        "rev": "b927985cd0f8b68f9a7f177353e96d8aaabf1b06",
+        "type": "github"
+      },
+      "original": {
+        "owner": "helix-editor",
+        "repo": "helix",
         "type": "github"
       }
     },
@@ -165,32 +190,6 @@
         "type": "indirect"
       }
     },
-    "nkitsaini_helix": {
-      "inputs": {
-        "crane": "crane",
-        "flake-utils": [
-          "flake-utils"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "rust-overlay": "rust-overlay"
-      },
-      "locked": {
-        "lastModified": 1719826898,
-        "narHash": "sha256-JVDS/hXlqOkMNzjkPk9qe7MijqgWR59/fnPT6cWRDbM=",
-        "owner": "nkitsaini",
-        "repo": "helix",
-        "rev": "75f9c7bbaaa021c75cf54e16bdc660a2a233ad73",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nkitsaini",
-        "ref": "nkit-driver-2024-07-01",
-        "repo": "helix",
-        "type": "github"
-      }
-    },
     "nur": {
       "locked": {
         "lastModified": 1718804903,
@@ -210,11 +209,11 @@
       "inputs": {
         "disko": "disko",
         "flake-utils": "flake-utils",
+        "helix_master": "helix_master",
         "home-manager": "home-manager",
         "nixgl": "nixgl",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs",
-        "nkitsaini_helix": "nkitsaini_helix",
         "nur": "nur",
         "volume_control_rs": "volume_control_rs"
       }
@@ -222,11 +221,11 @@
     "rust-overlay": {
       "inputs": {
         "flake-utils": [
-          "nkitsaini_helix",
+          "helix_master",
           "flake-utils"
         ],
         "nixpkgs": [
-          "nkitsaini_helix",
+          "helix_master",
           "nixpkgs"
         ]
       },

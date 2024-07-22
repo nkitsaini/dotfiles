@@ -21,12 +21,10 @@ in {
     ];
   };
 
-  # TODO: use absolute path to `hx`. It's not in nkitsaini_helix/bin/hx but in
+  # TODO: use absolute path to `hx`. It's not in helix_master/bin/hx but in
   # home-manager-path/bin/hx
   xdg.configFile."tridactyl/tridactylrc".text = ''
-    js tri.config.set("editorcmd", "${pkgs.wezterm}/bin/wezterm -e ${
-      inputs.nkitsaini_helix.packages.${system}.default
-    }/bin/hx")
+    js tri.config.set("editorcmd", "${pkgs.wezterm}/bin/wezterm -e hx")
     js tri.config.set("theme", "shydactyl")
     bind --mode=normal <C-V> mode ignore
   '';

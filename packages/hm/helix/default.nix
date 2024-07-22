@@ -20,7 +20,7 @@
     };
   in {
     enable = true;
-    package = inputs.nkitsaini_helix.packages.${system}.default;
+    package = inputs.helix_master.packages.${system}.default;
     # defaultEditor = true; # does not provide absolute path so fails with sudo, but actually should it?, explicitly setting EDITOR for now
 
     extraPackages = with pkgs; [

@@ -17,8 +17,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nkitsaini_helix = {
-      url = "github:nkitsaini/helix/nkit-driver-2024-07-01";
+    helix_master = {
+      url = "github:helix-editor/helix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
@@ -42,8 +42,8 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixos-hardware, home-manager, nkitsaini_helix, nur
-    , disko, ... }@inputs:
+  outputs =
+    { self, nixpkgs, nixos-hardware, home-manager, nur, disko, ... }@inputs:
     let
       mkSystem = { hostname, extraModules ? [ ], username ? "kit" }:
         nixpkgs.lib.nixosSystem {
