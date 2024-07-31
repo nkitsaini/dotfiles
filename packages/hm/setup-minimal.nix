@@ -12,6 +12,7 @@
     ./syncthing.nix
     ./k9s
     ./cmus
+    ./aria2
   ];
   # username and home directory are provided by the parent home.nix
 
@@ -271,7 +272,7 @@
 
       # From old fish history
       acpi
-      aria2
+      rqbit
       asciinema
       bandwhich
       bc

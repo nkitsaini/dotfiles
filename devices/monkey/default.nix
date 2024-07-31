@@ -29,6 +29,7 @@
     ../../packages/os/fonts.nix
 
     ../../packages/os/sway
+    ../../packages/os/aria2
 
     ../../users/kit
     ../../users/root

@@ -19,6 +19,7 @@
 
     ../../packages/os/docker_swarm.nix
     ../../packages/os/caddy
+    ../../packages/os/aria2
 
     ./headscale.nix
     ./notes-git-push.nix
