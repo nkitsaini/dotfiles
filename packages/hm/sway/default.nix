@@ -1,6 +1,13 @@
 # This is a nixos package (not home-manager)
-{ pkgs, config, system, inputs, nixGLCommandPrefix ? "", disableSwayLock ? false
-, ... }:
+{
+  pkgs,
+  config,
+  system,
+  inputs,
+  nixGLCommandPrefix ? "",
+  disableSwayLock ? false,
+  ...
+}:
 let
   left = "h";
   right = "l";
@@ -10,7 +17,11 @@ let
 
   sway_display_control = pkgs.writeShellApplication {
     name = "sway-display-control";
-    runtimeInputs = with pkgs; [ sway jq findutils ];
+    runtimeInputs = with pkgs; [
+      sway
+      jq
+      findutils
+    ];
     text = ''
       # usage: sway-display-control off
       # usage: sway-display-control on
@@ -23,12 +34,11 @@ let
   turn_on_output_cmd = "${sway_display_control}/bin/sway-display-control on";
   # Can't get PAM to work on non-nixos (ubuntu) with swaylock
   # It seems like the solution but didn't bother: https://github.com/NixOS/nixpkgs/issues/158025#issuecomment-1616807870
-  swaylock_cmd = if disableSwayLock then
-    turn_off_output_cmd
-  else
-    "${pkgs.swaylock}/bin/swaylock -i ${
-      (import ../../shared/wallpapers.nix).wallpaper2
-    } --color '#100B1B' -fF";
+  swaylock_cmd =
+    if disableSwayLock then
+      turn_off_output_cmd
+    else
+      "${pkgs.swaylock}/bin/swaylock -i ${(import ../../shared/wallpapers.nix).wallpaper2} --color '#100B1B' -fF";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
@@ -41,22 +51,46 @@ let
     scroll_factor = "0.75";
     accel_profile = "adaptive";
   };
+
+  xkb_layout_name = "us_alt_l_as_mod1";
+  xkb_layout_content = ''
+    // Writing our own custom XKB layout to only use Alt_L for mod1
+    default partial modifier_keys
+
+    xkb_symbols "basic" {
+
+        include "us(basic)"
+        name[Group1] = "US Keyboard, Only Alt_L as Mod1";
+        // modifier_map Mod1 { Alt_L };
+        // modifier_map Mod3 { Alt_L };
+    };
+  '';
+
   _keyboard = {
+    # Whole xkb mod3 stuff was helped by: https://www.reddit.com/r/swaywm/comments/1b8hw3u/comment/ktqd5a3/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+    # basically I want to have following behaviour
+    #   left_alt+1/2/3/4 etc... -> sway control (Can't use Super as that is just torture for hand)
+    #   left_alt + ctrl + f1/f2 -> tty switch (don't want to think about when can I use it or when not)
+    #   right_alt or super to be usable as alt in applications without being hijacked by sway. (helix and fish use alt shortcuts)
+    #   solution: remove Alt_R from Mod1 and for good measures map Super -> AltR so that Super key is of some use.
+    # See DEBUG_NOTES.md
+    # xkb_layout = xkb_layout_name;
     xkb_layout = "us";
 
     # This only takes effect if inside non-nixos environment.
     # Otherwise interception-tools handles it at `packages/os/keyboard.nix`
-    xkb_options = "ctrl:nocaps,altwin:swap_lalt_lwin";
+    xkb_options = "ctrl:nocaps";
     # xkb_variant = "colemak_dh";
     repeat_rate = "50";
     repeat_delay = "160";
   };
 
-  menu =
-    "${nixGLCommandPrefix}${pkgs.rofi-wayland}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
+  menu = "${nixGLCommandPrefix}${pkgs.rofi-wayland}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 
   wallpaper = (import ../../shared/wallpapers.nix).wallpaper1;
-in {
+in
+{
+
   home.packages = with pkgs; [
     wl-clipboard
     swaylock
@@ -66,8 +100,12 @@ in {
     grim
     slurp
   ];
-  imports = [ ../../hm/waybar ../wlsunset ];
+  imports = [
+    ../../hm/waybar
+    ../wlsunset
+  ];
   home.file = {
+    # ".xkb/symbols/${xkb_layout_name}".text = xkb_layout_content;
     ".home-manager-extras/README.md".text = ''
       Generated files to use to configure home-manager without nixos environment.
       - home-manager-wayland.desktop - copy (not symlink) to /usr/share/wayland-sessions/home-manager-wayland.desktop (to enable using sway with gdm/ligthdm etc.)
@@ -89,7 +127,9 @@ in {
     '';
   };
 
-  services.copyq = { enable = true; };
+  services.copyq = {
+    enable = true;
+  };
   services.swayidle = {
     enable = true;
     events = [
@@ -147,6 +187,7 @@ in {
   };
 
   wayland.windowManager.sway.enable = true;
+  # wayland.windowManager.sway.checkConfig = false; # https://discourse.nixos.org/t/services-xserver-xkb-extralayouts-doesnt-seem-to-be-compatible-with-sway/46128
   wayland.windowManager.sway.systemd.enable = true;
   wayland.windowManager.sway.xwayland = true;
   wayland.windowManager.sway.extraSessionCommands = ''
@@ -163,6 +204,7 @@ in {
 
   wayland.windowManager.sway.config = rec {
     modifier = "Mod4";
+    # modifier = "Alt_L";
     focus.followMouse = "always";
     terminal = "${terminal_cmd}";
     input = {
@@ -172,14 +214,21 @@ in {
 
     output = {
       # Can't use negative indexes due to https://github.com/swaywm/sway/wiki#mouse-events-clicking-scrolling-arent-working-on-some-of-my-workspaces
-      "${out_laptop}" = { position = "0,1080"; };
+      "${out_laptop}" = {
+        position = "0,1080";
+      };
       "${out_monitor}" = {
         resolution = "2560x1080";
         position = "0,0";
       };
     };
 
-    inherit left up right down;
+    inherit
+      left
+      up
+      right
+      down
+      ;
 
     keybindings = {
       # Focus
@@ -204,8 +253,7 @@ in {
       "${modifier}+Shift+e" = "exec i3-msg exit";
 
       "${modifier}+Return" = "exec ${terminal}";
-      "${modifier}+d" =
-        "exec ${menu}"; # run rofi with nixGL so all program opened inherit it
+      "${modifier}+d" = "exec ${menu}"; # run rofi with nixGL so all program opened inherit it
 
       "${modifier}+Shift+c" = "reload";
       "${modifier}+Shift+r" = "restart";
@@ -245,7 +293,7 @@ in {
 
       # Toggle the current focus between tiling and floating mode
       "${modifier}+Shift+space" = "floating toggle";
-      "${modifier}+Shift+Ctrl+space" = "sticky toggle";
+      # "${modifier}+Shift+Ctrl+space" = "sticky toggle";
 
       # Swap focus between the tiling area and the floating area
       "${modifier}+space" = "focus mode_toggle";
@@ -256,30 +304,23 @@ in {
       # "${modifier}+." = "exec ${pkgs.bemoji}/bin/bemoji";
 
       # Brightness
-      "XF86MonBrightnessUp" =
-        "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5+%";
-      "XF86MonBrightnessDown" =
-        "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5-%";
+      "XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5+%";
+      "XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5-%";
 
       # Screenshot
-      "Print" =
-        "exec ${pkgs.grim}/bin/grim -c && ${pkgs.libnotify}/bin/notify-send 'Screenshot saved'";
-      "Shift+Print" =
-        "exec ${pkgs.grim}/bin/grim -c -g $(${pkgs.slurp}/bin/slurp) && ${pkgs.libnotify}/bin/notify-send 'Screenshot saved'";
-      "Ctrl+Shift+Print" =
-        "exec ${pkgs.grim}/bin/grim -c -g $(${pkgs.slurp}/bin/slurp) - | ${pkgs.wl-clipboard}/bin/wl-copy";
+      # "Print" = "exec ${pkgs.grim}/bin/grim -c && ${pkgs.libnotify}/bin/notify-send 'Screenshot saved'";
+      # "Shift+Print" = "exec ${pkgs.grim}/bin/grim -c -g $(${pkgs.slurp}/bin/slurp) && ${pkgs.libnotify}/bin/notify-send 'Screenshot saved'";
+      # "Ctrl+Shift+Print" = "exec ${pkgs.grim}/bin/grim -c -g $(${pkgs.slurp}/bin/slurp) - | ${pkgs.wl-clipboard}/bin/wl-copy";
 
       ## Pulse Audio controls
       "XF86AudioRaiseVolume" = "exec --no-startup-id ${
-          inputs.volume_control_rs.defaultPackage.${system}
-        }/bin/volume_control -- +0.05"; # increase sound volume
+        inputs.volume_control_rs.defaultPackage.${system}
+      }/bin/volume_control -- +0.05"; # increase sound volume
       "XF86AudioLowerVolume" = "exec --no-startup-id ${
-          inputs.volume_control_rs.defaultPackage.${system}
-        }/bin/volume_control -- -0.05"; # decrease sound volume
-      "XF86AudioMute" =
-        "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; # mute sound
-      "XF86AudioMicMute" =
-        "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle"; # mute mic audio
+        inputs.volume_control_rs.defaultPackage.${system}
+      }/bin/volume_control -- -0.05"; # decrease sound volume
+      "XF86AudioMute" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; # mute sound
+      "XF86AudioMicMute" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle"; # mute mic audio
 
       "XF86AudioPlay" = "exec ${pkgs.playerctl}/bin/playerctl play-pause";
       "XF86AudioPause" = "exec ${pkgs.playerctl}/bin/playerctl play-pause";
@@ -318,7 +359,9 @@ in {
       PartOf = [ "graphical-session.target" ];
       After = [ "graphical-session-pre.target" ];
     };
-    Install = { WantedBy = [ "graphical-session.target" ]; };
+    Install = {
+      WantedBy = [ "graphical-session.target" ];
+    };
     Service = {
       ExecStart = "${pkgs.swaybg}/bin/swaybg -i ${wallpaper}";
       Restart = "on-failure";

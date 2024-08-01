@@ -75,8 +75,8 @@ rec {
             disko.nixosModules.disko
             ({inputs, ...}: {
               nix.settings = {
-                substituters = inputs.self.nixConfig.extra-substituters;
-                trusted-public-keys = inputs.self.nixConfig.extra-trusted-public-keys;
+                substituters = nixConfig.extra-substituters;
+                trusted-public-keys = nixConfig.extra-trusted-public-keys;
               };
             })
           ]
