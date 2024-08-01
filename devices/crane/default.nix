@@ -20,9 +20,9 @@
     ../../packages/os/docker_swarm.nix
     ../../packages/os/caddy
     ../../packages/os/aria2
+    ../../packages/os/aria2/caddy_rpc_integration.nix
 
     ./headscale.nix
-    ./notes-git-push.nix
     ./docker-registry.nix
     ../../users/${username}
     ../../users/root
