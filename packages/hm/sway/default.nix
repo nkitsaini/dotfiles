@@ -52,25 +52,12 @@ let
     accel_profile = "adaptive";
   };
 
-    # basically I want to have following behaviour
-    #   left_alt+1/2/3/4 etc... -> sway control (Can't use Super as that is just torture for hand)
-    #   left_alt + ctrl + f1/f2 -> tty switch (don't want to think about when can I use it or when not)
-    #   right_alt or super to be usable as alt in applications without being hijacked by sway. (helix and fish use alt shortcuts)
-    #   solution: remove Alt_R from Mod1
-    # See DEBUG_NOTES.md
-  xkbConfig = pkgs.writeTextFile {
-    name = "keymap.xkb";
-    text = builtins.readFile ./keymap.xkb;
-  };
-
   _keyboard = {
-    # xkb_layout = xkb_layout_name;
-    xkb_file = "${xkbConfig}";
-    # xkb_layout = "us";
+    xkb_layout = "us";
 
     # This only takes effect if inside non-nixos environment.
     # Otherwise interception-tools handles it at `packages/os/keyboard.nix`
-    # xkb_options = "ctrl:nocaps";
+    xkb_options = "ctrl:nocaps";
     # xkb_variant = "colemak_dh";
     repeat_rate = "50";
     repeat_delay = "160";
@@ -96,7 +83,6 @@ in
     ../wlsunset
   ];
   home.file = {
-    # ".xkb/symbols/${xkb_layout_name}".text = xkb_layout_content;
     ".home-manager-extras/README.md".text = ''
       Generated files to use to configure home-manager without nixos environment.
       - home-manager-wayland.desktop - copy (not symlink) to /usr/share/wayland-sessions/home-manager-wayland.desktop (to enable using sway with gdm/ligthdm etc.)
@@ -194,7 +180,7 @@ in
   };
 
   wayland.windowManager.sway.config = rec {
-    modifier = "Mod1";
+    modifier = "Mod4";
     focus.followMouse = "always";
     terminal = "${terminal_cmd}";
     input = {
