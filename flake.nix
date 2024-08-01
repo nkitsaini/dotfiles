@@ -1,4 +1,4 @@
-{
+rec {
   description = "Home Manager configuration of ankit";
 
   inputs = {
@@ -19,10 +19,13 @@
 
     helix_master = {
       url = "github:helix-editor/helix";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
+      # NOTE: do not follow inputs, otherwise the cache will be of no use and 
+      #   the sun will go out of fashion before nix-build switch finishes.
+      #   I know it'll be more network/space usage, but time is of essense.
+      # inputs.nixpkgs.follows = "nixpkgs";
+      # inputs.flake-utils.follows = "flake-utils";
     };
-    nur = { url = "github:nix-community/NUR"; };
+    nur = {url = "github:nix-community/NUR";};
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -42,74 +45,95 @@
     };
   };
 
-  outputs =
-    { self, nixpkgs, nixos-hardware, home-manager, nur, disko, ... }@inputs:
-    let
-      mkSystem = { hostname, extraModules ? [ ], username ? "kit" }:
-        nixpkgs.lib.nixosSystem {
-          # NOTE: Change this to aarch64-linux if you are on ARM
+  outputs = {
+    self,
+    nixpkgs,
+    nixos-hardware,
+    home-manager,
+    nur,
+    disko,
+    ...
+  } @ inputs: let
+    mkSystem = {
+      hostname,
+      extraModules ? [],
+      username ? "kit",
+    }:
+      nixpkgs.lib.nixosSystem {
+        # NOTE: Change this to aarch64-linux if you are on ARM
+        inherit system;
+        specialArgs = {
+          inherit inputs;
           inherit system;
-          specialArgs = {
-            inherit inputs;
-            inherit system;
-            inherit hostname;
-            inherit username;
-          };
-          modules = [
+          inherit hostname;
+          inherit username;
+        };
+        modules =
+          [
             ./devices/${hostname}
             home-manager.nixosModules.home-manager
             disko.nixosModules.disko
-          ] ++ extraModules;
-        };
-
-      system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        system = system;
-        overlays = [ inputs.nixgl.overlay ];
+            ({inputs, ...}: {
+              nix.settings = {
+                substituters = inputs.self.nixConfig.extra-substituters;
+                trusted-public-keys = inputs.self.nixConfig.extra-trusted-public-keys;
+              };
+            })
+          ]
+          ++ extraModules;
       };
 
-    in {
-      # ===== Home-manager only configs
-      homeConfigurations."shifu" = home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
-
-        # Specify your home configuration modules here, for example,
-        # the path to your home.nix.
-        modules = [ ./devices/shifu/home.nix ];
-        extraSpecialArgs = {
-          inherit inputs;
-          inherit system;
-          nixGLCommandPrefix = "${pkgs.nixgl.nixGLMesa}/bin/nixGLMesa ";
-          disableSwayLock = true;
-        };
-      };
-
-      # ===== Nixos configs
-      nixosConfigurations.monkey = mkSystem {
-        hostname = "monkey";
-        extraModules = [ nixos-hardware.nixosModules.lenovo-thinkpad-e14-amd ];
-      };
-      nixosConfigurations.iso = mkSystem { hostname = "iso"; };
-
-      nixosConfigurations.deepak = mkSystem {
-        hostname = "deepak";
-        username = "deepak";
-      };
-      nixosConfigurations.akanksha = mkSystem {
-        hostname = "akanksha";
-        username = "akanksha";
-      };
-
-      # TODO: disko config remaining
-      nixosConfigurations.oogway = mkSystem { hostname = "oogway"; };
-
-      # TODO: following configs to be in similar fashion as `monkey`
-      # i.e.
-      # 1. use fixed users,
-      # 2. rename configuration.nix -> default.nix
-      # 3. have home-manager config imported through default.nix
-      # 4. manage disk through disko
-      # ... or something I missed
-      nixosConfigurations.crane = mkSystem { hostname = "crane"; };
+    system = "x86_64-linux";
+    pkgs = import nixpkgs {
+      system = system;
+      overlays = [inputs.nixgl.overlay];
     };
+  in {
+    # ===== Home-manager only configs
+    homeConfigurations."shifu" = home-manager.lib.homeManagerConfiguration {
+      inherit pkgs;
+
+      # Specify your home configuration modules here, for example,
+      # the path to your home.nix.
+      modules = [./devices/shifu/home.nix];
+      extraSpecialArgs = {
+        inherit inputs;
+        inherit system;
+        nixGLCommandPrefix = "${pkgs.nixgl.nixGLMesa}/bin/nixGLMesa ";
+        disableSwayLock = true;
+      };
+    };
+
+    # ===== Nixos configs
+    nixosConfigurations.monkey = mkSystem {
+      hostname = "monkey";
+      extraModules = [nixos-hardware.nixosModules.lenovo-thinkpad-e14-amd];
+    };
+    nixosConfigurations.iso = mkSystem {hostname = "iso";};
+
+    nixosConfigurations.deepak = mkSystem {
+      hostname = "deepak";
+      username = "deepak";
+    };
+    nixosConfigurations.akanksha = mkSystem {
+      hostname = "akanksha";
+      username = "akanksha";
+    };
+
+    # TODO: disko config remaining
+    nixosConfigurations.oogway = mkSystem {hostname = "oogway";};
+
+    # TODO: following configs to be in similar fashion as `monkey`
+    # i.e.
+    # 1. use fixed users,
+    # 2. rename configuration.nix -> default.nix
+    # 3. have home-manager config imported through default.nix
+    # 4. manage disk through disko
+    # ... or something I missed
+    nixosConfigurations.crane = mkSystem {hostname = "crane";};
+  };
+  nixConfig = {
+    extra-substituters = ["https://helix.cachix.org"];
+    extra-trusted-public-keys = ["helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="];
+  };
 }

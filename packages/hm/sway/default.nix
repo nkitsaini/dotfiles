@@ -12,20 +12,10 @@ let
     name = "sway-display-control";
     runtimeInputs = with pkgs; [ sway jq findutils ];
     text = ''
-      # usage: sway-disable-control off
-      # usage: sway-disable-control on
-      # usage: sway-disable-control toggle
+      # usage: sway-display-control off
+      # usage: sway-display-control on
+      # usage: sway-display-control toggle
       swaymsg -t get_outputs | jq '.[].name' | xargs -I _ swaymsg "output _ dpms $1"
-    '';
-  };
-  volume_control_no_deps =
-    pkgs.writeScriptBin "wireplumber-volume-control-deps-missing"
-    (builtins.readFile ../../scripts/volume_control.py);
-  volume_control = pkgs.writeShellApplication {
-    name = "volume-control";
-    runtimeInputs = with pkgs; [ python312 wireplumber ];
-    text = ''
-      exec ${volume_control_no_deps}/bin/wireplumber-volume-control-deps-missing "$@"
     '';
   };
 
@@ -56,7 +46,7 @@ let
 
     # This only takes effect if inside non-nixos environment.
     # Otherwise interception-tools handles it at `packages/os/keyboard.nix`
-    xkb_options = "ctrl:nocaps";
+    xkb_options = "ctrl:nocaps,altwin:swap_lalt_lwin";
     # xkb_variant = "colemak_dh";
     repeat_rate = "50";
     repeat_delay = "160";

@@ -1,11 +1,16 @@
 # The core profile is automatically applied to all hosts.
-{ lib, pkgs, inputs, system, ... }: {
-
+{
+  lib,
+  pkgs,
+  inputs,
+  system,
+  ...
+}: {
   i18n.defaultLocale = "en_US.UTF-8";
   time.timeZone = lib.mkDefault "Asia/Kolkata";
 
   environment = {
-    variables = { DO_NOT_TRACK = "1"; };
+    variables = {DO_NOT_TRACK = "1";};
     systemPackages = with pkgs; [
       binutils
       coreutils
@@ -38,9 +43,9 @@
     settings = {
       cores = 0;
       auto-optimise-store = true;
-      allowed-users = [ "@wheel" ];
-      trusted-users = [ "root" "@wheel" ];
-      experimental-features = [ "nix-command" "flakes" ];
+      allowed-users = ["@wheel"];
+      trusted-users = ["root" "@wheel"];
+      experimental-features = ["nix-command" "flakes"];
     };
   };
 
@@ -73,4 +78,3 @@
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "23.11"; # Did you read the comment?
 }
-

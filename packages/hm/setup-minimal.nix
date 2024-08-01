@@ -215,7 +215,7 @@
       iperf
 
       # Code specific
-      nixfmt
+      nixfmt-rfc-style
       ruff
       lazygit
       nodejs_20
