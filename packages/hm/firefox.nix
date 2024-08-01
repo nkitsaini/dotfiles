@@ -27,6 +27,7 @@ in {
     js tri.config.set("editorcmd", "${pkgs.wezterm}/bin/wezterm -e hx")
     js tri.config.set("theme", "shydactyl")
     bind --mode=normal <C-V> mode ignore
+    unbind --mode=normal <C-f>
   '';
 
   # remove after this: https://bugzilla.mozilla.org/show_bug.cgi?id=259356

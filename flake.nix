@@ -34,7 +34,7 @@
     # from other developers machine.
     # The way of merging inputs together and calling `outputs` directly works *until* inputs have duplicates
     # So using seperate repo for this stuff. Ideally `dotfiles` repo can be used where you first push than nix flake update, but that seems confusing.
-    # To update use `nix flake lock --update volume_control_rs`
+    # To update use `nix flake lock --update-input volume_control_rs`
     volume_control_rs = {
       url = "github:nkitsaini/hive?dir=volume_control";
       inputs.nixpkgs.follows = "nixpkgs";
