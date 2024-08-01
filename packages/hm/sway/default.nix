@@ -52,34 +52,25 @@ let
     accel_profile = "adaptive";
   };
 
-  xkb_layout_name = "us_alt_l_as_mod1";
-  xkb_layout_content = ''
-    // Writing our own custom XKB layout to only use Alt_L for mod1
-    default partial modifier_keys
-
-    xkb_symbols "basic" {
-
-        include "us(basic)"
-        name[Group1] = "US Keyboard, Only Alt_L as Mod1";
-        // modifier_map Mod1 { Alt_L };
-        // modifier_map Mod3 { Alt_L };
-    };
-  '';
-
-  _keyboard = {
-    # Whole xkb mod3 stuff was helped by: https://www.reddit.com/r/swaywm/comments/1b8hw3u/comment/ktqd5a3/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
     # basically I want to have following behaviour
     #   left_alt+1/2/3/4 etc... -> sway control (Can't use Super as that is just torture for hand)
     #   left_alt + ctrl + f1/f2 -> tty switch (don't want to think about when can I use it or when not)
     #   right_alt or super to be usable as alt in applications without being hijacked by sway. (helix and fish use alt shortcuts)
-    #   solution: remove Alt_R from Mod1 and for good measures map Super -> AltR so that Super key is of some use.
+    #   solution: remove Alt_R from Mod1
     # See DEBUG_NOTES.md
+  xkbConfig = pkgs.writeTextFile {
+    name = "keymap.xkb";
+    text = builtins.readFile ./keymap.xkb;
+  };
+
+  _keyboard = {
     # xkb_layout = xkb_layout_name;
-    xkb_layout = "us";
+    xkb_file = "${xkbConfig}";
+    # xkb_layout = "us";
 
     # This only takes effect if inside non-nixos environment.
     # Otherwise interception-tools handles it at `packages/os/keyboard.nix`
-    xkb_options = "ctrl:nocaps";
+    # xkb_options = "ctrl:nocaps";
     # xkb_variant = "colemak_dh";
     repeat_rate = "50";
     repeat_delay = "160";
@@ -203,8 +194,7 @@ in
   };
 
   wayland.windowManager.sway.config = rec {
-    modifier = "Mod4";
-    # modifier = "Alt_L";
+    modifier = "Mod1";
     focus.followMouse = "always";
     terminal = "${terminal_cmd}";
     input = {

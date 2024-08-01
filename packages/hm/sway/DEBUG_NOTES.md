@@ -10,3 +10,11 @@ In virtual consoles only ctrl+alt_l+F1 work.
 
 
 Resorting to using Super instead of Alt as sway modifier, but it hurts ... literally.
+
+
+------------- Finally worked, I realized that Alt_R wasn't getting removed from modifiers using xkb_layout, and using `xmodmap` didn't actually change the behaviour at all.
+So finally just dumped whole keymap.xkb (see packages/hm/sway/keymap.xkb) and changed as required.
+
+
+
+------------- shoot xmodmap shows `alt_R` is not in `mod1` but for some reason sway doesn't leave it alone. I'm out of here
