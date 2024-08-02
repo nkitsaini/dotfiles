@@ -728,7 +728,7 @@ xkb_compatibility "(unnamed)" {
     };
     interpret Alt_R+AnyOf(all) {
         virtualModifier= Alt;
-        action= SetMods(modifiers=modMapMods,clearLocks);
+        action= SetMods(modifiers=clearLocks);
     };
     interpret Meta_L+AnyOf(all) {
         virtualModifier= Meta;
@@ -1555,8 +1555,8 @@ xkb_symbols "(unnamed)" {
     modifier_map Mod4 { <LWIN> };
     modifier_map Mod4 { <RWIN> };
     modifier_map Mod3 { <LVL5> };
-    modifier_map Mod1 { <ALT> };
-    modifier_map Mod1 { <META> };
+    // modifier_map Mod1 { <ALT> };
+    // modifier_map Mod1 { <META> };
     modifier_map Mod4 { <SUPR> };
     modifier_map Mod4 { <HYPR> };
 };
