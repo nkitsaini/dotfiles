@@ -6,7 +6,7 @@
   };
   programs.helix = let
     comment_binding = ''
-      :pipe ${pkgs.python312}/bin/python3 ${config.home.homeDirectory}/code/shoal/commenter/commenter.py --start-token="/*" --end-token="*/"'';
+      :pipe ${pkgs.python312}/bin/python3 ${./commenter.py} --start-token="/*" --end-token="*/"'';
     markdown_table_formatter_stdin = pkgs.writeShellApplication {
       name = "markdown-table-formatter-stdin";
       runtimeInputs = [ pkgs.bun pkgs.coreutils ];
