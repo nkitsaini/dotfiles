@@ -110,6 +110,10 @@
         name = "fzf";
         src = pkgs.fishPlugins.fzf-fish.src;
       }
+      {
+        name = "done";
+        src = pkgs.fishPlugins.done.src;
+      }
     ];
     shellAliases = {
       gs = "git status";
