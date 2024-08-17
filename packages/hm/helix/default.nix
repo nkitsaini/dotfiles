@@ -281,6 +281,11 @@
             unit = "	";
           };
           language-servers = [ "typst-lsp" ];
+          formatter = {
+            command =
+              "${pkgs.typstyle}/bin/typstyle";
+            args = [ ];
+          };
         }
 
         {

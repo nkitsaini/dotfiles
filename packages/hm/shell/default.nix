@@ -136,6 +136,8 @@
       rm = "echo 'use `tp` or `rmforce`'";
       mv = "mv -i";
       rmforce = "${pkgs.coreutils-full}/bin/rm";
+
+      pocker = "docker --context prod";
     };
     shellInit = ''
       # Emulates vim's cursor shape behavior
