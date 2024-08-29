@@ -47,6 +47,7 @@
       nodePackages.graphql-language-service-cli
       svelte-language-server
       tailwindcss-language-server
+      ltex-ls
     ];
 
     settings = {
@@ -178,12 +179,21 @@
         language-id = "typst";
         command = "typst-lsp";
       };
+      language-server.ltex-lsp = {
+        command = "${pkgs.ltex-ls}/bin/ltex-ls";
+      };
 
       # Language config
       language = [
         {
+          name = "text";
+          scope = "source.txt";
+          file-types = [ "txt" ];
+          language-servers = [ "ltex-lsp" ];
+        }
+        {
           name = "markdown";
-          language-servers = [ "markdown-oxide" ];
+          language-servers = [ "markdown-oxide" "ltex-lsp" ];
           formatter = {
             command =
               "${markdown_table_formatter_stdin}/bin/markdown-table-formatter-stdin";
