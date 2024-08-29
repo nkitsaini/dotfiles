@@ -16,6 +16,7 @@ if success then
 end
 
 return {
+  front_end = "WebGpu", -- For some reason opengl breaks rendering (started happening after nixpkgs update)
   xcursor_theme = xcursor_theme,
   xcursor_size = xcursor_size,
   -- color_scheme = "Solarized (dark) (terminal.sexy)",

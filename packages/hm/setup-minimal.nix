@@ -312,7 +312,9 @@
       duf # better df
 
       # btrfs
-      compsize
+
+      # Broken: https://github.com/NixOS/nixpkgs/issues/336006
+      # compsize
 
       sshfs
 

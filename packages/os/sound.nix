@@ -1,5 +1,6 @@
 { ... }: {
-  sound.enable = true;
+  # overloaded but where?
+  # sound.enable = true;
   hardware.pulseaudio.enable = false;
   services.pipewire = {
     enable = true;

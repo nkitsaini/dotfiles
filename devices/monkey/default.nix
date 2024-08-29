@@ -30,6 +30,7 @@
 
     ../../packages/os/sway
     ../../packages/os/aria2
+    ../../packages/os/games.nix
 
     ../../users/kit
     ../../users/root

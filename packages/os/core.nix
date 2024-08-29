@@ -49,6 +49,11 @@
     };
   };
 
+  # better timesync for unstable internet connections
+  services.chrony.enable = true;
+  services.timesyncd.enable = false;
+
+
   # Need to configure home-manager to work with flakes
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
