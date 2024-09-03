@@ -33,6 +33,7 @@
     libdrm
     libglvnd
     libnotify
+    fontconfig
     libpulseaudio
     libunwind
     libusb1
