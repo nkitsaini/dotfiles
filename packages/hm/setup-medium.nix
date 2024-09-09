@@ -6,11 +6,11 @@
   gtk = {
     enable = true;
     cursorTheme.name = "Adwaita";
-    cursorTheme.package = pkgs.gnome.adwaita-icon-theme;
+    cursorTheme.package = pkgs.adwaita-icon-theme;
     theme.name = "adw-gtk3-light";
     theme.package = pkgs.adw-gtk3;
     iconTheme = {
-      package = pkgs.gnome.adwaita-icon-theme;
+      package = pkgs.adwaita-icon-theme;
       name = "adwaita-icon-theme";
     };
   };
@@ -60,8 +60,8 @@
       wezterm
 
       sioyek
-      gnome.eog
-      gnome.seahorse # for keyring
+      eog
+      seahorse # for keyring
       qimgv
 
       # inputs.nkitsaini_notes_utils.packages.${system}.default
