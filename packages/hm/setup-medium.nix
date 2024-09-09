@@ -46,8 +46,12 @@
     [
       deluge
       obsidian
-      wl-screenrec
+
+      # For some reason ctrl-c not working, so can't stop recording
+      # wl-screenrec
+
       wf-recorder
+
       vlc
       xorg.xset # I see a vlc warning reguarding xset missing. Just in case.
       pavucontrol
