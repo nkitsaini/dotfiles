@@ -47,6 +47,7 @@
       deluge
       obsidian
       wl-screenrec
+      wf-recorder
       vlc
       xorg.xset # I see a vlc warning reguarding xset missing. Just in case.
       pavucontrol
