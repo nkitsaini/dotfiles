@@ -60,6 +60,7 @@
       xfce.thunar
 
       zellij
+      zed-editor
 
       alacritty-theme
       wezterm

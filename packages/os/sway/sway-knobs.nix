@@ -67,6 +67,9 @@ in {
     dbus-sway-environment
     configure-gtk
 
+
+    # Use  env `WLR_RENDERER=vulkan` on related errors
+    vulkan-validation-layers
   ];
 
   xdg.portal.config.common.default = "*";

@@ -99,7 +99,9 @@ rec {
       extraSpecialArgs = {
         inherit inputs;
         inherit system;
-        nixGLCommandPrefix = "${pkgs.nixgl.nixVulkanIntel}/bin/nixVulkanIntel ";
+
+        # wezterm didn't work with only vulkan, zed didn't work with only GL. So support both!
+        nixGLCommandPrefix = "env WLR_RENDERER=vulkan ${pkgs.nixgl.nixGLIntel}/bin/nixGLIntel -- ${pkgs.nixgl.nixVulkanIntel}/bin/nixVulkanIntel ";
         disableSwayLock = true;
       };
     };
