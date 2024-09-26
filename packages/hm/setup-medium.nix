@@ -84,6 +84,9 @@
       # Xorg
       xorg.xev
 
+      # Gets vulkan related libs with itself I think
+      vulkan-tools
+
       # From old fish history
       dolphin
       gparted

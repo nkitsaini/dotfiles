@@ -10,7 +10,7 @@ in {
   home.username = username;
   home.homeDirectory = homeDirectory;
   imports = [ ../../packages/hm/setup-full.nix ../../packages/hm/sway ];
-  home.packages = [ pkgs.slack ];
+  home.packages = [ pkgs.slack pkgs.nixgl.nixVulkanIntel pkgs.nixgl.nixGLIntel];
   xdg.mimeApps.associations.added = {
     "x-scheme-handler/slack" = [ "slack.desktop" ];
   };

@@ -346,17 +346,7 @@
       # (writeShellScriptBin "my-hello" ''
       #   echo "Hello, ${config.home.username}!"
       # '')
-    ] ++ (if nixGLCommandPrefix != "" then
-      [
-        (writeShellApplication {
-          name = "nixgl-run";
-          text = ''
-            exec ${nixGLCommandPrefix} -- "$@"
-          '';
-        })
-      ]
-    else
-      [ ]);
+    ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.

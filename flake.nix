@@ -99,7 +99,7 @@ rec {
       extraSpecialArgs = {
         inherit inputs;
         inherit system;
-        nixGLCommandPrefix = "${pkgs.nixgl.nixGLMesa}/bin/nixGLMesa ";
+        nixGLCommandPrefix = "${pkgs.nixgl.nixVulkanIntel}/bin/nixVulkanIntel ";
         disableSwayLock = true;
       };
     };
