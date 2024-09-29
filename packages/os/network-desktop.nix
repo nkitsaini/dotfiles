@@ -16,6 +16,10 @@
   # otherwise blocks nixos-rebuild if wired is unplugged.
   systemd.network.wait-online.enable = false;
 
+  # https://discourse.nixos.org/t/how-to-disable-networkmanager-wait-online-service-in-the-configuration-file/19963/2
+  # https://github.com/NixOS/nixpkgs/issues/180175
+  systemd.services.NetworkManager-wait-online.enable = false;
+
   # need to use nmtui and applet from networkmanager
   # need to use dhcp fallback to link-local using systemd
   networking.useNetworkd = true;
