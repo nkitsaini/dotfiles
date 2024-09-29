@@ -82,11 +82,15 @@
       # shows cp etc. progress
       progress
 
+      transmission
+
       # Xorg
       xorg.xev
 
-      # Gets vulkan related libs with itself I think
       vulkan-tools
+     
+      # Run appimage
+      appimage-run
 
       # From old fish history
       dolphin

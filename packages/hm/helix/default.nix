@@ -100,7 +100,7 @@
               :pipe-to python3 -c "import shlex, os, sys;a=sys.stdin.read();a += '\\n'; os.system(shlex.join(['tmux', 'send-keys', '-t', '1', a]));"'';
 
             L = ":run-shell-command tmux send-keys -t 1 C-c";
-            n = [ "select_all" ":pipe notes-util" "goto_file_start" ];
+            # n = [ "select_all" ":pipe notes-util 2>/dev/null" "goto_file_start" ];
 
             o = {
               l = ":open ~/.config/helix/languages.toml";
