@@ -103,6 +103,13 @@
             exec ${nixGLCommandPrefix} -- "$@"
           '';
         })
+        (writeShellApplication {
+          # Run using vulkan
+          name = "nixgl-vulkan-run";
+          text = ''
+            exec env WLR_RENDERER=vulkan  ${pkgs.nixgl.nixVulkanIntel}/bin/nixVulkanIntel -- "$@"
+          '';
+        })
       ]
     else
       [ ]);

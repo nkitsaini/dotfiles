@@ -100,8 +100,9 @@ rec {
         inherit inputs;
         inherit system;
 
-        # wezterm didn't work with only vulkan, zed didn't work with only GL. So support both!
-        nixGLCommandPrefix = "env WLR_RENDERER=vulkan ${pkgs.nixgl.nixGLIntel}/bin/nixGLIntel -- ${pkgs.nixgl.nixVulkanIntel}/bin/nixVulkanIntel ";
+        # wezterm didn't work with only vulkan, zed didn't work with only GL.
+        # But can't include vulkan as it can break non-gui packages due to llvm lib in `LD_LIBRARY_PATH`. So open-gl globally, and vulkan for specific packages after: https://github.com/nix-community/home-manager/pull/5355, right now it is manual: `nixgl-vulkan-run ....`
+        nixGLCommandPrefix = "${pkgs.nixgl.nixGLIntel}/bin/nixGLIntel  ";
         disableSwayLock = true;
       };
     };
