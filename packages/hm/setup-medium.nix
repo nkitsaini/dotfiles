@@ -92,6 +92,9 @@
       # Run appimage
       appimage-run
 
+      # Easy drag and drop for tiling wm
+      xdragon
+
       # From old fish history
       dolphin
       gparted
