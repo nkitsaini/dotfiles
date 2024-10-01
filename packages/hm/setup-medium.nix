@@ -82,8 +82,6 @@
       # shows cp etc. progress
       progress
 
-      transmission
-
       # Xorg
       xorg.xev
 
