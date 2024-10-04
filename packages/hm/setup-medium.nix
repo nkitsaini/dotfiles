@@ -1,7 +1,7 @@
 # Has everything except for desktop manager.
 # It is good to be used in nixos or standalone home-manager for desktop setups.
 { pkgs, nixGLCommandPrefix ? "", ... }: {
-  imports = [ ./setup-minimal.nix ./wezterm ./firefox.nix ./mpv ];
+  imports = [ ./setup-minimal.nix ./wezterm ./firefox.nix ./mpv ./zed ];
 
   gtk = {
     enable = true;

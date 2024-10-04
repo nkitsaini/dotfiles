@@ -20,5 +20,19 @@ Steps:
   - `sudo apt install slurp` (to allow selecting monitor while sharing screen)
       - We also install it in home-manager, but the systemd service xdg-desktop-portal-wlr can't access it unless it's installed globally in /usr/bin or something
 
+- Change the `/usr/bin/firefox` to point to firefox from nix. Otherwise dbus openURI doesn't work.
+  - `mv /usr/bin/firefox /usr/bin/firefox.bak`
+  - `ln -s /home/<username>/.nix-profile/bin/firefox /usr/bin/firefox`
+
+```sh
+# Test by running
+gdbus call --session \
+        --dest org.freedesktop.portal.Desktop \
+        --object-path /org/freedesktop/portal/desktop \
+        --method org.freedesktop.portal.OpenURI.OpenURI \
+        "" \
+        "https://example.com" \
+        {}
+```
 
 - restart to let things like .desktop discovery take effect
