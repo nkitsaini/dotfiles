@@ -1,19 +1,7 @@
 # Has everything except for desktop manager.
 # It is good to be used in nixos or standalone home-manager for desktop setups.
 { pkgs, nixGLCommandPrefix ? "", ... }: {
-  imports = [ ./setup-minimal.nix ./wezterm ./firefox.nix ./mpv ./zed ];
-
-  gtk = {
-    enable = true;
-    cursorTheme.name = "Adwaita";
-    cursorTheme.package = pkgs.adwaita-icon-theme;
-    theme.name = "adw-gtk3-light";
-    theme.package = pkgs.adw-gtk3;
-    iconTheme = {
-      package = pkgs.adwaita-icon-theme;
-      name = "adwaita-icon-theme";
-    };
-  };
+  imports = [ ./setup-minimal.nix ./wezterm ./firefox.nix ./mpv ./theme ./zed ];
 
   programs.alacritty = {
     enable = true;
@@ -31,12 +19,6 @@
 
   xsession.enable = true;
 
-  qt.enable = true;
-  qt.platformTheme.name = "qtct";
-  xdg.configFile."qt5ct/qt5ct.conf".text = ''
-    [Appearance]
-    icon_theme=breeze
-  '';
 
   services.gnome-keyring.enable = true;
 
