@@ -2,6 +2,8 @@
 # It is good to be used in nixos or standalone home-manager for desktop setups.
 { pkgs, nixGLCommandPrefix ? "", ... }: {
   imports = [ ./setup-minimal.nix ./wezterm ./firefox.nix ./mpv ./theme ./zed ];
+  
+  services.blueman-applet.enable = true;
 
   programs.alacritty = {
     enable = true;

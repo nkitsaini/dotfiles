@@ -1,15 +1,16 @@
+/* CLAUDE GENERATED */
+
 * {
-  /* `otf-font-awesome` is required to be installed for icons */
   font-family: "Noto Sans CJK KR Regular";
   font-size: 13px;
   min-height: 0;
 }
 
 window#waybar {
-  background: rgba(43, 48, 59, 0.5);
-  /*    background-color: rgba(43, 48, 59, 0.5); */
-  /*    border-bottom: 3px solid rgba(100, 114, 125, 0.5); */
-  color: #ffffff;
+  background: rgba(253, 246, 227, 0.7);
+  /* Solarized base3 with increased transparency */
+  color: #657b83;
+  /* Solarized base00 */
   transition-property: background-color;
   transition-duration: .5s;
 }
@@ -22,53 +23,45 @@ window#waybar.hidden {
   background-color: transparent;
 }
 
-#workspaces {}
-
 #window {
-  margin: 2;
-  padding-left: 8;
-  padding-right: 8;
-  background-color: rgba(0, 0, 0, 0.3);
+  margin: 2px;
+  padding: 0 8px;
+  background-color: rgba(238, 232, 213, 0.8);
+  /* Solarized base2 with transparency */
   font-size: 14px;
   font-weight: bold;
 }
 
 button {
-  /* Use box-shadow instead of border so the text isn't offset */
   box-shadow: inset 0 -3px transparent;
-  /* Avoid rounded borders under each button name */
   border: none;
   border-radius: 0;
 }
 
-/* https://github.com/Alexays/Waybar/wiki/FAQ#the-workspace-buttons-have-a-strange-hover-effect */
 button:hover {
   background: inherit;
-  border-top: 2px solid #c9545d;
+  border-top: 2px solid #268bd2;
+  /* Solarized blue */
 }
 
 #workspaces button {
   padding: 0 4px;
-  color: #ffffff;
-  /*    background-color: rgba(0,0,0,0.3); */
+  color: #657b83;
+  /* Solarized base00 */
 }
 
-#workspaces button:hover {}
-
 #workspaces button.focused {
-  /*    box-shadow: inset 0 -2px #c9545d; */
-  background-color: rgba(0, 0, 0, 0.3);
-  color: #c9545d;
-  border-top: 2px solid #c9545d;
+  background-color: rgba(238, 232, 213, 0.8);
+  /* Solarized base2 with transparency */
+  color: #268bd2;
+  /* Solarized blue */
+  border-top: 2px solid #268bd2;
+  /* Solarized blue */
 }
 
 #workspaces button.urgent {
-  background-color: #eb4d4b;
-}
-
-#mode {
-  background-color: #64727D;
-  border-bottom: 3px solid #ffffff;
+  background-color: #dc322f;
+  /* Solarized red */
 }
 
 #clock,
@@ -82,26 +75,22 @@ button:hover {
 #pulseaudio,
 #wireplumber,
 #custom-media,
-#tray,
 #mode,
+#tray,
 #idle_inhibitor,
 #scratchpad,
 #mpd {
-  margin: 2px;
-  padding-left: 4px;
-  padding-right: 4px;
-  background-color: rgba(0, 0, 0, 0.3);
-  color: #ffffff;
+  /* margin: 2px; */
+  padding: 6px;
+  background-color: rgba(238, 232, 213, 0.8);
+  /* Solarized base2 without transparency */
+  color: #657b83;
+  /* Solarized base00 */
 }
 
-/* If workspaces is the leftmost module, omit left margin */
-.modules-left>widget:first-child>#workspaces {
-  margin-left: 0;
-}
-
-/* If workspaces is the rightmost module, omit right margin */
-.modules-right>widget:last-child>#workspaces {
-  margin-right: 0;
+#tray {
+  background-color: #eee8d5;
+  /* Solarized base2 (solid) */
 }
 
 #clock {
@@ -109,58 +98,50 @@ button:hover {
   font-weight: bold;
 }
 
-#battery icon {
-  color: red;
-}
-
 #battery.charging,
 #battery.plugged {
-  color: #ffffff;
-  background-color: #26A65B;
+  color: #657b83;
+  /* Solarized base00 */
+  background-color: #859900;
+  /* Solarized green */
 }
 
 @keyframes blink {
   to {
-    background-color: #ffffff;
-    color: #000000;
+    background-color: #657b83;
+    /* Solarized base00 */
+    color: #fdf6e3;
+    /* Solarized base3 */
   }
 }
 
-#battery.warning:not(.charging) {
-  background-color: #f53c3c;
-  color: #ffffff;
-  animation-name: blink;
-  animation-duration: 0.5s;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  animation-direction: alternate;
-}
-
 #battery.critical:not(.charging) {
-  background-color: #f53c3c;
-  color: #ffffff;
+  background-color: #dc322f;
+  /* Solarized red */
+  color: #fdf6e3;
+  /* Solarized base3 */
   animation-name: blink;
   animation-duration: 0.5s;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
   animation-direction: alternate;
-}
-
-label:focus {
-  background-color: #000000;
 }
 
 #network.disconnected {
-  background-color: #f53c3c;
+  background-color: #dc322f;
+  /* Solarized red */
 }
 
 #temperature.critical {
-  background-color: #eb4d4b;
+  background-color: #dc322f;
+  /* Solarized red */
 }
 
 #idle_inhibitor.activated {
-  background-color: #ecf0f1;
-  color: #2d3436;
+  background-color: #2aa198;
+  /* Solarized cyan */
+  color: #fdf6e3;
+  /* Solarized base3 */
 }
 
 #tray>.passive {
@@ -169,21 +150,6 @@ label:focus {
 
 #tray>.needs-attention {
   -gtk-icon-effect: highlight;
-  background-color: #eb4d4b;
+  background-color: #dc322f;
+  /* Solarized red */
 }
-
-/*
-
-window#waybar.solo {
-background-color: #FFFFFF;
-}
-
-window#waybar.termite {
-background-color: #3F3F3F;
-}
-
-window#waybar.chromium {
-background-color: #000000;
-border: none;
-}
- */

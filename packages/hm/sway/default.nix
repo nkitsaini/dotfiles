@@ -107,6 +107,7 @@ in
   services.copyq = {
     enable = true;
   };
+
   services.swayidle = {
     enable = true;
     events = [

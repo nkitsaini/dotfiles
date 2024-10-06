@@ -22,8 +22,8 @@
         "pulseaudio"
         "backlight"
         "battery"
-        "tray"
         "clock"
+        "tray"
       ];
       "keyboard-state" = {
         "numlock" = true;

@@ -23,9 +23,15 @@
   # '';
 
   home.packages = with pkgs; [
-
-    papirus-folders
-    
+    xorg.xcursorthemes
+    # maia-icon-theme
+    kdePackages.breeze-gtk
+    kdePackages.breeze-icons
+    kdePackages.breeze.qt5
+    kdePackages.breeze
+    catppuccin-cursors # Mouse cursor theme
+    catppuccin-papirus-folders # Icon theme, e.g. for pcmanfm-qt
+    papirus-folders # For the catppucing stuff work
   ];
 
   gtk = {
@@ -34,21 +40,32 @@
       name = "Breeze";
       package = pkgs.kdePackages.breeze-gtk;
     };
+
+    # iconTheme = {
+    #   name = "Adwaita";
+    #   package = pkgs.gnome.adwaita-icon-theme;
+    # };
     iconTheme = {
-      name = "Breeze";
+      name = "breeze";
       package = pkgs.kdePackages.breeze-icons;
     };
+
+
+    # See value of  `echo $XCURSOR_PATH` and `echo $XCURSOR_THEME` the path should contain a theme named directory containing icons
+    # `echo ~/.nix-profile/share/icons/*/cursors`
+    #   
     cursorTheme = {
-      name = "Breeze";
-      package = pkgs.breeze-hacked-cursor-theme;
+      name = "breeze_cursors";
+      package = pkgs.kdePackages.breeze-icons;
+      # size = 20;
     };
   };
 
   home.pointerCursor = {
     gtk.enable = true;
-    name = "Breeze";
-    package = pkgs.breeze-hacked-cursor-theme;
-    size = 16;
+    name = "breeze_cursors";
+    package = pkgs.kdePackages.breeze-icons;
+    # size = 20;
   };
 
   dconf.settings = {
@@ -65,40 +82,41 @@
 
   qt = {
     enable = true;
-    platformTheme = "qtct";
-    style.name = "fusion";
+    # platformTheme = "qtct";
+    platformTheme = "kde";
+    # style.name = "breeze";
   };
 
   xdg.configFile = {
-    "Kvantum/kvantum.kvconfig".source = (pkgs.formats.ini { }).generate "kvantum.kvconfig" {
-      General.theme = "Breeze";
-    };
-    qt5ct = {
-      target = "qt5ct/qt5ct.conf";
-      text = pkgs.lib.generators.toINI { } {
-        Appearance = {
-          icon_theme = "breeze";
-          style="Fusion";
-        };
-        Interface = {
-          # Show only icons in toolbar, not the text
-          toolbutton_style=0;
-        };
-      };
-    };
+    # "Kvantum/kvantum.kvconfig".source = (pkgs.formats.ini { }).generate "kvantum.kvconfig" {
+    #   General.theme = "Breeze";
+    # };
+    # qt5ct = {
+    #   target = "qt5ct/qt5ct.conf";
+    #   text = pkgs.lib.generators.toINI { } {
+    #     Appearance = {
+    #       icon_theme = "breeze";
+    #       style="Fusion";
+    #     };
+    #     Interface = {
+    #       # Show only icons in toolbar, not the text
+    #       toolbutton_style=0;
+    #     };
+    #   };
+    # };
 
-    qt6ct = {
-      target = "qt6ct/qt6ct.conf";
-      text = pkgs.lib.generators.toINI { } {
-        Appearance = {
-          icon_theme = "breeze";
-          style="Fusion";
-        };
-        Interface = {
-          # Show only icons in toolbar, not the text
-          toolbutton_style=0;
-        };
-      };
-    };
+    # qt6ct = {
+    #   target = "qt6ct/qt6ct.conf";
+    #   text = pkgs.lib.generators.toINI { } {
+    #     Appearance = {
+    #       icon_theme = "breeze";
+    #       style="Fusion";
+    #     };
+    #     Interface = {
+    #       # Show only icons in toolbar, not the text
+    #       toolbutton_style=0;
+    #     };
+    #   };
+    # };
   };
 }
