@@ -13,6 +13,7 @@
     ../../packages/os/core.nix
     ../../packages/os/kernel.nix
 
+    ../../packages/os/fhs_tools.nix
     # ../../packages/os/tailscale.nix
 
     ../../packages/os/podman.nix
