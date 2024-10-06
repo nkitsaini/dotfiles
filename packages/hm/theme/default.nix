@@ -31,63 +31,58 @@
   gtk = {
     enable = true;
     theme = {
-      name = "Catppuccin-Macchiato-Standard-Blue-Light";
-      package = pkgs.catppuccin-gtk.override {
-        accents = [ "blue" ];
-        size = "standard";
-        variant = "macchiato";
-      };
+      name = "Breeze";
+      package = pkgs.kdePackages.breeze-gtk;
     };
     iconTheme = {
-      name = "Papirus-Light";
-      package = pkgs.catppuccin-papirus-folders.override {
-        flavor = "macchiato";
-        accent = "blue";
-      };
+      name = "Breeze";
+      package = pkgs.kdePackages.breeze-icons;
     };
     cursorTheme = {
-      name = "Catppuccin-Macchiato-Light-Cursors";
-      package = pkgs.catppuccin-cursors.macchiatoLight;
-    };
-    gtk3 = {
-      extraConfig.gtk-application-prefer-dark-theme = false;
+      name = "Breeze";
+      package = pkgs.breeze-hacked-cursor-theme;
     };
   };
 
   home.pointerCursor = {
     gtk.enable = true;
-    name = "Catppuccin-Macchiato-Light-Cursors";
-    package = pkgs.catppuccin-cursors.macchiatoLight;
+    name = "Breeze";
+    package = pkgs.breeze-hacked-cursor-theme;
     size = 16;
   };
 
   dconf.settings = {
     "org/gnome/desktop/interface" = {
-      gtk-theme = "Catppuccin-Macchiato-Standard-Blue-Light";
+      gtk-theme = "Breeze";
       color-scheme = "prefer-light";
     };
 
     # For Gnome shell
     "org/gnome/shell/extensions/user-theme" = {
-      name = "Catppuccin-Macchiato-Standard-Blue-Light";
+      name = "Breeze";
     };
   };
 
   qt = {
     enable = true;
     platformTheme = "qtct";
-    style.name = "kvantum";
+    style.name = "fusion";
   };
 
   xdg.configFile = {
     "Kvantum/kvantum.kvconfig".source = (pkgs.formats.ini { }).generate "kvantum.kvconfig" {
-      General.theme = "Catppuccin-Macchiato-Blue";
+      General.theme = "Breeze";
     };
     qt5ct = {
       target = "qt5ct/qt5ct.conf";
       text = pkgs.lib.generators.toINI { } {
         Appearance = {
-          icon_theme = "Papirus-Light";
+          icon_theme = "breeze";
+          style="Fusion";
+        };
+        Interface = {
+          # Show only icons in toolbar, not the text
+          toolbutton_style=0;
         };
       };
     };
@@ -96,7 +91,12 @@
       target = "qt6ct/qt6ct.conf";
       text = pkgs.lib.generators.toINI { } {
         Appearance = {
-          icon_theme = "Papirus-Light";
+          icon_theme = "breeze";
+          style="Fusion";
+        };
+        Interface = {
+          # Show only icons in toolbar, not the text
+          toolbutton_style=0;
         };
       };
     };

@@ -26,7 +26,7 @@
   # environment.
   home.packages = with pkgs;
     [
-      deluge
+      # deluge
       obsidian
 
       # For some reason ctrl-c not working, so can't stop recording
