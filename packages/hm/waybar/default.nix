@@ -11,7 +11,7 @@
       "height" = 24; # Waybar height (to be removed for auto height)
       # Choose the order of the modules
       "modules-left" = ["sway/workspaces" "sway/mode" "sway/scratchpad"];
-      "modules-center" = ["sway/window"];
+      "modules-center" = [];
       "modules-right" = [
         "mpd"
         "idle_inhibitor"
