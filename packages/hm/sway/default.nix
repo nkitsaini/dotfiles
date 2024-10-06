@@ -38,7 +38,7 @@ let
     if disableSwayLock then
       turn_off_output_cmd
     else
-      "${pkgs.swaylock}/bin/swaylock -i ${(import ../../shared/wallpapers.nix).wallpaper2} --color '#100B1B' -fF";
+      "${pkgs.swaylock}/bin/swaylock -i ${(import ../../shared/wallpapers.nix).wallpaper3} --color '#100B1B' -fF";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
@@ -65,7 +65,7 @@ let
 
   menu = "${nixGLCommandPrefix}${pkgs.rofi-wayland}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 
-  wallpaper = (import ../../shared/wallpapers.nix).wallpaper1;
+  wallpaper = (import ../../shared/wallpapers.nix).wallpaper3;
 in
 {
 
@@ -340,7 +340,7 @@ in
       WantedBy = [ "graphical-session.target" ];
     };
     Service = {
-      ExecStart = "${pkgs.swaybg}/bin/swaybg -i ${wallpaper}";
+      ExecStart = "${pkgs.swaybg}/bin/swaybg -i ${wallpaper} -m fill";
       Restart = "on-failure";
     };
   };

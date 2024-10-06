@@ -81,6 +81,7 @@
 
       # From old fish history
       dolphin
+      konsole
       gparted
     ] ++ (if nixGLCommandPrefix != "" then
       [

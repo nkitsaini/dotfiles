@@ -9,4 +9,5 @@
     url = "https://www.ghibli.jp/gallery/marnie009.jpg";
     sha256 = "177n6nfy9la5g1h1hdm6lmcsq587lk108zcl1zgigcnshlccki9d";
   };
+  wallpaper3 = "${./my_neighbour_totoro_sunset.png}";
 }

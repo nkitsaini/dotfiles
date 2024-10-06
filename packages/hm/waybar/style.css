@@ -1,5 +1,3 @@
-/* CLAUDE GENERATED */
-
 * {
   font-family: "Noto Sans CJK KR Regular";
   font-size: 13px;
@@ -142,6 +140,11 @@ button:hover {
   /* Solarized cyan */
   color: #fdf6e3;
   /* Solarized base3 */
+}
+
+#tray>.active:hover {
+  background-color: #ffffff;
+  /* Solarized base2 (solid) */
 }
 
 #tray>.passive {

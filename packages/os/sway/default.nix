@@ -15,13 +15,13 @@ in {
     (pkgs.catppuccin-sddm.override {
       flavor = "mocha";
       # CustomBackground = true;
-      background = (import ../../shared/wallpapers.nix).wallpaper2;
+      background = (import ../../shared/wallpapers.nix).wallpaper3;
       loginBackground = false;
     })
     (pkgs.sddm-chili-theme.override {
       themeConfig = {
         blur = false;
-        background = (import ../../shared/wallpapers.nix).wallpaper2;
+        background = (import ../../shared/wallpapers.nix).wallpaper3;
         # AvatarPixelSize = 15;
       };
     })
@@ -29,7 +29,7 @@ in {
       variants = [ "qt5" ];
       themeConfig.General = {
         # ref: https://github.com/stepanzubkov/where-is-my-sddm-theme/blob/main/where_is_my_sddm_theme/example_configs/tree.conf
-        background = (import ../../shared/wallpapers.nix).wallpaper2;
+        background = (import ../../shared/wallpapers.nix).wallpaper3;
         backgroundFillMode = "aspect";
         passwordInputRadius = 10;
         blurRadius = 0;
@@ -55,7 +55,7 @@ in {
   services.xserver.enable = true;
   services.xserver.displayManager.lightdm = {
     enable = true;
-    background = (import ../../shared/wallpapers.nix).wallpaper2;
+    background = (import ../../shared/wallpapers.nix).wallpaper3;
   };
 
   # services.displayManager.sddm = {
