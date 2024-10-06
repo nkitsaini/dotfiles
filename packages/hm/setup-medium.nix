@@ -63,6 +63,9 @@
       playerctl
       brightnessctl
 
+      # music player
+      amberol
+
       # shows cp etc. progress
       progress
 
