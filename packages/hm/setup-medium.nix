@@ -42,6 +42,7 @@
       qpdf
 
       xfce.thunar
+      nautilus
 
       zellij
       zed-editor
