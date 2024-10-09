@@ -29,6 +29,9 @@
     kdePackages.breeze-icons
     kdePackages.breeze.qt5
     kdePackages.breeze
+
+    # https://www.reddit.com/r/hyprland/comments/18ecoo3/comment/lcb7at8/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+    kdePackages.qtsvg
     # catppuccin-cursors # Mouse cursor theme
     # catppuccin-papirus-folders # Icon theme, e.g. for pcmanfm-qt
     # papirus-folders # For the catppucing stuff work
