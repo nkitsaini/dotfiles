@@ -107,6 +107,7 @@ in
   services.copyq = {
     enable = true;
   };
+ services.swayosd.enable  = true;
 
   services.swayidle = {
     enable = true;
