@@ -144,6 +144,9 @@ in
       }
     ];
   };
+  # services.swaync = {
+  #   enable =true;
+  # };
   services.mako = {
     enable = true;
     padding = "15,20";

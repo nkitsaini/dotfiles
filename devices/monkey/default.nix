@@ -31,6 +31,7 @@
     ../../packages/os/sway
     ../../packages/os/aria2
     ../../packages/os/games.nix
+    ../../packages/os/torrent.nix
 
     ../../users/kit
     ../../users/root

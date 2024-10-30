@@ -31,6 +31,8 @@
       # deluge
       obsidian
 
+      ollama
+
       # For some reason ctrl-c not working, so can't stop recording
       # wl-screenrec
 

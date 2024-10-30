@@ -241,7 +241,7 @@
       (writeShellApplication {
         name = "notes-util";
         text = ''
-          exec nix run ${config.home.homeDirectory}/code/shoal/notes_utils/rs -- "$@"
+          exec nix run ${config.home.homeDirectory}/code/shoal/notes_utils -- "$@"
         '';
       })
       (writeShellApplication {
@@ -260,6 +260,12 @@
         name = "make_public";
         text = ''
           exec nix run ${config.home.homeDirectory}/code/shoal/make_public -- "$@"
+        '';
+      })
+      (writeShellApplication {
+        name = "cuckoo_controller";
+        text = ''
+          exec nix run ${config.home.homeDirectory}/code/shoal/cuckoo_controller -- "$@"
         '';
       })
 
