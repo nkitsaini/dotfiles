@@ -5,7 +5,7 @@ services:
     networks:
       - caddy
     labels:
-      caddy: element.nkit.dev
+      caddy: matrix.nkit.dev
       caddy.reverse_proxy: "{{upstreams 80}}"
 
 networks:
