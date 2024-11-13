@@ -1,8 +1,17 @@
-{ config, pkgs, ... }: {
-  home.packages = [ pkgs.git-absorb pkgs.meld ];
+{ config, pkgs, ... }:
+{
+  home.packages = [
+    pkgs.git-absorb
+    pkgs.meld
+  ];
   programs.jujutsu = {
     enable = true;
-    settings = { ui.paginate = "never"; };
+    settings = {
+      ui = {
+        paginate = "never";
+        default-command = "log";
+      };
+    };
   };
 
   programs.git = {
@@ -28,10 +37,8 @@
     };
     extraConfig = {
       include.path = builtins.fetchurl {
-        url =
-          "https://raw.githubusercontent.com/dandavison/delta/2f76c56d91d3d49feb170b89d7526e0272634998/themes.gitconfig";
-        sha256 =
-          "06d6a1dafb5df353b2de52558bc17cf78b0fbd31da7186f41eb0489b2bcd6e26";
+        url = "https://raw.githubusercontent.com/dandavison/delta/2f76c56d91d3d49feb170b89d7526e0272634998/themes.gitconfig";
+        sha256 = "06d6a1dafb5df353b2de52558bc17cf78b0fbd31da7186f41eb0489b2bcd6e26";
       };
       diff = {
         algorithm = "histogram";
@@ -40,15 +47,21 @@
         colormoved = "default";
       };
       url = {
-        "git@github.com:" = { insteadOf = "gh:"; };
-        "git@github.com:nkitsaini/" = { insteadOf = "ghme:"; };
+        "git@github.com:" = {
+          insteadOf = "gh:";
+        };
+        "git@github.com:nkitsaini/" = {
+          insteadOf = "ghme:";
+        };
       };
 
       transfer.fsckobjects = true;
       fetch.fsckobjects = true;
       receive.fsckObjects = true;
 
-      branch = { sort = "-committerdate"; };
+      branch = {
+        sort = "-committerdate";
+      };
       init.defaultBranch = "main";
       help.autocorrect = 10;
       merge.tool = "meld";
@@ -57,17 +70,28 @@
         default = "simple";
         autoSetupRemote = true;
       };
-      merge = { conflictstyle = "zdiff3"; };
-      rerere = { enabled = 1; };
-      pull = { rebase = true; };
-      rebase = { autostash = true; };
-      commit = { verbose = true; };
-      core = { excludeFiles = "${config.home.homeDirectory}/.gitignore"; };
+      merge = {
+        conflictstyle = "zdiff3";
+      };
+      rerere = {
+        enabled = 1;
+      };
+      pull = {
+        rebase = true;
+      };
+      rebase = {
+        autostash = true;
+      };
+      commit = {
+        verbose = true;
+      };
+      core = {
+        excludeFiles = "${config.home.homeDirectory}/.gitignore";
+      };
     };
     attributes = [ "*.lockb binary diff=lockb" ];
     aliases = {
-      l =
-        "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset %C(yellow)%an%Creset' --all --abbrev-commit --date=relative";
+      l = "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset %C(yellow)%an%Creset' --all --abbrev-commit --date=relative";
       ls = "log --stat --oneline";
       pf = "push --force-with-lease";
       p = "push";
