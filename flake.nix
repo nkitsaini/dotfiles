@@ -12,6 +12,13 @@ rec {
       inputs.flake-utils.follows = "flake-utils";
     };
 
+    # doom-emacs is a configuration framework for GNU Emacs.
+    doomemacs = {
+      url = "github:doomemacs/doomemacs";
+      flake = false;
+    };
+
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";

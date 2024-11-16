@@ -35,6 +35,22 @@
         "type": "github"
       }
     },
+    "doomemacs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1731579417,
+        "narHash": "sha256-F1CfUiOcSdZi/00iKvL74n2ycH9cA3IV7z5GnTfMaME=",
+        "owner": "doomemacs",
+        "repo": "doomemacs",
+        "rev": "7bc39f2c1402794e76ea10b781dfe586fed7253b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "doomemacs",
+        "repo": "doomemacs",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -232,6 +248,7 @@
     "root": {
       "inputs": {
         "disko": "disko",
+        "doomemacs": "doomemacs",
         "flake-utils": "flake-utils",
         "helix_master": "helix_master",
         "home-manager": "home-manager",

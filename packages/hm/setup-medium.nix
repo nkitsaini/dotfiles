@@ -1,7 +1,11 @@
 # Has everything except for desktop manager.
 # It is good to be used in nixos or standalone home-manager for desktop setups.
 { pkgs, nixGLCommandPrefix ? "", ... }: {
-  imports = [ ./setup-minimal.nix ./wezterm ./firefox.nix ./mpv ./theme ./zed ./activity_watch ];
+  imports = [ ./setup-minimal.nix ./wezterm ./firefox.nix ./mpv ./theme ./zed ./activity_watch ./emacs ];
+  modules.editors.emacs = {
+    enable = true;
+  };
+
   
   services.blueman-applet.enable = true;
 
