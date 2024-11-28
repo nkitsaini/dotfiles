@@ -13,6 +13,7 @@
     ./k9s
     ./cmus
     ./aria2
+    ./neovim
   ];
   # username and home directory are provided by the parent home.nix
 
@@ -56,54 +57,6 @@
     };
   };
 
-  programs.neovim = {
-    enable = true;
-    vimAlias = true;
-    plugins = [
-      pkgs.vimPlugins.copilot-vim
-      pkgs.vimPlugins.vim-fugitive
-      pkgs.vimPlugins.neogit
-      pkgs.vimPlugins.tokyonight-nvim
-      pkgs.vimPlugins.diffview-nvim
-      pkgs.vimPlugins.telescope-nvim
-      pkgs.vimPlugins.which-key-nvim
-      pkgs.vimPlugins.plenary-nvim
-      pkgs.vimPlugins.obsidian-nvim
-      # pkgs.vimPlugins.vim-markdown
-    ];
-    extraLuaConfig = ''
-      local neogit = require('neogit')
-      neogit.setup {}
-
-      vim.g.mapleader = ' '
-      vim.opt.termguicolors = true
-      vim.cmd 'colorscheme tokyonight-storm'
-
-      local builtin = require('telescope.builtin')
-      vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
-      vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
-      vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
-      vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
-      vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
-      vim.print("Config done")
-      vim.opt.number = true
-
-
-      -- Which Key
-      vim.o.timeout = true
-      vim.o.timeoutlen = 300
-      require("which-key").setup {}
-      require("obsidian").setup({
-        workspaces = {
-          {
-            name ="notes",
-            path="~/code/notes"
-          }
-        }
-      })
-
-    '';
-  };
   programs.tealdeer = {
     enable = true;
     settings = { updates = { auto_update = true; }; };

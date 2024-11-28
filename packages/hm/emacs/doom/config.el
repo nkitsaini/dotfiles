@@ -45,7 +45,8 @@
 ;; `load-theme' function. This is the default:
 ;; other doom's official themes:
 ;;   https://github.com/doomemacs/themes
-(setq doom-theme 'doom-dracula) ;; doom-one doom-dracula doom-nord
+; (setq doom-theme 'doom-dracula) ;; doom-one doom-dracula doom-nord
+(setq doom-theme 'doom-one-light) ;; doom-one doom-dracula doom-nord
 (if (eq system-type 'darwin)
     ;; Transparent Backgroud - for macOS
     ;;(set-frame-parameter (selected-frame) 'alpha '(<active> . <inactive>))
@@ -54,8 +55,8 @@
       (set-frame-parameter (selected-frame) 'alpha '(85 . 70))
       (add-to-list 'default-frame-alist '(alpha . (85 . 70))))
   ;; Transparent Background - for Linux Xorg/Wayland
-  (set-frame-parameter nil 'alpha-background 93) ; For current frame
-  (add-to-list 'default-frame-alist '(alpha-background . 93))); For all new frames henceforth
+  (set-frame-parameter nil 'alpha-background 100) ; For current frame
+  (add-to-list 'default-frame-alist '(alpha-background . 100))); For all new frames henceforth
 
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
@@ -175,5 +176,8 @@
 
 ;; which-key shorted delay
 (require 'which-key)
-(setq which-key-idle-delay 0.01)
+(setq which-key-idle-delay 0.3) ;; keeping this below 0.1 will affect performance very badly
+
+;; Org mode
+(setq org-agenda-files '("~/code/notes/org"))
 

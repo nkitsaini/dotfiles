@@ -32,6 +32,7 @@
     ../../packages/os/aria2
     ../../packages/os/games.nix
     ../../packages/os/torrent.nix
+    ../../packages/os/open-webui
 
     ../../users/kit
     ../../users/root

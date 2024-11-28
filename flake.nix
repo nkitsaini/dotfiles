@@ -4,6 +4,7 @@ rec {
   inputs = {
     # Specify the source of Home Manager and Nixpkgs.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs_working_openwebui.url = "github:nixos/nixpkgs/4633a7c72337ea8fd23a4f2ba3972865e3ec685d";
     flake-utils.url = "github:numtide/flake-utils";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     nixgl = {
@@ -12,12 +13,18 @@ rec {
       inputs.flake-utils.follows = "flake-utils";
     };
 
+    nixvim = {
+      url = "github:nix-community/nixvim/faa962367cfa3c95bcf20702949fb4ef52620033"; # This is one that works with current nixpkgs lock. Will need to update this when nixpkgs is updated.
+      # I just searched git log of nixvim for commit hash of current nixpkgs
+      # If using a stable channel you can use `url = "github:nix-community/nixvim/nixos-<version>"`
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # doom-emacs is a configuration framework for GNU Emacs.
     doomemacs = {
       url = "github:doomemacs/doomemacs";
       flake = false;
     };
-
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -32,7 +39,9 @@ rec {
       # inputs.nixpkgs.follows = "nixpkgs";
       # inputs.flake-utils.follows = "flake-utils";
     };
-    nur = {url = "github:nix-community/NUR";};
+    nur = {
+      url = "github:nix-community/NUR";
+    };
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -52,98 +61,111 @@ rec {
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    nixos-hardware,
-    home-manager,
-    nur,
-    disko,
-    ...
-  } @ inputs: let
-    mkSystem = {
-      hostname,
-      extraModules ? [],
-      username ? "kit",
-    }:
-      nixpkgs.lib.nixosSystem {
-        # NOTE: Change this to aarch64-linux if you are on ARM
-        inherit system;
-        specialArgs = {
-          inherit inputs;
+  outputs =
+    {
+      self,
+      nixpkgs,
+      nixos-hardware,
+      home-manager,
+      nixvim,
+
+      nixpkgs_working_openwebui,
+      nur,
+      disko,
+      ...
+    }@inputs:
+    let
+      mkSystem =
+        {
+          hostname,
+          extraModules ? [ ],
+          username ? "kit",
+        }:
+        nixpkgs.lib.nixosSystem {
+          # NOTE: Change this to aarch64-linux if you are on ARM
           inherit system;
-          inherit hostname;
-          inherit username;
-        };
-        modules =
-          [
+          specialArgs = {
+            inherit inputs;
+            inherit system;
+            inherit hostname;
+            inherit username;
+            inherit pkgs_working_openwebui;
+          };
+          modules = [
             ./devices/${hostname}
             home-manager.nixosModules.home-manager
             disko.nixosModules.disko
-            ({inputs, ...}: {
-              nix.settings = {
-                substituters = nixConfig.extra-substituters;
-                trusted-public-keys = nixConfig.extra-trusted-public-keys;
-              };
-            })
-          ]
-          ++ extraModules;
+            (
+              { inputs, ... }:
+              {
+                nix.settings = {
+                  substituters = nixConfig.extra-substituters;
+                  trusted-public-keys = nixConfig.extra-trusted-public-keys;
+                };
+              }
+            )
+          ] ++ extraModules;
+        };
+
+      system = "x86_64-linux";
+      pkgs = import nixpkgs {
+        system = system;
+        overlays = [ inputs.nixgl.overlay ];
       };
 
-    system = "x86_64-linux";
-    pkgs = import nixpkgs {
-      system = system;
-      overlays = [inputs.nixgl.overlay];
-    };
-  in {
-    # ===== Home-manager only configs
-    homeConfigurations."shifu" = home-manager.lib.homeManagerConfiguration {
-      inherit pkgs;
-
-      # Specify your home configuration modules here, for example,
-      # the path to your home.nix.
-      modules = [./devices/shifu/home.nix];
-      extraSpecialArgs = {
-        inherit inputs;
-        inherit system;
-
-        # wezterm didn't work with only vulkan, zed didn't work with only GL.
-        # But can't include vulkan as it can break non-gui packages due to llvm lib in `LD_LIBRARY_PATH`. So open-gl globally, and vulkan for specific packages after: https://github.com/nix-community/home-manager/pull/5355, right now it is manual: `nixgl-vulkan-run ....`
-        nixGLCommandPrefix = "${pkgs.nixgl.nixGLIntel}/bin/nixGLIntel  ";
-        disableSwayLock = true;
+      pkgs_working_openwebui = import nixpkgs_working_openwebui {
+        system = system;
       };
-    };
+    in
+    {
+      # ===== Home-manager only configs
+      homeConfigurations."shifu" = home-manager.lib.homeManagerConfiguration {
+        inherit pkgs;
 
-    # ===== Nixos configs
-    nixosConfigurations.monkey = mkSystem {
-      hostname = "monkey";
-      extraModules = [nixos-hardware.nixosModules.lenovo-thinkpad-e14-amd];
-    };
-    nixosConfigurations.iso = mkSystem {hostname = "iso";};
+        # Specify your home configuration modules here, for example,
+        # the path to your home.nix.
+        modules = [ ./devices/shifu/home.nix ];
+        extraSpecialArgs = {
+          inherit inputs;
+          inherit system;
 
-    nixosConfigurations.deepak = mkSystem {
-      hostname = "deepak";
-      username = "deepak";
-    };
-    nixosConfigurations.akanksha = mkSystem {
-      hostname = "akanksha";
-      username = "akanksha";
-    };
+          # wezterm didn't work with only vulkan, zed didn't work with only GL.
+          # But can't include vulkan as it can break non-gui packages due to llvm lib in `LD_LIBRARY_PATH`. So open-gl globally, and vulkan for specific packages after: https://github.com/nix-community/home-manager/pull/5355, right now it is manual: `nixgl-vulkan-run ....`
+          nixGLCommandPrefix = "${pkgs.nixgl.nixGLIntel}/bin/nixGLIntel  ";
+          disableSwayLock = true;
+        };
+      };
 
-    # TODO: disko config remaining
-    nixosConfigurations.oogway = mkSystem {hostname = "oogway";};
+      # ===== Nixos configs
+      nixosConfigurations.monkey = mkSystem {
+        hostname = "monkey";
+        extraModules = [ nixos-hardware.nixosModules.lenovo-thinkpad-e14-amd ];
+      };
+      nixosConfigurations.iso = mkSystem { hostname = "iso"; };
 
-    # TODO: following configs to be in similar fashion as `monkey`
-    # i.e.
-    # 1. use fixed users,
-    # 2. rename configuration.nix -> default.nix
-    # 3. have home-manager config imported through default.nix
-    # 4. manage disk through disko
-    # ... or something I missed
-    nixosConfigurations.crane = mkSystem {hostname = "crane";};
-  };
+      nixosConfigurations.deepak = mkSystem {
+        hostname = "deepak";
+        username = "deepak";
+      };
+      nixosConfigurations.akanksha = mkSystem {
+        hostname = "akanksha";
+        username = "akanksha";
+      };
+
+      # TODO: disko config remaining
+      nixosConfigurations.oogway = mkSystem { hostname = "oogway"; };
+
+      # TODO: following configs to be in similar fashion as `monkey`
+      # i.e.
+      # 1. use fixed users,
+      # 2. rename configuration.nix -> default.nix
+      # 3. have home-manager config imported through default.nix
+      # 4. manage disk through disko
+      # ... or something I missed
+      nixosConfigurations.crane = mkSystem { hostname = "crane"; };
+    };
   nixConfig = {
-    extra-substituters = ["https://helix.cachix.org"];
-    extra-trusted-public-keys = ["helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="];
+    extra-substituters = [ "https://helix.cachix.org" ];
+    extra-trusted-public-keys = [ "helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs=" ];
   };
 }
