@@ -17,7 +17,8 @@
       number = true;
       foldlevel = 99;
       conceallevel = 2;
-      concealcursor = "normal";
+      concealcursor = "n";
+      signcolumn = "yes";
     };
 
     performance = {
@@ -39,9 +40,11 @@
       ayu.enable = true;
       one.enable = true;
       onedark.enable = true;
-      vscode.enable = true;
-      everforest.enable = true;
+
+      # vscode.enable = true;
       catppuccin.enable = true;
+      
+      everforest.enable = true;
       dracula.enable = true;
       dracula-nvim.enable = true;
       nord.enable = true;
