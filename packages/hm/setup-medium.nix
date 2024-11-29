@@ -78,6 +78,8 @@
 
       transmission_4-qt
 
+      texliveMedium
+
       # Xorg
       xorg.xev
 

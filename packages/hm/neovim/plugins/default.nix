@@ -17,6 +17,8 @@
       };
       typescript-tools.enable = true;
       auto-save.enable = true;
+      markdown-preview.enable = true;
+      image.enable = true;
     };
   };
 

@@ -4,22 +4,51 @@
       {
         action = ":Neorg journal today<CR>";
         key = "<leader>jt";
-        mode = ["n" "v"];
+        mode = [
+          "n"
+          "v"
+        ];
       }
       {
         action = ":Neorg journal yesterday<CR>";
         key = "<leader>jy";
-        mode = ["n" "v"];
+        mode = [
+          "n"
+          "v"
+        ];
       }
       {
         action = ":Neorg journal tomorrow<CR>";
         key = "<leader>jn";
-        mode = ["n" "v"];
+        mode = [
+          "n"
+          "v"
+        ];
       }
       {
         action = ":Neorg journal custom<CR>";
         key = "<leader>jc";
-        mode = ["n" "v"];
+        mode = [
+          "n"
+          "v"
+        ];
+      }
+      {
+        action.__raw = ''
+          function()
+            local current = vim.wo.concealcursor
+            if current == 'nc' then
+                vim.wo.concealcursor = ""
+            else
+                vim.wo.concealcursor = 'nc'
+            end
+          end
+        '';
+        key = "<leader>cc";
+        mode = [
+          "n"
+          "v"
+        ];
       }
     ];
     plugins.neorg = {
@@ -40,12 +69,13 @@
         "core.dirman".config.default_workspace = "notes";
 
         "core.concealer".__empty = null;
-        "core.ui".__empty = null;
-        "core.ui.calendar".__empty = null;
-        # "core.completion".__empty = null;
+        "core.summary".__empty = null;
+        "core.text-objects".__empty = null; # TODO: setup keybindings
         "core.completion".config.engine = "nvim-cmp";
-        "core.todo-introspector".__empty = null;
-        # "core.completion".configuration.engine = "nvim-cmp";
+
+        "core.export".__empty = null;
+        "core.export.markdown".__empty = null;
+        "core.latex.renderer".__empty = null;
       };
     };
   };
