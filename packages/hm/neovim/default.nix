@@ -17,7 +17,7 @@
       number = true;
       foldlevel = 99;
       conceallevel = 2;
-      concealcursor = "n";
+      concealcursor = "";
       signcolumn = "yes";
     };
 
