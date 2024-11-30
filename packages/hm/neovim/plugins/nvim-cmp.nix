@@ -19,7 +19,11 @@
         yamlls.enable = true;
         leanls.enable = true;
         basedpyright.enable = true;
-        rust_analyzer.enable = true;
+        rust-analyzer = {
+          enable = true;
+          installRustc = false;
+          installCargo = false;
+        };
         svelte.enable = true;
       };
     };

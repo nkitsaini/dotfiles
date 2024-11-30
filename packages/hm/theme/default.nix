@@ -86,7 +86,7 @@
   qt = {
     enable = true;
     # platformTheme = "qtct";
-    platformTheme = "kde";
+    platformTheme.name = "kde";
     # style.name = "breeze";
   };
 

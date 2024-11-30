@@ -19,6 +19,17 @@
       auto-save.enable = true;
       markdown-preview.enable = true;
       image.enable = true;
+      web-devicons.enable = true; # is dependency of something, gives warning if not added, can be removed safely
+      # lualine.enable = true;
+
+
+      orgmode = {
+        enable = true;
+        settings = {
+          org_agenda_files = "~/code/notes/org/**/*";
+          org_default_notes_file = "~/code/notes/org/index.org";
+        };
+      };
     };
   };
 

@@ -46,7 +46,7 @@ in {
   security.pam.services.swaylock = { };
   programs.dconf.enable = true;
 
-  hardware.opengl = {
+  hardware.graphics = {
     enable = true;
     # Added by nixos-hardware
     # driSupport = true;

@@ -14,6 +14,7 @@
     ./cmus
     ./aria2
     ./neovim
+    ./taskwarrior
   ];
   # username and home directory are provided by the parent home.nix
 

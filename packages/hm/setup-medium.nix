@@ -1,36 +1,55 @@
 # Has everything except for desktop manager.
 # It is good to be used in nixos or standalone home-manager for desktop setups.
-{ pkgs, nixGLCommandPrefix ? "", ... }: {
-  imports = [ ./setup-minimal.nix ./wezterm ./firefox.nix ./mpv ./theme ./zed ./activity_watch ./emacs ];
+{
+  pkgs,
+  nixGLCommandPrefix ? "",
+  ...
+}:
+{
+  imports = [
+    ./setup-minimal.nix
+    ./wezterm
+    ./firefox.nix
+    ./mpv
+    ./theme
+    ./zed
+    ./activity_watch
+    ./emacs
+  ];
   modules.editors.emacs = {
     enable = true;
   };
 
-  
   services.blueman-applet.enable = true;
 
   programs.alacritty = {
     enable = true;
     settings = {
       import = [ "${pkgs.alacritty-theme}/gruvbox_dark.toml" ];
-      env = { XTERM_VERION = "9999"; };
-      font = { size = 16; };
+      env = {
+        XTERM_VERION = "9999";
+      };
+      font = {
+        size = 16;
+      };
       font.normal = {
         family = "Noto Sans Mono";
         style = "Regular";
       };
-      scrolling = { history = 10000; };
+      scrolling = {
+        history = 10000;
+      };
     };
   };
 
   xsession.enable = true;
 
-
   services.gnome-keyring.enable = true;
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
-  home.packages = with pkgs;
+  home.packages =
+    with pkgs;
     [
       # deluge
       obsidian
@@ -84,7 +103,7 @@
       xorg.xev
 
       vulkan-tools
-     
+
       # Run appimage
       appimage-run
 
@@ -95,22 +114,25 @@
       dolphin
       konsole
       gparted
-    ] ++ (if nixGLCommandPrefix != "" then
-      [
-        (writeShellApplication {
-          name = "nixgl-run";
-          text = ''
-            exec ${nixGLCommandPrefix} -- "$@"
-          '';
-        })
-        (writeShellApplication {
-          # Run using vulkan
-          name = "nixgl-vulkan-run";
-          text = ''
-            exec env WLR_RENDERER=vulkan  ${pkgs.nixgl.nixVulkanIntel}/bin/nixVulkanIntel -- "$@"
-          '';
-        })
-      ]
-    else
-      [ ]);
+    ]
+    ++ (
+      if nixGLCommandPrefix != "" then
+        [
+          (writeShellApplication {
+            name = "nixgl-run";
+            text = ''
+              exec ${nixGLCommandPrefix} -- "$@"
+            '';
+          })
+          (writeShellApplication {
+            # Run using vulkan
+            name = "nixgl-vulkan-run";
+            text = ''
+              exec env WLR_RENDERER=vulkan  ${pkgs.nixgl.nixVulkanIntel}/bin/nixVulkanIntel -- "$@"
+            '';
+          })
+        ]
+      else
+        [ ]
+    );
 }
