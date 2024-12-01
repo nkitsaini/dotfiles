@@ -36,19 +36,21 @@
       {
         action.__raw = ''
           function()
-            local current = vim.wo.concealcursor
-            if current == 'nc' then
-                vim.wo.concealcursor = ""
-            else
-                vim.wo.concealcursor = 'nc'
-            end
-          end
-        '';
-        key = "<leader>cc";
+                  local current = vim.wo.concealcursor
+                  if current == 'nc' then
+                      vim.wo.concealcursor = ""
+                  else
+                      vim.wo.concealcursor = 'nc'
+                  end
+                end'';
+        key = "<leader>ct";
         mode = [
           "n"
           "v"
         ];
+        options = {
+          desc = "Toggle concealcursor between 'nc' (only show in insert/visual) vs '' (show on current line)";
+        };
       }
     ];
     plugins.neorg = {
@@ -76,6 +78,14 @@
         "core.export".__empty = null;
         "core.export.markdown".__empty = null;
         "core.latex.renderer".__empty = null;
+        "core.integrations.telescope" = {
+          config = {
+            insert_file_link = {
+              # disable if slow
+              show_title_preview = true;
+            };
+          };
+        };
       };
     };
   };
