@@ -19,6 +19,7 @@
       conceallevel = 2;
       concealcursor = "";
       signcolumn = "yes";
+      timeoutlen = 200;
     };
 
     performance = {
