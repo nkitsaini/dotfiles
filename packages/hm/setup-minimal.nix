@@ -158,6 +158,7 @@
       hyperfine
       bun
       ncdu
+      dua # ncdu alternative
       caddy
       archivemount
       ethtool

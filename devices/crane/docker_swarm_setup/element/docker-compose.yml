@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   server:
-    image: vectorim/element-web
+    image: vectorim/element-web:v1.11.87
     networks:
       - caddy
     labels:

@@ -65,7 +65,7 @@
         '';
 
         "core.dirman".config.workspaces = {
-          notes = "~/code/notes/neorg";
+          notes = "~/code/notes/norg";
         };
 
         "core.dirman".config.default_workspace = "notes";
