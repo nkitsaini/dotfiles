@@ -118,6 +118,11 @@ rec {
       };
     in
     {
+      devShells.${system}.default = pkgs.mkShell {
+        nativeBuildInputs = with pkgs; [
+          git-crypt
+        ];
+      };
       # ===== Home-manager only configs
       homeConfigurations."shifu" = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
