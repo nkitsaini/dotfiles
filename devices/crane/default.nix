@@ -1,4 +1,10 @@
-{ pkgs, hostname, username, ... }: {
+{
+  pkgs,
+  hostname,
+  username,
+  ...
+}:
+{
   imports = [
     ./hardware-configuration.nix
     # TODO: clean the files too
@@ -46,8 +52,7 @@
   # boot.loader.grub.enable = true;
   # boot.loader.efi.canTouchEfiVariables = true;
 
-  documentation.nixos.enable =
-    false; # Takes too much ram causing failures on small machines. https://discourse.nixos.org/t/sudo-nixos-rebuild-switch-does-nothing/9273/14
+  documentation.nixos.enable = false; # Takes too much ram causing failures on small machines. https://discourse.nixos.org/t/sudo-nixos-rebuild-switch-does-nothing/9273/14
 
   boot.tmp.cleanOnBoot = true;
   # zramSwap.enable = true;

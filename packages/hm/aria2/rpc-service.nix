@@ -9,7 +9,7 @@ let
   downloadDir = "${config.home.homeDirectory}/Downloads/aria2";
   configFile = pkgs.writeTextFile {
     name = "aria2.conf";
-    text = import ./aria2.conf;
+    text = builtins.readFile ./aria2.conf;
   };
 
   servicePre = (pkgs.writeScriptBin "pre.sh" ''
