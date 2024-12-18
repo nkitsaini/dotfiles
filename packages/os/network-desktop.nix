@@ -35,6 +35,7 @@
   };
 
   #### 90-disable-non-wired seems to be effective in blocking, but just securing both ends.
+  # Let iwd handle wifi
   systemd.network.networks."10-disable-non-wired" = {
     matchConfig = { Type = "!ether"; };
     linkConfig = { Unmanaged = "yes"; };

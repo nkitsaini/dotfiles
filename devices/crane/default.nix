@@ -35,11 +35,19 @@
   ];
 
   home-manager.users.${username} = {
-    imports =
-      [ ../../packages/hm/setup-minimal.nix ../../packages/hm/notes-git-push ../../packages/hm/aria2/rpc-service.nix ];
+    imports = [
+      ../../packages/hm/setup-minimal.nix
+      ../../packages/hm/notes-git-push
+      ../../packages/hm/aria2/rpc-service.nix
+    ];
   };
 
-  networking.firewall.allowedTCPPorts = [ 80 443 9080 9443 ];
+  networking.firewall.allowedTCPPorts = [
+    80
+    443
+    9080
+    9443
+  ];
 
   boot.loader.grub = {
     enable = true;
