@@ -75,6 +75,23 @@
 
   programs.fuse.userAllowOther = true;
 
+  boot.kernel.sysctl = {
+    "fs.inotify.max_user_watches" = 524288;
+    "fs.inotify.max_queued_events" = 524288;
+    "fs.inotify.max_user_instances" = 524288; 
+  };
+
+  security.pam.loginLimits = [
+  # Increase soft limit for number of open files, default is way too low (~2048)
+  {
+    domain = "*";        # Applies to all users
+    type = "soft";       # Soft limit
+    item = "nofile";     # Number of file descriptors
+    value = "65535";
+  }
+  ];
+
+
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It‘s perfectly fine and recommended to leave
