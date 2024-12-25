@@ -51,7 +51,10 @@
 
   systemd.network.networks."20-wan" = {
     matchConfig.Name = "enp1s0"; # either ens3 or enp1s0, check 'ip addr'
-    networkConfig.DHCP = "ipv4";
+    networkConfig = {
+      IPv6PrivacyExtensions = "yes";
+      DHCP = "ipv4";
+    };
     address = [
       # replace this subnet with the one assigned to your instance
       "2a01:4f8:1c1c:d4da::1/64" # TODO: move this elsewhere
@@ -59,7 +62,6 @@
     routes = [
       { Gateway = "fe80::1"; }
     ];
-
   };
 
   boot.loader.grub = {
