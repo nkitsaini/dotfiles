@@ -18,6 +18,9 @@ services:
     deploy:
       replicas: 1
 
+
+# First create the network
+# docker --context prod network create caddy --scope swarm
 networks:
   caddy:
     external: true
