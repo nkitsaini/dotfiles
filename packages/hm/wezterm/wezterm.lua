@@ -17,6 +17,7 @@ if success then
 end
 
 return {
+    enable_wayland = false, -- launches very slow (200-300ms) if wayland is enabled, not sure why. 40-50ms when it is disabled
     front_end = "WebGpu", -- For some reason opengl breaks rendering (started happening after nixpkgs update)
     xcursor_theme = xcursor_theme,
     xcursor_size = xcursor_size,
