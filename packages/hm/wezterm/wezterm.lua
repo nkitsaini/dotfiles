@@ -17,58 +17,79 @@ if success then
 end
 
 return {
-    enable_wayland = false, -- launches very slow (200-300ms) if wayland is enabled, not sure why. 40-50ms when it is disabled
+
+    -- launches very slow (200-300ms) if wayland is enabled, not sure why. 40-50ms when it is disabled
+    -- But keyboard lags (only in some windows) when wayland is enabled
+    enable_wayland = true,
+
     front_end = "WebGpu", -- For some reason opengl breaks rendering (started happening after nixpkgs update)
     xcursor_theme = xcursor_theme,
     xcursor_size = xcursor_size,
-    colors = {
+    -- colors = {
 
-       -- solarized from ghostty themes with two modifications
-       -- 1. bright colors are same as normal colors
-       -- 2. background is the average of gruvbox background and solarized background (a bit darker then solrazied)
+    --    -- solarized from ghostty themes with two modifications
+    --    -- 1. bright colors are same as normal colors
+    --    -- 2. background is the average of gruvbox background and solarized background (a bit darker then solrazied)
        
-        foreground = "#657b83",
-        background = "#fcf4d5", -- '#fbf1c7', '#fdf6e3'
-        cursor_bg = "#657b83",
-        cursor_fg = "#fdf6e3",
-        cursor_border = "#657b83",
-        selection_fg = "#586e75",
-        selection_bg = "#eee8d5",
-        ansi = {
-            "#073642", -- black
-            "#dc322f", -- red
-            "#859900", -- green
-            "#b58900", -- yellow
-            "#268bd2", -- blue
-            "#d33682", -- magenta
-            "#2aa198", -- cyan
-            "#eee8d5" -- white
-        },
-        brights = {
-            "#073642", -- black
-            "#dc322f", -- red
-            "#859900", -- green
-            "#b58900", -- yellow
-            "#268bd2", -- blue
-            "#d33682", -- magenta
-            "#2aa198", -- cyan
-            "#eee8d5" -- white
-        },
-        indexed = {
-            [16] = "#cb4b16", -- orange
-            [17] = "#d33682", -- magenta
-            [18] = "#073642", -- base02
-            [19] = "#586e75", -- base01
-            [20] = "#657b83", -- base00
-            [21] = "#839496", -- base0
-            [22] = "#93a1a1", -- base1
-            [23] = "#eee8d5" -- base2
-        }
-    },
+    --     foreground = "#657b83",
+    --     background = "#fcf4d5", -- '#fbf1c7', '#fdf6e3'
+    --     cursor_bg = "#657b83",
+    --     cursor_fg = "#fdf6e3",
+    --     cursor_border = "#657b83",
+    --     selection_fg = "#586e75",
+    --     selection_bg = "#eee8d5",
+    --     ansi = {
+    --         "#073642", -- black
+    --         "#dc322f", -- red
+    --         "#859900", -- green
+    --         "#b58900", -- yellow
+    --         "#268bd2", -- blue
+    --         "#d33682", -- magenta
+    --         "#2aa198", -- cyan
+    --         "#eee8d5" -- white
+    --     },
+    --     brights = {
+    --         "#073642", -- black
+    --         "#dc322f", -- red
+    --         "#859900", -- green
+    --         "#b58900", -- yellow
+    --         "#268bd2", -- blue
+    --         "#d33682", -- magenta
+    --         "#2aa198", -- cyan
+    --         "#eee8d5" -- white
+    --     },
+    --     indexed = {
+    --         [16] = "#cb4b16", -- orange
+    --         [17] = "#d33682", -- magenta
+    --         [18] = "#073642", -- base02
+    --         [19] = "#586e75", -- base01
+    --         [20] = "#657b83", -- base00
+    --         [21] = "#839496", -- base0
+    --         [22] = "#93a1a1", -- base1
+    --         [23] = "#eee8d5" -- base2
+    --     }
+    -- },
     -- color_scheme = "Solarized (dark) (terminal.sexy)",
     -- color_scheme = "Gruvbox Dark (Gogh)",
     -- color_scheme = "Gruvbox Dark (Gogh)",
-    -- color_scheme = "GruvboxLight",
+    -- 
+    -- 
+    -- NOTE: Some wisdom about color themes
+    -- ANSI color codes define white, black, blue, ..., and their bright versions
+    -- Some tools will use ansi.white to show text, while others will use ansi.black
+    -- Some are 'smart' and will check the terminal theme and adjust accordingly
+    -- Some tools that you can test your any new theme with
+    --   --- taskwarrior (atleast 3 task items) = `task list`
+    --   --- bottom (process monitor) = `btm`
+    --   --- nmtui-connect = `nmtui-connect`
+    --   --- fish = Notice fish autocomplete color
+    --   --- ls = Notice folder colors (should be blue)
+    --   
+    --   GruvboxLight - `task list` has bad contract (with solarized theme) and nmtui-connect is visible but not pleasant
+    --                - everything else is good
+    --   A "solution" to this is iterm's contrast setting https://www.reddit.com/r/wezterm/comments/1df0e4d/contrast_settings/
+    --   Hopefully wezterm will have that some day https://github.com/wez/wezterm/issues/6225
+    color_scheme = "GruvboxLight",
     hide_tab_bar_if_only_one_tab = true,
     -- font_hinting = "None",
     --
