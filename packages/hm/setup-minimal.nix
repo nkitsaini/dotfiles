@@ -32,7 +32,10 @@
   systemd.user.startServices = true;
 
   programs.gh.enable = true;
+
   programs.ssh.enable = true;
+  services.ssh-agent.enable = true;
+
   programs.feh.enable = true;
   programs.zathura.enable = true;
 

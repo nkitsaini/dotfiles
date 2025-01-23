@@ -13,7 +13,7 @@
     variables = {DO_NOT_TRACK = "1";};
     systemPackages = with pkgs; [
       binutils
-      coreutils
+      coreutils-full
       curl
       dnsutils
       dosfstools

@@ -84,8 +84,6 @@
       typst
       pypy3
       usbutils
-      toybox
-      lsusb
       # inputs.nkitsaini_notes_utils.packages.${system}.default
 
       # I3 specific
