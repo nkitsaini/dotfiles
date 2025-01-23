@@ -169,6 +169,14 @@
       openssl
       iperf
 
+
+      # Utils
+      pv
+      pdftk
+      hwinfo
+      beep
+      ascii
+
       # Code specific
       nixfmt-rfc-style
       ruff

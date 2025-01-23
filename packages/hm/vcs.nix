@@ -18,6 +18,7 @@
     # username and email are defined
     # by device specific config
     enable = true;
+    lfs.enable = true;
 
     delta = {
       enable = true;

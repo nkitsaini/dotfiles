@@ -33,6 +33,7 @@
     ../../packages/os/games.nix
     ../../packages/os/torrent.nix
     ../../packages/os/open-webui
+    ../../packages/os/ipfs
 
     ../../users/kit
     ../../users/root
