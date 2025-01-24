@@ -4,7 +4,7 @@
     noto-fonts-cjk-sans
     noto-fonts-cjk-serif
     noto-fonts-monochrome-emoji
-    (nerdfonts.override { fonts = [ "Noto" ]; })
+    nerd-fonts.noto
     font-awesome
   ];
 }

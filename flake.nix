@@ -14,7 +14,7 @@ rec {
     };
 
     nixvim = {
-      url = "github:nix-community/nixvim/faa962367cfa3c95bcf20702949fb4ef52620033"; # This is one that works with current nixpkgs lock. Will need to update this when nixpkgs is updated.
+      url = "github:nix-community/nixvim"; # This is one that works with current nixpkgs lock. Will need to update this when nixpkgs is updated.
       # I just searched git log of nixvim for commit hash of current nixpkgs
       # If using a stable channel you can use `url = "github:nix-community/nixvim/nixos-<version>"`
       inputs.nixpkgs.follows = "nixpkgs";
@@ -41,6 +41,7 @@ rec {
     };
     nur = {
       url = "github:nix-community/NUR";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     disko = {
       url = "github:nix-community/disko";
@@ -94,6 +95,7 @@ rec {
           modules = [
             ./devices/${hostname}
             home-manager.nixosModules.home-manager
+            inputs.nur.modules.nixos.default
             disko.nixosModules.disko
             (
               { inputs, ... }:
@@ -110,7 +112,7 @@ rec {
       system = "x86_64-linux";
       pkgs = import nixpkgs {
         system = system;
-        overlays = [ inputs.nixgl.overlay ];
+        overlays = [ inputs.nur.overlay inputs.nixgl.overlay ];
       };
 
       pkgs_working_openwebui = import nixpkgs_working_openwebui {

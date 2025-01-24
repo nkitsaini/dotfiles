@@ -1,7 +1,8 @@
 # non-gui stuff
 { config, pkgs, inputs, nixGLCommandPrefix ? "", ... }: {
   imports = [
-    inputs.nur.hmModules.nur
+    # inputs.nur.homeManager.default
+    # inputs.nur.hmModules.nur
     ./shell
     ./tms
     ./helix
@@ -295,6 +296,7 @@
       curl
       dnsutils
       usbutils # lsusb
+      lshw
       dosfstools
       powertop
       iputils

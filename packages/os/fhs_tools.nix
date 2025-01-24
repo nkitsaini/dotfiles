@@ -3,7 +3,7 @@
   environment.systemPackages = [
     # TODO: use all libs from nix-ld.libraries definition
     (let base = pkgs.appimageTools.defaultFhsEnvArgs;
-    in pkgs.buildFHSUserEnv (base // {
+    in pkgs.buildFHSEnv (base // {
       name = "fhs";
       targetPkgs = pkgs:
         (base.targetPkgs pkgs) ++ [ pkgs.pkg-config ]
