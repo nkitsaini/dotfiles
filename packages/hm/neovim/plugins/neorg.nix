@@ -55,6 +55,7 @@
     ];
     plugins.neorg = {
       enable = true;
+      telescopeIntegration.enable = true;
       modules = {
         "core.defaults".__empty = null;
 
