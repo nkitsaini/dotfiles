@@ -22,6 +22,12 @@
       web-devicons.enable = true; # is dependency of something, gives warning if not added, can be removed safely
       # lualine.enable = true;
 
+      zen-mode = {
+        enable = true;
+        settings = {
+          window.width = 85;
+        };
+      };
 
       orgmode = {
         enable = true;

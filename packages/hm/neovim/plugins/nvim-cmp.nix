@@ -19,7 +19,7 @@
         yamlls.enable = true;
         # leanls.enable = true;
         basedpyright.enable = true;
-        rust-analyzer = {
+        rust_analyzer = {
           enable = true;
           installRustc = false;
           installCargo = false;

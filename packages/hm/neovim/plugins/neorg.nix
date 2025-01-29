@@ -89,7 +89,7 @@
     plugins.neorg = {
       enable = true;
       telescopeIntegration.enable = true;
-      modules = {
+      settings.load = {
         "core.defaults".__empty = null;
 
         "core.keybinds".config.hook.__raw = ''

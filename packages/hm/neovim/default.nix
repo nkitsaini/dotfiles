@@ -18,6 +18,8 @@
       foldlevel = 99;
       conceallevel = 2;
       concealcursor = "";
+      linebreak = true;
+      breakindent = true;
       signcolumn = "yes";
       timeoutlen = 200;
     };
