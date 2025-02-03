@@ -187,6 +187,14 @@
       ruff
       lazygit
       nodejs_20
+      (writeScriptBin "notes" ''
+        #!${pkgs.dash}/bin/dash
+        cd ${config.home.homeDirectory}/code/notes
+
+        # HACK: without `:e` otherwise norg doesn't load on default file
+        exec nvim -c ':e'
+      '')
+
       (writeScriptBin "copilot" ''
         #!${pkgs.dash}/bin/dash
         exec ${nodejs_20}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
