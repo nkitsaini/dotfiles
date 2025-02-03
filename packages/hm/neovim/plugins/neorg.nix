@@ -89,6 +89,7 @@
     plugins.neorg = {
       enable = true;
       telescopeIntegration.enable = true;
+      autoLoad = true;
       settings.load = {
         "core.defaults".__empty = null;
 

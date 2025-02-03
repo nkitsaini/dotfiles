@@ -152,6 +152,7 @@
       minio-client
       ffmpeg
       kopia
+      rclone
       ddcutil
       tmux
       tmuxp

@@ -8,6 +8,16 @@
     ./nvim-cmp.nix
   ];
   programs.nixvim = {
+    keymaps = [
+      {
+        action = ":ZenMode<CR>";
+        key = "<leader>z";
+        mode = [
+          "n"
+          "v"
+        ];
+      }
+    ];
     plugins = {
       which-key = {
         enable = true;
