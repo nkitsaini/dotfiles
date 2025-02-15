@@ -6,7 +6,7 @@ let
     runtimeInputs = [ pkgs.nix pkgs.git ];
     text = ''
       cd ${notesDirectory}
-      ${pkgs.nix}/bin/nix develop . --command python3 scripts/auto-commit.py
+      ${pkgs.nix}/bin/nix develop . --command scripts/auto-commit.py
     '';
   };
 in {

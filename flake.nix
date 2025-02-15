@@ -33,7 +33,7 @@ rec {
 
     helix_master = {
       url = "github:helix-editor/helix";
-      # NOTE: do not follow inputs, otherwise the cache will be of no use and 
+      # NOTE: do not follow inputs, otherwise the cache will be of no use and
       #   the sun will go out of fashion before nix-build switch finishes.
       #   I know it'll be more network/space usage, but time is of essense.
       # inputs.nixpkgs.follows = "nixpkgs";
@@ -112,7 +112,14 @@ rec {
       system = "x86_64-linux";
       pkgs = import nixpkgs {
         system = system;
-        overlays = [ inputs.nur.overlay inputs.nixgl.overlay ];
+        overlays = [
+          inputs.nur.overlay
+          inputs.nixgl.overlay
+        ];
+        config = {
+          allowUnfree = true;
+          allowUnfreePredicate = _: true;
+        };
       };
 
       pkgs_working_openwebui = import nixpkgs_working_openwebui {

@@ -23,6 +23,7 @@
       fish
       neovim
       helix
+      devenv
       htop
       powertop
       iputils
