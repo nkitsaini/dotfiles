@@ -13,6 +13,9 @@ rec {
       inputs.flake-utils.follows = "flake-utils";
     };
 
+    kit.url = "path:modules";
+    kit.inputs.nixpkgs.follows = "nixpkgs";
+
     nixvim = {
       url = "github:nix-community/nixvim"; # This is one that works with current nixpkgs lock. Will need to update this when nixpkgs is updated.
       # I just searched git log of nixvim for commit hash of current nixpkgs
@@ -48,8 +51,10 @@ rec {
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # TODO: these belong in dotfiles repo itself.
-    # But nix doesn't have good support for importing flakes within same repo.
+    # TODO: This has been fixed in https://github.com/NixOS/nix/pull/10089
+    # Bring relevant code in this repo itself
+    # 
+    # Nix doesn't have good support for importing flakes within same repo.
     # if imported using path:... syntax, it uses narHash which might be missing
     # from other developers machine.
     # The way of merging inputs together and calling `outputs` directly works *until* inputs have duplicates

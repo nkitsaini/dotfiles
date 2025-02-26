@@ -16,7 +16,10 @@
     ./aria2
     ./neovim
     ./taskwarrior
+    # ../../modules/hm
   ];
+
+  # kit.neovim.enable = true;
   # username and home directory are provided by the parent home.nix
 
   # This value determines the Home Manager release that your configuration is
@@ -87,6 +90,9 @@
   home.file.".cargo/config.toml".text = ''
     [registries.crates-io]
     protocol = "sparse"
+    [target.x86_64-unknown-linux-gnu]
+    linker = "${pkgs.clang}/bin/clang"
+    rustflags = ["-C", "link-arg=--ld-path=${pkgs.mold}/bin/mold"]
   '';
 
   # Home Directories
@@ -119,6 +125,9 @@
       exiftool
       # mpv
       mediainfo
+
+
+      cmake
 
       # httpie in rust
       xh

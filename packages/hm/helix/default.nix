@@ -41,7 +41,7 @@
         gopls
         golangci-lint-langserver
         rust-analyzer
-        typst-lsp
+        tinymist
         biome
         pyright
         dockerfile-language-server-nodejs
@@ -207,7 +207,7 @@
         };
         language-server.typst-lsp = {
           language-id = "typst";
-          command = "typst-lsp";
+          command = "tinymist";
         };
         language-server.ltex-lsp = {
           command = "${pkgs.ltex-ls}/bin/ltex-ls";
