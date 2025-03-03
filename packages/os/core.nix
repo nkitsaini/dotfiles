@@ -5,37 +5,25 @@
   inputs,
   system,
   ...
-}: {
+}:
+{
   i18n.defaultLocale = "en_US.UTF-8";
   time.timeZone = lib.mkDefault "Asia/Kolkata";
 
   environment = {
-    variables = {DO_NOT_TRACK = "1";};
-    systemPackages = with pkgs; [
-      binutils
-      coreutils-full
-      curl
-      dnsutils
-      dosfstools
-      fd
-      git
-      tmux
-      fish
-      neovim
-      helix
-      devenv
-      htop
-      powertop
-      iputils
-      jq
-      # moreutils
-      nmap
-      sd
-      ripgrep
-      util-linux # has cfdisk
-      whois
-      gparted
-    ];
+    variables = {
+      DO_NOT_TRACK = "1";
+    };
+    systemPackages =
+      ((import ../shared/core_deps.nix) pkgs)
+      ++ (with pkgs; [
+        helix
+        tmux
+        git
+        fish
+        neovim
+        ripgrep
+      ]);
   };
 
   nix = {
@@ -44,16 +32,21 @@
     settings = {
       cores = 0;
       auto-optimise-store = true;
-      allowed-users = ["@wheel"];
-      trusted-users = ["root" "@wheel"];
-      experimental-features = ["nix-command" "flakes"];
+      allowed-users = [ "@wheel" ];
+      trusted-users = [
+        "root"
+        "@wheel"
+      ];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
     };
   };
 
   # better timesync for unstable internet connections
   services.chrony.enable = true;
   services.timesyncd.enable = false;
-
 
   # Need to configure home-manager to work with flakes
   home-manager.useGlobalPkgs = true;
@@ -79,19 +72,18 @@
   boot.kernel.sysctl = {
     "fs.inotify.max_user_watches" = 524288;
     "fs.inotify.max_queued_events" = 524288;
-    "fs.inotify.max_user_instances" = 524288; 
+    "fs.inotify.max_user_instances" = 524288;
   };
 
   security.pam.loginLimits = [
-  # Increase soft limit for number of open files, default is way too low (~2048)
-  {
-    domain = "*";        # Applies to all users
-    type = "soft";       # Soft limit
-    item = "nofile";     # Number of file descriptors
-    value = "65535";
-  }
+    # Increase soft limit for number of open files, default is way too low (~2048)
+    {
+      domain = "*"; # Applies to all users
+      type = "soft"; # Soft limit
+      item = "nofile"; # Number of file descriptors
+      value = "65535";
+    }
   ];
-
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

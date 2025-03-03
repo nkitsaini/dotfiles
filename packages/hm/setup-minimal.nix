@@ -1,5 +1,12 @@
 # non-gui stuff
-{ config, pkgs, inputs, nixGLCommandPrefix ? "", ... }: {
+{
+  config,
+  pkgs,
+  inputs,
+  nixGLCommandPrefix ? "",
+  ...
+}:
+{
   imports = [
     # inputs.nur.homeManager.default
     # inputs.nur.hmModules.nur
@@ -44,8 +51,7 @@
   programs.zathura.enable = true;
 
   # Stores configs I don't want to be in Nix
-  programs.ssh.extraConfig =
-    "Include ${config.home.homeDirectory}/.ssh/user_config";
+  programs.ssh.extraConfig = "Include ${config.home.homeDirectory}/.ssh/user_config";
 
   programs.ripgrep = {
     enable = true;
@@ -54,7 +60,11 @@
 
   programs.bottom = {
     enable = true;
-    settings = { flags = { color = "gruvbox-light"; }; };
+    settings = {
+      flags = {
+        color = "gruvbox-light";
+      };
+    };
   };
 
   programs.bat = {
@@ -67,14 +77,22 @@
 
   programs.tealdeer = {
     enable = true;
-    settings = { updates = { auto_update = true; }; };
+    settings = {
+      updates = {
+        auto_update = true;
+      };
+    };
   };
   programs.gitui.enable = true;
   programs.gitui.keyConfig = builtins.readFile ./gitui_keybindings.ron;
 
-  programs.nix-index = { enable = true; };
+  programs.nix-index = {
+    enable = true;
+  };
 
-  services.batsignal = { enable = true; };
+  services.batsignal = {
+    enable = true;
+  };
   services.network-manager-applet.enable = true;
 
   xdg.configFile."nixpkgs/config.nix".text = ''
@@ -106,11 +124,14 @@
   home.file."Downloads/.keep".text = ""; # downloads directory
   home.file."pictures/.keep".text = ""; # downloads directory
 
-  programs.eza = { enable = true; };
+  programs.eza = {
+    enable = true;
+  };
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
-  home.packages = with pkgs;
+  home.packages =
+    with pkgs;
     [
       # # Adds the 'hello' command to your environment. It prints a friendly
       # # "Hello, world!" when run.
@@ -125,7 +146,6 @@
       exiftool
       # mpv
       mediainfo
-
 
       cmake
 
@@ -182,7 +202,6 @@
       ntfs3g
       openssl
       iperf
-
 
       # Utils
       pv
@@ -310,7 +329,6 @@
       sshfs
 
       binutils
-      coreutils
       curl
       dnsutils
       usbutils # lsusb
@@ -338,7 +356,11 @@
       # (writeShellScriptBin "my-hello" ''
       #   echo "Hello, ${config.home.username}!"
       # '')
-    ];
+    ] ++ (import ../shared/core_deps.nix) pkgs; # NOTE: include the version below if this gives error on environment with nixos configuration. 
+    # Include core-deps in home-manager if we are not inside nixos configuration
+    # otherwise these will get included in nixos configuration itself
+    # ++ (if (config ? nixosVersion) then [] else ((import ../shared/core_deps.nix) pkgs));
+
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
