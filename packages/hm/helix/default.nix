@@ -54,7 +54,7 @@
         vscode-langservers-extracted
         # nodePackages.vscode-eslint-language-server
         nodePackages.typescript-language-server
-        nodePackages.graphql-language-service-cli
+        # nodePackages.graphql-language-service-cli
         svelte-language-server
         tailwindcss-language-server
         ltex-ls

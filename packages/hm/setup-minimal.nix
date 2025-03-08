@@ -222,6 +222,10 @@
         # HACK: without `:e` otherwise norg doesn't load on default file
         exec nvim -c ':e'
       '')
+      (writeScriptBin "yt-dlp" ''
+        #!${pkgs.dash}/bin/dash
+        exec ${pkgs.uv}/bin/uv tool run --python 3.12 --with httpx --with requests --prerelease explicit yt-dlp@latest "$@"
+      '')
 
       (writeScriptBin "copilot" ''
         #!${pkgs.dash}/bin/dash

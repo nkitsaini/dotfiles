@@ -1,7 +1,7 @@
 { pkgs, ... }: {
   programs.vscode = {
     enable = true;
-    extensions = with pkgs; [
+    profiles.default.extensions = with pkgs; [
       vscode-extensions.vscodevim.vim
       vscode-extensions.ms-vsliveshare.vsliveshare
       vscode-extensions.ms-python.python

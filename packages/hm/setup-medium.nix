@@ -17,7 +17,7 @@
     ./emacs
   ];
   modules.editors.emacs = {
-    enable = true;
+    enable = false; # This is broken, need to delete emacs config altogether
   };
 
   services.blueman-applet.enable = true;
@@ -115,8 +115,8 @@
       xdragon
 
       # From old fish history
-      dolphin
-      konsole
+      kdePackages.dolphin
+      kdePackages.konsole
       gparted
     ]
     ++ (
