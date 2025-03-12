@@ -154,6 +154,17 @@ rec {
           disableSwayLock = true;
         };
       };
+      homeConfigurations."shifu_remote" = home-manager.lib.homeManagerConfiguration {
+        inherit pkgs;
+
+        # Specify your home configuration modules here, for example,
+        # the path to your home.nix.
+        modules = [ ./devices/shifu_remote/home.nix ];
+        extraSpecialArgs = {
+          inherit inputs;
+          inherit system;
+        };
+      };
 
       # ===== Nixos configs
       nixosConfigurations.monkey = mkSystem {
