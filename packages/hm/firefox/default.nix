@@ -29,6 +29,7 @@ in {
     bind --mode=normal <C-V> mode ignore
     unbind --mode=normal <C-f>
   '';
+  xdg.configFile."tridactyl/autoclose.js".source = pkgs.runCommand "tridactyl-autoclose-build" {} "${pkgs.bun}/bin/bun build ${./tridactyl_autoclose.ts} --outfile=$out";
 
   # remove after this: https://bugzilla.mozilla.org/show_bug.cgi?id=259356
   programs.firefox.policies = {

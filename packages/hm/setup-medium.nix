@@ -9,7 +9,7 @@
   imports = [
     ./setup-minimal.nix
     ./wezterm
-    ./firefox.nix
+    ./firefox
     ./mpv
     ./theme
     ./zed
