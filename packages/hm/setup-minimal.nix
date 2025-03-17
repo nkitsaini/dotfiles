@@ -110,7 +110,9 @@
     protocol = "sparse"
     [target.x86_64-unknown-linux-gnu]
     linker = "${pkgs.clang}/bin/clang"
-    rustflags = ["-C", "link-arg=--ld-path=${pkgs.mold}/bin/mold"]
+
+    # --no-rosegment -> required for cargo-flamegraph
+    rustflags = ["-Clink-arg=--ld-path=${pkgs.mold}/bin/mold", "-Clink-arg=-Wl,--no-rosegment"]
   '';
 
   # Home Directories
