@@ -13,6 +13,7 @@
     ./mpv
     ./theme
     ./zed
+    ./sioyek
     ./activity_watch
     ./emacs
   ];
@@ -75,7 +76,6 @@
       alacritty-theme
       wezterm
 
-      sioyek
       eog
       seahorse # for keyring
       qimgv
