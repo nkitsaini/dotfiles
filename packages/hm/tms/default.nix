@@ -8,18 +8,19 @@
         "venv",
         ".venv",
         "target",
+        ".direnv",
     ]
 
     [[search_dirs]]
     path = "${config.home.homeDirectory}/code"
-    depth = 5
+    depth = 4
 
     [[search_dirs]]
     path = "${config.home.homeDirectory}/external"
-    depth = 5
+    depth = 4
 
     [[search_dirs]]
     path = "${config.home.homeDirectory}/workspace"
-    depth = 5
+    depth = 4
   '';
 }
