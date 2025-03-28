@@ -154,6 +154,7 @@ in
     # backgroundColor = "#281733F0";
     # textColor = "#ebeafa";
     borderSize = 2;
+    height=300;
     # borderColor = "#a4a0e8";
     defaultTimeout = 5000;
     markup = true;

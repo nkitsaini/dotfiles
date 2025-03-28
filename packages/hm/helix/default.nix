@@ -39,7 +39,7 @@
         nil
         texlab
         gopls
-        golangci-lint-langserver
+        # golangci-lint-langserver
         rust-analyzer
         tinymist
         biome
