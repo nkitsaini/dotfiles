@@ -39,6 +39,10 @@
   home.stateVersion = "23.11"; # Please read the comment before changing.
 
   nixpkgs.config.allowUnfree = true;
+  nix.gc = {
+    automatic = true;
+    options = "--delete-older-than 7d";
+  };
   systemd.user.enable = true;
   systemd.user.startServices = true;
 
