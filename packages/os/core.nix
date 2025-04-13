@@ -13,6 +13,10 @@
   environment = {
     variables = {
       DO_NOT_TRACK = "1";
+
+      # Required for cloudflare wrangler
+      SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
+      NIX_SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
     };
     systemPackages =
       ((import ../shared/core_deps.nix) pkgs)
