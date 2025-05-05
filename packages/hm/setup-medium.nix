@@ -118,6 +118,10 @@
       kdePackages.dolphin
       kdePackages.konsole
       gparted
+
+
+      # Required for something in neovim/neorg
+      imagemagick
     ]
     ++ (
       if nixGLCommandPrefix != "" then

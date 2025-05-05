@@ -107,7 +107,7 @@ in
   services.copyq = {
     enable = true;
   };
- services.swayosd.enable  = true;
+  services.swayosd.enable = true;
 
   services.swayidle = {
     enable = true;
@@ -153,20 +153,21 @@ in
     # # backgroundColor = "#3b224cF0";
     # backgroundColor = "#281733F0";
     # textColor = "#ebeafa";
-    borderSize = 2;
-    height=300;
+    borderSize = "2";
+    height = "300";
     # borderColor = "#a4a0e8";
-    defaultTimeout = 5000;
-    markup = true;
+    defaultTimeout = "5000";
+    markup = "true";
     format = "<b>%s</b>\\n\\n%b";
     # urgency
-    extraConfig = ''
-      [urgency=high]
-      text-color=#CFFFF6
-      border-color=#000000
-      background-color=#FF0F0F
-      border-size=4
-    '';
+    # settings = {
+    #   "[urgency=high]" = {
+    #     text-color = "#CFFFF6";
+    #     border-color = "#000000";
+    #     background-color = "#FF0F0F";
+    #     border-size = 4;
+    #   };
+    # };
   };
 
   wayland.windowManager.sway.enable = true;
@@ -301,8 +302,10 @@ in
       "XF86AudioLowerVolume" = "exec --no-startup-id ${
         inputs.volume_control_rs.defaultPackage.${system}
       }/bin/volume_control -- -0.05"; # decrease sound volume
-      "XF86AudioMute" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; # mute sound
-      "XF86AudioMicMute" = "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle"; # mute mic audio
+      "XF86AudioMute" =
+        "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; # mute sound
+      "XF86AudioMicMute" =
+        "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle"; # mute mic audio
 
       "XF86AudioPlay" = "exec ${pkgs.playerctl}/bin/playerctl play-pause";
       "XF86AudioPause" = "exec ${pkgs.playerctl}/bin/playerctl play-pause";
