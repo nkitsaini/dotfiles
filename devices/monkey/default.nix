@@ -2,8 +2,15 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ hostname, pkgs, username, ... }: {
-  imports = [ # Include the results of the hardware scan.
+{
+  hostname,
+  pkgs,
+  username,
+  ...
+}:
+{
+  imports = [
+    # Include the results of the hardware scan.
     ./hardware-configuration.nix
     ./wireguard.nix
 
@@ -43,6 +50,17 @@
     imports = [ ../../packages/hm/setup-full.nix ];
   };
 
+  security.audit = {
+    enable = true;
+    rules = [
+      "-a exit,always -F path=/home/kit -F perm=wa -F key=home-watch" # Record file write/attribute changes 
+      "-a always,exit -S execve -F key=process_execution" # Record process create/delete
+    ];
+  };
+  security.auditd = {
+    enable = true;
+  };
+
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.systemd-boot.configurationLimit = 120;
@@ -54,7 +72,9 @@
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
-  services.gvfs = { enable = true; };
+  services.gvfs = {
+    enable = true;
+  };
   services.printing.drivers = [
     pkgs.gutenprint # — Drivers for many different printers from many different vendors.
     pkgs.gutenprintBin # — Additional, binary-only drivers for some printers.
