@@ -207,15 +207,14 @@
         ]
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-Kdzt272YEPrHx0j6lG1OGlrL+zUK0R6XxkTk0joGDQY=",
         "path": "modules",
         "type": "path"
       },
       "original": {
         "path": "modules",
         "type": "path"
-      }
+      },
+      "parent": []
     },
     "naersk": {
       "inputs": {
