@@ -149,25 +149,27 @@ in
   # };
   services.mako = {
     enable = true;
-    padding = "15,20";
-    # # backgroundColor = "#3b224cF0";
-    # backgroundColor = "#281733F0";
-    # textColor = "#ebeafa";
-    borderSize = "2";
-    height = "300";
-    # borderColor = "#a4a0e8";
-    defaultTimeout = "5000";
-    markup = "true";
-    format = "<b>%s</b>\\n\\n%b";
-    # urgency
-    # settings = {
-    #   "[urgency=high]" = {
-    #     text-color = "#CFFFF6";
-    #     border-color = "#000000";
-    #     background-color = "#FF0F0F";
-    #     border-size = 4;
-    #   };
-    # };
+    settings = {
+      padding = "15,20";
+      # # backgroundColor = "#3b224cF0";
+      # backgroundColor = "#281733F0";
+      # textColor = "#ebeafa";
+      borderSize = "2";
+      height = "300";
+      # borderColor = "#a4a0e8";
+      defaultTimeout = "10000";
+      markup = "true";
+      format = "<b>%s</b>\\n\\n%b";
+      # urgency
+    };
+    criteria = {
+      "[urgency=high]" = {
+        text-color = "#CFFFF6";
+        border-color = "#000000";
+        background-color = "#FF0F0F";
+        border-size = 4;
+      };
+    };
   };
 
   wayland.windowManager.sway.enable = true;
