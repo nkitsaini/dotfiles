@@ -16,5 +16,8 @@ in {
 
   programs.fish.shellAliases.rebuild-system =
     "home-manager switch --flake ${homeDirectory}/code/dotfiles/#shifu_remote";
+  programs.fish.shellInit = pkgs.lib.mkAfter ''
+    sudo sysctl -w fs.inotify.max_user_instances=8192
+  '';
 })
 
