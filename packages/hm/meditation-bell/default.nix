@@ -3,7 +3,7 @@ let
   meditationDirectory = "${config.home.homeDirectory}/code/shoal/meditation_bell_trigger";
   meditationTrigger = (pkgs.writeShellApplication {
     name = "meditation-bell-trigger";
-    runtimeInputs = [ pkgs.nix pkgs.git ];
+    runtimeInputs = [ pkgs.nix pkgs.git pkgs.libnotify ];
     # TODO: move to nix based build
     text = ''
       cd ${meditationDirectory}
