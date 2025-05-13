@@ -154,16 +154,16 @@ in
       # # backgroundColor = "#3b224cF0";
       # backgroundColor = "#281733F0";
       # textColor = "#ebeafa";
-      borderSize = "2";
+      border-size = "2";
       height = "300";
       # borderColor = "#a4a0e8";
-      defaultTimeout = "10000";
+      default-timeout = "10000";
       markup = "true";
       format = "<b>%s</b>\\n\\n%b";
       # urgency
     };
     criteria = {
-      "[urgency=high]" = {
+      "urgency=high" = {
         text-color = "#CFFFF6";
         border-color = "#000000";
         background-color = "#FF0F0F";

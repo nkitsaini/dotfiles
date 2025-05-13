@@ -79,6 +79,10 @@
     "fs.inotify.max_user_instances" = 524288;
   };
 
+  # Record and preloads the binaries in memory
+  # for fast startups
+  services.preload.enable = true;
+
   security.pam.loginLimits = [
     # Increase soft limit for number of open files, default is way too low (~2048)
     {

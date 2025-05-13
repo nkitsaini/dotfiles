@@ -15,6 +15,7 @@
     ./zed
     ./sioyek
     ./activity_watch
+    ./meditation-bell
     ./emacs
   ];
   modules.editors.emacs = {
