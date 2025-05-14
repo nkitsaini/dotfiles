@@ -33,10 +33,15 @@ in {
 
   # remove after this: https://bugzilla.mozilla.org/show_bug.cgi?id=259356
   programs.firefox.policies = {
+    # TODO: move everyone to `~/Downloads`, some tools just want to write to `~/Downloads` irrespective of your wish
     DefaultDownloadsDirectory = "\${home}/downloads";
   };
 
   programs.firefox.profiles."default" = {
+    settings = {
+     "sidebar.revamp" = true; 
+     "sidebar.verticalTabs" = true; 
+    };
     # containers = {
     #   personal = {
     #     color = "orange";
