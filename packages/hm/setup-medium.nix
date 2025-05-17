@@ -53,6 +53,8 @@
   home.packages =
     with pkgs;
     [
+      elan
+
       # deluge
       obsidian
 

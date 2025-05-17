@@ -161,8 +161,6 @@ in
       markup = "true";
       format = "<b>%s</b>\\n\\n%b";
       # urgency
-    };
-    criteria = {
       "urgency=high" = {
         text-color = "#CFFFF6";
         border-color = "#000000";
