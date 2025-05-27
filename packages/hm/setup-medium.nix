@@ -22,7 +22,7 @@
     enable = false; # This is broken, need to delete emacs config altogether
   };
 
-  services.blueman-applet.enable = true;
+  services.blueman-applet.enable = false; # Disabled as it enables auto-connect for some reason
 
   programs.alacritty = {
     enable = true;

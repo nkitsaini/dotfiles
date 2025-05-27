@@ -18,9 +18,4 @@
   # Not sure where did I get this and why do I need this?
   security.rtkit.enable = true;
 
-  # Bluetooth
-  services.blueman.enable = true;
-  hardware.bluetooth.enable = true; # enables support for Bluetooth
-  hardware.bluetooth.powerOnBoot =
-    true; # powers up the default Bluetooth controller on boot
 }
