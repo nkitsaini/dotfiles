@@ -52,7 +52,6 @@
   services.ssh-agent.enable = true;
 
   programs.feh.enable = true;
-  programs.zathura.enable = true;
 
   # Stores configs I don't want to be in Nix
   programs.ssh.extraConfig = "Include ${config.home.homeDirectory}/.ssh/user_config";
