@@ -150,6 +150,7 @@ in
   services.mako = {
     enable = true;
     settings = {
+      layer = "overlay"; # Show even in full-screen mode
       padding = "15,20";
       # # backgroundColor = "#3b224cF0";
       # backgroundColor = "#281733F0";
