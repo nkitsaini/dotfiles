@@ -31,6 +31,8 @@ in {
   '';
   xdg.configFile."tridactyl/autoclose.js".source = pkgs.runCommand "tridactyl-autoclose-build" {} "${pkgs.bun}/bin/bun build ${./tridactyl_autoclose.ts} --outfile=$out";
 
+  # TODO: Set `network.proxy.allow_hijacking_localhost=true` (about:config)
+  
   # remove after this: https://bugzilla.mozilla.org/show_bug.cgi?id=259356
   programs.firefox.policies = {
     # TODO: move everyone to `~/Downloads`, some tools just want to write to `~/Downloads` irrespective of your wish
