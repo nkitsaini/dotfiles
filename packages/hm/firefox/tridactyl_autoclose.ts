@@ -1,4 +1,4 @@
-// Register using:
+// Needs to be manually registered using:
 // 
 // autocmd TriStart .* js -s -r ./autoclose.js
 // autocmd DocStart .* js -s -r ./autoclose.js

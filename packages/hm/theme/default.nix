@@ -21,6 +21,23 @@
   #   [Appearance]
   #   icon_theme=breeze
   # '';
+  #
+
+
+  # Installing breeze-qt6 installs kwallet, which in turn gets registered as dbus service, which in turn is detected by Brave browser and started on startup.
+  # This makes kwallet ask for password. We mask the services to stop kwallet from starting.
+  # We always want to use gnome-keyring.
+  home.file.".local/share/dbus-1/services/org.kde.kwalletd6.service".text = ''
+    [D-BUS Service]
+    Name=org.kde.kwalletd6
+    Exec=/bin/false
+  '';
+
+  home.file.".local/share/dbus-1/services/org.kde.kwalletd5.service".text = ''
+    [D-BUS Service]
+    Name=org.kde.kwalletd5
+    Exec=/bin/false
+  '';
 
   home.packages = with pkgs; [
     # xorg.xcursorthemes
@@ -53,10 +70,9 @@
       package = pkgs.kdePackages.breeze-icons;
     };
 
-
     # See value of  `echo $XCURSOR_PATH` and `echo $XCURSOR_THEME` the path should contain a theme named directory containing icons
     # `echo ~/.nix-profile/share/icons/*/cursors`
-    #   
+    #
     cursorTheme = {
       name = "breeze_cursors";
       package = pkgs.kdePackages.breeze-icons;
