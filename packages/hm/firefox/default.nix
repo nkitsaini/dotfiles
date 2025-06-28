@@ -34,7 +34,7 @@ in {
     command kit_status viewconfig autocmds
     command kit_setup composite autocmd TriStart .* js -s -r ./autoclose.js | autocmd DocStart .* js -s -r ./autoclose.js | autocmd TriStart (www\.)?youtube.com js -s -r ./grayscale.js | autocmd DocStart (www\.)?youtube.com js -s -r ./grayscale.js
     command kit_stop composite autocmddelete TriStart .* js -s -r ./autoclose.js | autocmddelete DocStart .* js -s -r ./autoclose.js | autocmddelete TriStart (www\.)?youtube.com js -s -r ./grayscale.js | autocmddelete DocStart (www\.)?youtube.com js -s -r ./grayscale.js
-
+    command kit_grayscale_override js 'document.documentElement.style.filter = ""'
   '';
   xdg.configFile."tridactyl/autoclose.js".source = pkgs.runCommand "tridactyl-autoclose-build" {} "${pkgs.bun}/bin/bun build ${./tridactyl_autoclose.ts} --outfile=$out";
   xdg.configFile."tridactyl/grayscale.js".source = pkgs.runCommand "tridactyl-grayscale-build" {} "${pkgs.bun}/bin/bun build ${./tridactyl_grayscale.ts} --outfile=$out";
