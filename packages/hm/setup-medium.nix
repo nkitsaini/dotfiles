@@ -85,7 +85,9 @@
 
       pandoc
       typst
-      pypy3
+      # https://github.com/NixOS/nixpkgs/issues/419942#issuecomment-3025623956
+      # pypy3.override (y: { sqlite = sqlite.overrideAttrs (x: { configureFlags = x.configureFlags ++ ["--soname=legacy"];});})
+
       usbutils
       # inputs.nkitsaini_notes_utils.packages.${system}.default
 
