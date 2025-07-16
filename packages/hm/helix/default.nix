@@ -306,40 +306,6 @@
             };
           }
           {
-            name = "caddyfile";
-            roots = [ ];
-            scope = "source.caddyfile";
-            injection-regex = "caddyfile";
-            file-types = [ "Caddyfile" ];
-            comment-token = "#";
-            language-servers = [ ];
-            indent = {
-              tab-width = 4;
-              unit = "\\t";
-            };
-            formatter = {
-              command = "caddy-fmt";
-            };
-          }
-          {
-            name = "typst";
-            roots = [ ];
-            scope = "source.typst";
-            injection-regex = "typst";
-            file-types = [ "typ" ];
-            comment-token = "//";
-            indent = {
-              tab-width = 4;
-              unit = "	";
-            };
-            language-servers = [ "typst-lsp" ];
-            formatter = {
-              command = "${pkgs.typstyle}/bin/typstyle";
-              args = [ ];
-            };
-          }
-
-          {
             name = "javascript";
             formatter = {
               command = "biome";

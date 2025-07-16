@@ -92,7 +92,11 @@ in
         . "$HOME/.profile"
       fi
 
-      exec ${nixGLCommandPrefix}sway
+      # For some reason /dev/dri/card0 is a virtual device instead of integrated amd gpu on shifu
+      # Use this to identify correct one. It should mention amdgpu or something:
+      #       cat /sys/class/drm/cardN/device/uevent
+      #       Example: cat /sys/class/drm/card0/device/uevent
+      exec env WLR_DRM_DEVICES=/dev/dri/card1 ${nixGLCommandPrefix}sway
     '';
     ".home-manager-extras/home-manager-wayland.desktop".text = ''
       [Desktop Entry]
