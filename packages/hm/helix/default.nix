@@ -205,10 +205,7 @@
             "GOFLAGS" = "-tags=cluster";
           };
         };
-        language-server.typst-lsp = {
-          language-id = "typst";
-          command = "tinymist";
-        };
+
         language-server.ltex-lsp = {
           command = "${pkgs.ltex-ls}/bin/ltex-ls";
         };
