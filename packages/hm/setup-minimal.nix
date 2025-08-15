@@ -18,13 +18,16 @@
     ./vcs.nix
     ./yazi.nix
     ./syncthing.nix
-    ./k9s
     ./cmus
     ./aria2
     ./neovim
     ./taskwarrior
     # ../../modules/hm
   ];
+
+  programs.kit = {
+    k9s.enable = true;
+  };
 
   # kit.neovim.enable = true;
   # username and home directory are provided by the parent home.nix
@@ -365,11 +368,11 @@
       # (writeShellScriptBin "my-hello" ''
       #   echo "Hello, ${config.home.username}!"
       # '')
-    ] ++ (import ../shared/core_deps.nix) pkgs; # NOTE: include the version below if this gives error on environment with nixos configuration. 
-    # Include core-deps in home-manager if we are not inside nixos configuration
-    # otherwise these will get included in nixos configuration itself
-    # ++ (if (config ? nixosVersion) then [] else ((import ../shared/core_deps.nix) pkgs));
-
+    ]
+    ++ (import ../shared/core_deps.nix) pkgs; # NOTE: include the version below if this gives error on environment with nixos configuration.
+  # Include core-deps in home-manager if we are not inside nixos configuration
+  # otherwise these will get included in nixos configuration itself
+  # ++ (if (config ? nixosVersion) then [] else ((import ../shared/core_deps.nix) pkgs));
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.

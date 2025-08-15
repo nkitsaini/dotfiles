@@ -5,6 +5,7 @@ let
     pname = "caddy-with-l4";
     version = "1.0.0";
     src = ./.;
+    meta.mainProgram = "caddy";
 
     nativeBuildInputs = [ pkgs.caddy ];
 

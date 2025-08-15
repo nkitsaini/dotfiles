@@ -1,0 +1,13 @@
+version: '3.7'
+services:
+  server:
+    image: vectorim/element-web:v1.11.96
+    networks:
+      - caddy
+    labels:
+      caddy: matrix.nkit.dev
+      caddy.reverse_proxy: "{{upstreams 80}}"
+
+networks:
+  caddy:
+    external: true

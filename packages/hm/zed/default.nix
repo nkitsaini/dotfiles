@@ -9,6 +9,9 @@
     [
       zed-editor
 
+      # Nix support
+      nil
+      nixd
     ]
     ++ (
       if nixGLCommandPrefix != "" then

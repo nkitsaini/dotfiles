@@ -4,8 +4,12 @@
   };
 
   outputs = _: {
-    nixosModule = {
-      a = 3;
+    nixosModules = {
+      default = import ./nixos;
+    };
+
+    hm = {
+      default = import ./hm;
     };
   };
 }

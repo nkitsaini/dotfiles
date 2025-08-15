@@ -1,0 +1,29 @@
+version: "3.7"
+services:
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:ci-alpine
+    ports:
+      # We don't use outbound /80 and /443 as those are also required by headscale.
+      # So our host caddy will redirect any requests not meant for headscale to `9080` and `9443`. This allows us to have files both on host and on docker swarm
+      - 9080:80
+      - 9443:443
+    environment:
+      - CADDY_INGRESS_NETWORKS=caddy
+    networks:
+      - caddy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - caddy_data:/data
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+
+
+# First create the network
+# docker --context prod network create caddy --scope swarm
+networks:
+  caddy:
+    external: true
+
+volumes:
+  caddy_data: {}

@@ -1,0 +1,20 @@
+version: '3.7'
+services:
+  server:
+    image: ghcr.io/open-webui/open-webui:v0.5.4
+    networks:
+      - caddy
+    labels:
+      caddy: ow.nkit.dev
+      caddy.reverse_proxy: "{{upstreams 8080}}"
+    volumes:
+      - open_webui:/app/backend/data
+
+
+networks:
+  caddy:
+    external: true
+
+volumes:
+  open_webui:
+

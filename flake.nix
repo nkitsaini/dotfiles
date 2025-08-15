@@ -13,8 +13,10 @@ rec {
       inputs.flake-utils.follows = "flake-utils";
     };
 
-    kit.url = "path:modules";
-    kit.inputs.nixpkgs.follows = "nixpkgs";
+    kit = {
+      url = "path:modules";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     nixvim = {
       url = "github:nix-community/nixvim"; # This is one that works with current nixpkgs lock. Will need to update this when nixpkgs is updated.
@@ -53,7 +55,7 @@ rec {
 
     # TODO: This has been fixed in https://github.com/NixOS/nix/pull/10089
     # Bring relevant code in this repo itself
-    # 
+    #
     # Nix doesn't have good support for importing flakes within same repo.
     # if imported using path:... syntax, it uses narHash which might be missing
     # from other developers machine.
@@ -85,6 +87,7 @@ rec {
         {
           hostname,
           extraModules ? [ ],
+          autoIncludeDeviceModule ? true,
           username ? "kit",
         }:
         nixpkgs.lib.nixosSystem {
@@ -97,21 +100,30 @@ rec {
             inherit username;
             inherit pkgs_working_openwebui;
           };
-          modules = [
-            ./devices/${hostname}
-            home-manager.nixosModules.home-manager
-            inputs.nur.modules.nixos.default
-            disko.nixosModules.disko
-            (
-              { inputs, ... }:
-              {
-                nix.settings = {
-                  substituters = nixConfig.extra-substituters;
-                  trusted-public-keys = nixConfig.extra-trusted-public-keys;
-                };
-              }
-            )
-          ] ++ extraModules;
+          modules =
+            [
+              home-manager.nixosModules.home-manager
+              inputs.nur.modules.nixos.default
+              disko.nixosModules.disko
+              inputs.kit.nixosModules.default
+              (
+                { inputs, ... }:
+                {
+                  nix.settings = {
+                    substituters = nixConfig.extra-substituters;
+                    trusted-public-keys = nixConfig.extra-trusted-public-keys;
+                  };
+
+                  home-manager.sharedModules = [
+                    inputs.kit.hm.default
+                  ];
+
+                }
+              )
+            ]
+            ++ extraModules
+            ++ (if (autoIncludeDeviceModule) then [ ./devices/${hostname} ] else [ ]);
+
         };
 
       system = "x86_64-linux";
@@ -143,7 +155,10 @@ rec {
 
         # Specify your home configuration modules here, for example,
         # the path to your home.nix.
-        modules = [ ./devices/shifu/home.nix ];
+        modules = [
+          ./devices/shifu/home.nix
+          inputs.kit.homeManagerModules.default
+        ];
         extraSpecialArgs = {
           inherit inputs;
           inherit system;
@@ -159,7 +174,10 @@ rec {
 
         # Specify your home configuration modules here, for example,
         # the path to your home.nix.
-        modules = [ ./devices/shifu_remote/home.nix ];
+        modules = [
+          ./devices/shifu_remote/home.nix
+          inputs.kit.homeManagerModules.default
+        ];
         extraSpecialArgs = {
           inherit inputs;
           inherit system;
@@ -193,6 +211,11 @@ rec {
       # 4. manage disk through disko
       # ... or something I missed
       nixosConfigurations.crane = mkSystem { hostname = "crane"; };
+      nixosConfigurations.crane2 = mkSystem {
+        hostname = "crane";
+        autoIncludeDeviceModule = false;
+        extraModules = [ ./devices/crane2 ];
+      };
     };
   nixConfig = {
     extra-substituters = [ "https://helix.cachix.org" ];
