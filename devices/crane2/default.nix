@@ -36,7 +36,8 @@
 
   # TODO: This is bad code. I need to refactor user handling.
   # The refactoring is is blocked on modules refactor in "modules/" folder.
-  users.users.${username}.hashedPassword = pkgs.lib.mkForce "$6$Pi4RhszjfUMHGAGc$uhXuc2lC0/LJevFwZW6dbSHgvGmw596HbNwVvi9.CUl8Z0SoWNezkcgoS5M9HBM.9R52qQVZwRIE4CbHeNHEY.";
+  users.users.${username}.hashedPassword =
+    pkgs.lib.mkForce "$6$Pi4RhszjfUMHGAGc$uhXuc2lC0/LJevFwZW6dbSHgvGmw596HbNwVvi9.CUl8Z0SoWNezkcgoS5M9HBM.9R52qQVZwRIE4CbHeNHEY.";
 
   home-manager.users.${username} = {
     imports = [

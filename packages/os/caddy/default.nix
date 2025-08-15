@@ -1,4 +1,9 @@
-{ pkgs, lib, config, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   # has l4 plugin
   caddyPackage = pkgs.stdenv.mkDerivation {
@@ -20,17 +25,16 @@ let
 
   host_http_port = "10080";
   host_tls_port = "10443";
-  swarm_http_port = "9080";
-  swarm_tls_port = "9443";
+  k3s_http_port = "30080";
+  k3s_tls_port = "30443";
 
   # TODO: this should be derived from config.caddy.virtualHosts
   host_services = builtins.attrNames config.services.caddy.virtualHosts;
 
-  host_http_rule =
-    lib.concatStringsSep " || " (map (x: "Host(`${x}`)") host_services);
-  host_tls_rule =
-    lib.concatStringsSep " || " (map (x: "HostSNI(`${x}`)") host_services);
-in {
+  host_http_rule = lib.concatStringsSep " || " (map (x: "Host(`${x}`)") host_services);
+  host_tls_rule = lib.concatStringsSep " || " (map (x: "HostSNI(`${x}`)") host_services);
+in
+{
   services.caddy = {
     enable = true;
     package = caddyPackage;
@@ -43,8 +47,12 @@ in {
     enable = true;
     staticConfigOptions = {
       entryPoints = {
-        web = { address = ":80"; };
-        websecure = { address = ":443"; };
+        web = {
+          address = ":80";
+        };
+        websecure = {
+          address = ":443";
+        };
       };
     };
     dynamicConfigOptions = {
@@ -56,20 +64,18 @@ in {
             service = "host-caddy-http";
           };
 
-          swarm-http = {
+          k3s-http = {
             entryPoints = [ "web" ];
             rule = "HostRegexp(`.*`)";
-            service = "swarm-caddy-http";
+            service = "k3s-caddy-http";
           };
         };
         services = {
           host-caddy-http = {
-            loadBalancer.servers =
-              [{ url = "http://127.0.0.1:${host_http_port}"; }];
+            loadBalancer.servers = [ { url = "http://127.0.0.1:${host_http_port}"; } ];
           };
-          swarm-caddy-http = {
-            loadBalancer.servers =
-              [{ url = "http://127.0.0.1:${swarm_http_port}"; }];
+          k3s-caddy-http = {
+            loadBalancer.servers = [ { url = "http://127.0.0.1:${k3s_http_port}"; } ];
           };
         };
       };
@@ -81,22 +87,20 @@ in {
             service = "host-caddy-tls";
             tls.passthrough = true;
           };
-          swarm-tls = {
+          k3s-tls = {
             entryPoints = [ "websecure" ];
             rule = "HostSNI(`*`)";
-            service = "swarm-caddy-tls";
+            service = "k3s-caddy-tls";
             tls.passthrough = true;
           };
         };
 
         services = {
           host-caddy-tls = {
-            loadBalancer.servers =
-              [{ address = "127.0.0.1:${host_tls_port}"; }];
+            loadBalancer.servers = [ { address = "127.0.0.1:${host_tls_port}"; } ];
           };
-          swarm-caddy-tls = {
-            loadBalancer.servers =
-              [{ address = "127.0.0.1:${swarm_tls_port}"; }];
+          k3s-caddy-tls = {
+            loadBalancer.servers = [ { address = "127.0.0.1:${k3s_tls_port}"; } ];
           };
         };
       };

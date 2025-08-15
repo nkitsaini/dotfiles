@@ -42,9 +42,9 @@ in
     services.k3s = {
       enable = true;
       role = "server";
-      # manifests = {
-      #   traefik-patch.source = ./traefik-patch.yaml;
-      # };
+      manifests = {
+        traefik-patch.source = ./traefik-patch.yaml;
+      };
     };
 
     # Open required ports for k3s
