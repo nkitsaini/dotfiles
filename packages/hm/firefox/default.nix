@@ -29,6 +29,8 @@ in {
     bind --mode=normal <C-V> mode ignore
     unbind --mode=normal <C-f>
 
+    # To open new tabs in personal container: bind <C-t> tabopen -c personal
+    # 
     # To view current autocmd's run `:viewconfig autocmd`
 
     command kit_status viewconfig autocmds

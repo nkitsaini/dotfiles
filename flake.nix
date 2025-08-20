@@ -157,7 +157,7 @@ rec {
         # the path to your home.nix.
         modules = [
           ./devices/shifu/home.nix
-          inputs.kit.homeManagerModules.default
+          inputs.kit.hm.default
         ];
         extraSpecialArgs = {
           inherit inputs;
@@ -176,7 +176,7 @@ rec {
         # the path to your home.nix.
         modules = [
           ./devices/shifu_remote/home.nix
-          inputs.kit.homeManagerModules.default
+          inputs.kit.hm.default
         ];
         extraSpecialArgs = {
           inherit inputs;

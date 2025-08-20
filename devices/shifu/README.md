@@ -12,7 +12,7 @@ Steps:
 
 - install fonts from 'packages/os/fonts.nix'
   - from apt: `sudo apt install fonts-font-awesome fonts-noto-mono fonts-noto-cjk-extra fonts-noto-extra fonts-noto-color-emoji`
-  - Download nerd font from `https://www.nerdfonts.com/font-downloads` and put inside ~/.fonts
+  - Download Noto font from `https://www.nerdfonts.com/font-downloads` and put inside ~/.fonts
   - Run `fc-cache -fv`
 
 - install packages from `packages/os/sway/sway-knobs.nix` (to support screen sharing and stuff)
