@@ -7,6 +7,6 @@
 
 {
   imports = [
-    ./services
+    ./k3s
   ];
 }

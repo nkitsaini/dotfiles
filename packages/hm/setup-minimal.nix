@@ -25,8 +25,8 @@
     # ../../modules/hm
   ];
 
-  programs.kit = {
-    k9s.enable = true;
+  kit.blocks = {
+    dev-cli.enable = true;
   };
 
   # kit.neovim.enable = true;

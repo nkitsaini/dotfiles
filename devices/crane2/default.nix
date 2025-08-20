@@ -46,7 +46,7 @@
     ];
   };
 
-  services.kit.k3s.enable = true;
+  kit.services.k3s.enable = true;
 
   networking.firewall.allowedTCPPorts = [
     80

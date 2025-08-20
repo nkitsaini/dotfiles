@@ -7,6 +7,6 @@
 
 {
   imports = [
-    ./services
+    ./dev-cli
   ];
 }

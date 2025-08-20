@@ -13,7 +13,7 @@
 with lib;
 
 let
-  cfg = config.services.kit.k3s;
+  cfg = config.kit.services.k3s;
 
   kit-setup-k3s-config = pkgs.writeShellScriptBin "kit-setup-k3s-config" ''
     set -euo pipefail
@@ -34,7 +34,7 @@ let
   '';
 in
 {
-  options.services.kit.k3s = {
+  options.kit.services.k3s = {
     enable = mkEnableOption "k3s Kubernetes cluster";
   };
 
