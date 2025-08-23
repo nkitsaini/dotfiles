@@ -11,12 +11,16 @@ let
   cfg = config.kit.blocks.dev-cli;
 in
 {
+  imports = [
+    ./k8s
+  ];
+
   options.kit.blocks.dev-cli = {
-    enable = mkEnableOption "Enable development tools";
+    enable = mkEnableOption "Enable all development tools";
   };
 
   config = mkIf cfg.enable {
-    kit.programs.k9s.enable = true;
+    kit.blocks.dev-cli.k8s.enable = true;
 
     home.packages = with pkgs; [
       # Decode jwts

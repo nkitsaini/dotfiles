@@ -145,7 +145,6 @@
       # # "Hello, world!" when run.
 
       # Nix specific
-      cached-nix-shell
       difftastic
 
       # For yazi
@@ -180,9 +179,6 @@
       python312Packages.ipython
       python312Packages.pipx
       python312Packages.tkinter # for turtle
-      kubectl
-      kubectl-tree
-      kubectx
       sd
       rsync
       nmap
