@@ -1,0 +1,79 @@
+# Sets up a dummy server that uses traefik for auto-tls. Useful for validation.
+# Replace `$DOMAIN` with a domain name that is forwarded to the k8s instance.
+
+# --- Deployment ---
+# This section defines the desired state for our application.
+# It tells Kubernetes to run two replicas of the 'httpd' (Apache) container.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-server-deployment
+  labels:
+    app: http-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: http-server
+  template:
+    metadata:
+      labels:
+        app: http-server
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest # A simple Nginx web server image
+          ports:
+            - containerPort: 80
+
+---
+# --- Service ---
+# This creates a stable internal endpoint for the pods in the Deployment.
+# The Ingress controller will send traffic to this Service, which then
+# load-balances it across the available pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: http-server-service
+spec:
+  selector:
+    app: http-server # This must match the labels on the pods
+  ports:
+    - protocol: TCP
+      port: 80 # The port the Service will listen on
+      targetPort: 80 # The port on the pods to forward traffic to
+
+---
+# --- Ingress ---
+# This resource tells Traefik how to route external traffic to our Service.
+# It's configured to listen on the 'websecure' entrypoint (port 443),
+# use the 'letsencrypt' certificate resolver for automatic TLS,
+# and route traffic for 'http-server.your-domain.com' to our service.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-server-ingress
+  annotations:
+    # Use the 'letsencrypt' resolver you configured in Traefik
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    # Ensure this router only listens on the HTTPS entrypoint
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  # Specify that Traefik should handle this Ingress
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - $DOMAIN
+      # Traefik will automatically create and manage a secret with this name
+      secretName: http-server-tls
+  rules:
+    - host: $DOMAIN
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: http-server-service # Must match the Service name above
+                port:
+                  number: 80 # Must match the Service port above

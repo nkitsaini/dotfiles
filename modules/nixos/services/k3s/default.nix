@@ -2,7 +2,7 @@
 #  - https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/cluster/k3s/docs/CLUSTER_UPKEEP.md
 #  - https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/cluster/k3s/docs/USAGE.md
 #
-# Use `kit-setup-k3s-config` to setup kubeconfig.
+# Use `kit-setup-k3s-config` to setup kubeconfig for current user.
 {
   config,
   lib,
