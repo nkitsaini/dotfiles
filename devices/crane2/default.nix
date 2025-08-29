@@ -6,7 +6,8 @@
 }:
 {
   imports = [
-    ./hardware-configuration.nix
+    # ./hardware-configuration.nix
+    ../../hardware/ovh_vps.nix
     # TODO: clean the files too
     # ./wireguard.nix
     ./disco.nix
