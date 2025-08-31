@@ -4,36 +4,7 @@ let
   derpPort = 3478;
 in
 {
-  # MIGRATION/BACKUP GUIDE:
-  #    Stop headscale on both: sudo systemctl stop headscale
-  #    Just copy /var/lib/headscale from one machine to another (while headscale is stopped.)
-  #    Start headscale on new host
-  #
-  #    ON clients restart tailscale via systemd and re-auth.
-  #    sudo systemctl restart tailscale
-  #    sudo tailscale down
-  #    sudo tailscale up --force-reauth
-
-  # ref:
-  #  - https://headscale.net/exit-node/
-  #  - https://headscale.net/android-client/
-
-  # headscale users create <user>
-
-  # TODO: simplify the below stuff
-  # On Cloud:
-  #   tailscale up --login-server https://headscale.nkit.dev --ssh --advertise-exit-node
-  #   headscale nodes register ... --user <user>
-  #   headscale routes list
-  #   headscale routes enable -r 1 
-  #   headscale routes enable -r 2 
-
-  # On Android:
-  #   tailscale up --login-server https://headscale.nkit.dev 
-  #   tailscale exit-node list
-  #   tailscale up --login-server https://headscale.nkit.dev --exit-node crane
-  #   headscale nodes register ... --user <user>
-
+	# NOTE: This is deprecated. See crane2/headscale
   services = {
     headscale = {
       enable = true;

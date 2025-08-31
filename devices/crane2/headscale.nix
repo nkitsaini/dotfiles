@@ -7,12 +7,20 @@ in
   # MIGRATION/BACKUP GUIDE:
   #    Stop headscale on both: sudo systemctl stop headscale
   #    Just copy /var/lib/headscale from one machine to another (while headscale is stopped.)
+  #    Fix permissions with:
+  # 			sudo chown -R headscale:headscale /var/lib/headscale
+  #       sudo chmod 644 /var/lib/headscale/*
+  #       sudo chmod 755 /var/lib/headscale/
+  #    Modify DNS for headscale.nkit.dev to new host IP (IMPORTANT: for both ipv4 and ipv6)
+  #    Setup the "headscale" servers tailscale client again. And set as exit-node
+	#      [See On cloud instructions below]
   #    Start headscale on new host
   #
-  #    ON clients restart tailscale via systemd and re-auth.
+  #    ON clients restart tailscale via systemd or force stop on android (no re-auth required).
   #    sudo systemctl restart tailscale
-  #    sudo tailscale down
-  #    sudo tailscale up --force-reauth
+  #
+  #    Test for debugging:
+  # 			`xh https://headscale.nkit.dev/health` (see IP with `curl -v` too)
 
   # ref:
   #  - https://headscale.net/exit-node/
@@ -24,12 +32,11 @@ in
   # On Cloud:
   #   tailscale up --login-server https://headscale.nkit.dev --ssh --advertise-exit-node
   #   headscale nodes register ... --user <user>
-  #   headscale routes list
-  #   headscale routes enable -r 1 
-  #   headscale routes enable -r 2 
+  #   headscale nodes list-routes
+  #   headscale routes approve-routes -r "0.0.0.0/0,::/0" -i 1 # Or ID of route from list-routes
 
   # On Android:
-  #   tailscale up --login-server https://headscale.nkit.dev 
+  #   tailscale up --login-server https://headscale.nkit.dev
   #   tailscale exit-node list
   #   tailscale up --login-server https://headscale.nkit.dev --exit-node crane
   #   headscale nodes register ... --user <user>
