@@ -44,7 +44,7 @@
   nixpkgs.config.allowUnfree = true;
   nix.gc = {
     automatic = true;
-    options = "--delete-older-than 7d";
+    options = "--delete-older-than 30d";
   };
   systemd.user.enable = true;
   systemd.user.startServices = true;

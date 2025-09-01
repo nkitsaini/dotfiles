@@ -54,18 +54,11 @@ kind: Ingress
 metadata:
   name: http-server-ingress
   annotations:
-    # Use the 'letsencrypt' resolver you configured in Traefik
-    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
-    # Ensure this router only listens on the HTTPS entrypoint
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # NOTE: Do not add the TLS certresolver annotation if you want to also use HTTP.
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
 spec:
   # Specify that Traefik should handle this Ingress
   ingressClassName: traefik
-  tls:
-    - hosts:
-        - $DOMAIN
-      # Traefik will automatically create and manage a secret with this name
-      secretName: http-server-tls
   rules:
     - host: $DOMAIN
       http:

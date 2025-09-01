@@ -4,11 +4,14 @@ metadata:
   name: traefik
   namespace: kube-system
 spec:
+  # Ref: https://doc.traefik.io/traefik-hub/api-gateway/reference/install/ref-helm
   valuesContent: |-
     ports:
       web:
+        exposedPort: 30080
         nodePort: 30080
       websecure:
+        exposedPort: 30443
         nodePort: 30443
     certificatesResolvers:
       letsencrypt:
@@ -17,7 +20,3 @@ spec:
           storage: /data/acme.json
           httpChallenge:
             entryPoint: web
-    additionalArguments:
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=nnkitsaini@gmail.com"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
