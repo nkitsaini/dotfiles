@@ -80,7 +80,7 @@ in
         dns = {
           override_local_dns = true;
           nameservers.global = [ "1.1.1.1" ]; # TODO: and 100.100.100.100?
-          base_domain = "hs.nkit.dev";
+          base_domain = "nkit.home.arpa."; # To avoid random issue, never add a domain that has wildcard entry. (Tailscale -> DNS Search Domain -> Cloudflare)
         };
         # ip_prefixes = "100.64.0.0/24";
         # prefixes = {
