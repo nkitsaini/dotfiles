@@ -1,9 +1,9 @@
-# Sets up a dummy server that uses traefik for auto-tls. Useful for validation.
+# Example service deploymet config.
 # Replace `$DOMAIN` with a domain name that is forwarded to the k8s instance.
 
 # --- Deployment ---
-# This section defines the desired state for our application.
-# It tells Kubernetes to run two replicas of the 'httpd' (Apache) container.
+# A pod defines what to run (like a docker container). A deployment defines how to create pods.
+# For example, you can specify always keep 3 pods running so even if one fails a different pod can serve requests.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -11,7 +11,7 @@ metadata:
   labels:
     app: http-server
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: http-server
@@ -28,9 +28,8 @@ spec:
 
 ---
 # --- Service ---
-# This creates a stable internal endpoint for the pods in the Deployment.
-# The Ingress controller will send traffic to this Service, which then
-# load-balances it across the available pods.
+# Service defines how people can reach your pods.
+# After creating a service other people don't need to care about how many pods you have running. They always send request to service.
 apiVersion: v1
 kind: Service
 metadata:
@@ -45,10 +44,11 @@ spec:
 
 ---
 # --- Ingress ---
-# This resource tells Traefik how to route external traffic to our Service.
-# It's configured to listen on the 'websecure' entrypoint (port 443),
-# use the 'letsencrypt' certificate resolver for automatic TLS,
-# and route traffic for 'http-server.your-domain.com' to our service.
+# Ingress defines that if a request comes from internet how to handle it.
+# Basically which service should the request be sent to
+#
+#
+# This Ingress is for HTTP version of site.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -70,6 +70,7 @@ spec:
                 port:
                   number: 80 # Must match the Service port above
 ---
+# This Ingress is for HTTPS (TLS) version of site.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
