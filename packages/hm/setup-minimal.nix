@@ -127,7 +127,7 @@
   home.file."workspace/.keep".text = ""; # Work repos
   home.file."mnt/.keep".text = ""; # mount points
   home.file."tmp/.keep".text = ""; # temporary directory
-  home.file."Music/.keep".text = ""; # temporary directory
+  home.file."music/.keep".text = ""; # temporary directory
   home.file."videos/.keep".text = ""; # temporary directory
   home.file."Downloads/.keep".text = ""; # downloads directory
   home.file."pictures/.keep".text = ""; # downloads directory

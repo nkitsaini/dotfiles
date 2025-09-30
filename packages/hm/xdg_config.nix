@@ -48,7 +48,7 @@
     documents = "Documents";
     download =
       "Downloads"; # firefox doesn't respect this, so using upper case stuff!
-    music = "Music"; # I think some one doesn't respect this
+    music = "music"; # I think some one doesn't respect this
     videos = "videos";
     pictures = "pictures";
     templates = "tmp";
