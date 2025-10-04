@@ -1,12 +1,12 @@
 # https://nixos.wiki/wiki/Sway
-# I think most of this is unnecesary, but some variation makes screen sharing work on firefox. 
+# I think most of this is unnecesary, but some variation makes screen sharing work on firefox.
 { pkgs, ... }:
 let
   # bash script to let dbus know about important env variables and
   # propagate them to relevent services run at the end of sway config
   # see
   # https://github.com/emersion/xdg-desktop-portal-wlr/wiki/"It-doesn't-work"-Troubleshooting-Checklist
-  # note: this is pretty much the same as  /etc/sway/config.d/nixos.conf but also restarts  
+  # note: this is pretty much the same as  /etc/sway/config.d/nixos.conf but also restarts
   # some user services to make sure they have the correct environment variables
   dbus-sway-environment = pkgs.writeTextFile {
     name = "dbus-sway-environment";
@@ -30,16 +30,19 @@ let
     name = "configure-gtk";
     destination = "/bin/configure-gtk";
     executable = true;
-    text = let
-      schema = pkgs.gsettings-desktop-schemas;
-      datadir = "${schema}/share/gsettings-schemas/${schema.name}";
-    in ''
-      gnome_schema=org.gnome.desktop.interface
-      gsettings set $gnome_schema gtk-theme 'Dracula'
-    '';
+    text =
+      let
+        schema = pkgs.gsettings-desktop-schemas;
+        datadir = "${schema}/share/gsettings-schemas/${schema.name}";
+      in
+      ''
+        gnome_schema=org.gnome.desktop.interface
+        gsettings set $gnome_schema gtk-theme 'Dracula'
+      '';
   };
 
-in {
+in
+{
   # Ideally, I should mix this with home-manager config.
   # But don't want to figure out user stuff
   security.polkit.enable = true;
@@ -48,10 +51,6 @@ in {
 
   hardware.graphics = {
     enable = true;
-    # Added by nixos-hardware
-    # driSupport = true;
-    # driSupport32Bit = true;
-    # extraPackages = with pkgs; [ rocmPackages.clr.icd ];
   }; # Should check for amd?
 
   ######### Not Part of sway-knobs
@@ -66,7 +65,6 @@ in {
     dbus # make dbus-update-activation-environment available in the path
     dbus-sway-environment
     configure-gtk
-
 
     # Use  env `WLR_RENDERER=vulkan` on related errors
     vulkan-validation-layers

@@ -4,7 +4,6 @@ rec {
   inputs = {
     # Specify the source of Home Manager and Nixpkgs.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nixpkgs_working_openwebui.url = "github:nixos/nixpkgs/4633a7c72337ea8fd23a4f2ba3972865e3ec685d";
     flake-utils.url = "github:numtide/flake-utils";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     nixgl = {
@@ -36,14 +35,6 @@ rec {
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    helix_master = {
-      url = "github:helix-editor/helix";
-      # NOTE: do not follow inputs, otherwise the cache will be of no use and
-      #   the sun will go out of fashion before nix-build switch finishes.
-      #   I know it'll be more network/space usage, but time is of essense.
-      # inputs.nixpkgs.follows = "nixpkgs";
-      # inputs.flake-utils.follows = "flake-utils";
-    };
     nur = {
       url = "github:nix-community/NUR";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -63,7 +54,7 @@ rec {
     # So using seperate repo for this stuff. Ideally `dotfiles` repo can be used where you first push than nix flake update, but that seems confusing.
     # To update use `nix flake lock --update-input volume_control_rs`
     volume_control_rs = {
-      url = "github:nkitsaini/hive?dir=volume_control";
+      url = "path:softwares/volume_control";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.utils.follows = "flake-utils";
     };
@@ -77,7 +68,6 @@ rec {
       home-manager,
       nixvim,
 
-      nixpkgs_working_openwebui,
       nur,
       disko,
       ...
@@ -98,31 +88,29 @@ rec {
             inherit system;
             inherit hostname;
             inherit username;
-            inherit pkgs_working_openwebui;
           };
-          modules =
-            [
-              home-manager.nixosModules.home-manager
-              inputs.nur.modules.nixos.default
-              disko.nixosModules.disko
-              inputs.kit.nixosModules.default
-              (
-                { inputs, ... }:
-                {
-                  nix.settings = {
-                    substituters = nixConfig.extra-substituters;
-                    trusted-public-keys = nixConfig.extra-trusted-public-keys;
-                  };
+          modules = [
+            home-manager.nixosModules.home-manager
+            inputs.nur.modules.nixos.default
+            disko.nixosModules.disko
+            inputs.kit.nixosModules.default
+            (
+              { inputs, ... }:
+              {
+                nix.settings = {
+                  substituters = nixConfig.extra-substituters;
+                  trusted-public-keys = nixConfig.extra-trusted-public-keys;
+                };
 
-                  home-manager.sharedModules = [
-                    inputs.kit.hm.default
-                  ];
+                home-manager.sharedModules = [
+                  inputs.kit.hm.default
+                ];
 
-                }
-              )
-            ]
-            ++ extraModules
-            ++ (if (autoIncludeDeviceModule) then [ ./devices/${hostname} ] else [ ]);
+              }
+            )
+          ]
+          ++ extraModules
+          ++ (if (autoIncludeDeviceModule) then [ ./devices/${hostname} ] else [ ]);
 
         };
 
@@ -139,9 +127,6 @@ rec {
         };
       };
 
-      pkgs_working_openwebui = import nixpkgs_working_openwebui {
-        system = system;
-      };
     in
     {
       devShells.${system}.default = pkgs.mkShell {

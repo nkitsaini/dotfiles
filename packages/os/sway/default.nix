@@ -12,12 +12,6 @@ in {
   # services.xserver.enable = true;
   environment.systemPackages = [
     start_desktop_script
-    (pkgs.catppuccin-sddm.override {
-      flavor = "mocha";
-      # CustomBackground = true;
-      background = (import ../../shared/wallpapers.nix).wallpaper3;
-      loginBackground = false;
-    })
     (pkgs.sddm-chili-theme.override {
       themeConfig = {
         blur = false;

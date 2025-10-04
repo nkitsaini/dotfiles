@@ -53,7 +53,7 @@
   security.audit = {
     enable = true;
     rules = [
-      "-a exit,always -F path=/home/kit -F perm=wa -F key=home-watch" # Record file write/attribute changes 
+      "-a exit,always -F path=/home/kit -F perm=wa -F key=home-watch" # Record file write/attribute changes
       "-a always,exit -S execve -F key=process_execution" # Record process create/delete
     ];
   };

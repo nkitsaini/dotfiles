@@ -63,7 +63,7 @@ let
     repeat_delay = "160";
   };
 
-  menu = "${nixGLCommandPrefix}${pkgs.rofi-wayland}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
+  menu = "${nixGLCommandPrefix}${pkgs.rofi}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 
   wallpaper = (import ../../shared/wallpapers.nix).wallpaper3;
 in

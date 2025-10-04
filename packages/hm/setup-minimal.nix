@@ -338,7 +338,6 @@
 
       binutils
       curl
-      dnsutils
       usbutils # lsusb
       lshw
       dosfstools

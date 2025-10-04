@@ -30,7 +30,6 @@
     in
     {
       enable = true;
-      package = inputs.helix_master.packages.${system}.default;
       # defaultEditor = true; # does not provide absolute path so fails with sudo, but actually should it?, explicitly setting EDITOR for now
 
       extraPackages = with pkgs; [

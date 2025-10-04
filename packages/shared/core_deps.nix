@@ -5,7 +5,6 @@ pkgs: with pkgs; [
   binutils
   coreutils-full
   curl
-  dnsutils
   dosfstools
   fd
   devenv
