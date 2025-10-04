@@ -55,7 +55,7 @@ fn main() -> anyhow::Result<()> {
 
     let mut new_volume = cli
         .volume_change
-        .apply(current_volume)
+        .apply_to(current_volume)
         .min(MAX_VOLUME)
         .max(0.);
 
