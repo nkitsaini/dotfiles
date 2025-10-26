@@ -36,3 +36,10 @@ gdbus call --session \
 ```
 
 - restart to let things like .desktop discovery take effect
+- Install wireplumber for wpctl to work (used for volume_control_rs script)
+```
+sudo apt install wireplumber pipewire-audio-client-libraries libspa-0.2-bluetooth
+systemctl --user --now enable wireplumber.service 
+systemctl --user restart pipewire pipewire-pulse wireplumber 
+```
+
