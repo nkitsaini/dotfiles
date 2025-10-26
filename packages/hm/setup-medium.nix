@@ -104,7 +104,7 @@
       # shows cp etc. progress
       progress
 
-      transmission_4-qt
+      transmission_4-qt6
 
       texliveMedium
 
