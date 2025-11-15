@@ -8,7 +8,7 @@
 {
   # TODO: use config.home-files to reference files inside current home-manager generation instead of path from home-directory. Currently config.home-files gives infinite recursion.
   home.sessionVariables = {
-    EDITOR = "${config.home.homeDirectory}/.local/state/nix/profiles/home-manager/home-path/bin/hx";
+    EDITOR = "hx";
   };
   programs.helix =
     let

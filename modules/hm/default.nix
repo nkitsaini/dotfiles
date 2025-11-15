@@ -9,5 +9,6 @@
   imports = [
     ./programs
     ./blocks
+    ./services
   ];
 }

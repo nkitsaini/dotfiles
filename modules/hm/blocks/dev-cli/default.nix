@@ -25,6 +25,9 @@ in
     home.packages = with pkgs; [
       # Decode jwts
       jwtinfo
+
+      # Live Serve (with hot-reloading) HTML, CSS etc.
+      live-server
     ];
   };
 }

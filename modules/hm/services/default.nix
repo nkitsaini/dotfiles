@@ -7,8 +7,5 @@
 
 {
   imports = [
-    ./services
-    ./programs
-    ./blocks
   ];
 }

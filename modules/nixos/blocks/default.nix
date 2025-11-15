@@ -7,8 +7,6 @@
 
 {
   imports = [
-    ./services
-    ./programs
-    ./blocks
+    ./gui-streaming
   ];
 }

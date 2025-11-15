@@ -46,6 +46,8 @@
     ../../users/root
   ];
 
+  kit.blocks.gui-streaming.enable = true;
+
   home-manager.users.${username} = {
     imports = [ ../../packages/hm/setup-full.nix ];
   };

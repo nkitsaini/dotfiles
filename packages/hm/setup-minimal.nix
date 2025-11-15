@@ -188,7 +188,8 @@
       rclone
       ddcutil
       tmux
-      tmuxp
+      # tmuxp is broken
+      # tmuxp
       just
       grc
       fzf

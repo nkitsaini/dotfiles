@@ -1,12 +1,16 @@
-{ pkgs, ... }: {
-  imports = [ ./setup-medium.nix ./vscode ];
+{ pkgs, ... }:
+{
+  imports = [
+    ./setup-medium.nix
+    ./vscode
+  ];
 
   home.packages = with pkgs; [
-  obs-studio
-  evcxr
-  brave
-  github-desktop
-  pandoc
-  chromium
+    obs-studio
+    evcxr
+    brave
+    github-desktop
+    pandoc
+    chromium
   ];
 }

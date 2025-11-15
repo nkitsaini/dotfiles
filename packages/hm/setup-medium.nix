@@ -117,13 +117,12 @@
       appimage-run
 
       # Easy drag and drop for tiling wm
-      xdragon
+      dragon-drop
 
       # From old fish history
       kdePackages.dolphin
       kdePackages.konsole
       gparted
-
 
       # Required for something in neovim/neorg
       imagemagick

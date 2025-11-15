@@ -21,7 +21,7 @@ rec {
   ];
 
   programs.nix-ld.enable = true;
-  programs.nix-ld.package = pkgs.nix-ld-rs;
+  programs.nix-ld.package = pkgs.nix-ld;
   # Initially from: https://github.com/Mic92/dotfiles/blob/ce4d81790ac9111324b25d0b3fc5748d241f2f6f/nixos/modules/nix-ld.nix#L6
   programs.nix-ld.libraries = with pkgs; [
     glibc.dev
