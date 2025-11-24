@@ -4,6 +4,7 @@
   inputs,
   lib,
   system,
+  module_inputs,
   ...
 }:
 
@@ -12,7 +13,7 @@ let
   cfg = config.kit.services.notes-sync;
 
   notesDirectory = "${config.home.homeDirectory}/code/notes";
-  git_syncer = inputs.git_syncer.packages.${system}.default;
+  git_syncer = module_inputs.git_syncer.packages.${system}.default;
 in
 {
   options.kit.services.notes-sync = {
