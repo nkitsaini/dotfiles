@@ -1,15 +1,22 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-  };
 
-  outputs = _: {
-    nixosModules = {
-      default = import ./nixos;
-    };
-
-    hm = {
-      default = import ./hm;
+    git_syncer = {
+      url = "path:../softwares/git_syncer";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
+
+  outputs =
+    { ... }@inputs:
+    {
+      nixosModules = {
+        default = import ./nixos;
+      };
+
+      hm = {
+        default = import ./hm;
+      };
+    };
 }

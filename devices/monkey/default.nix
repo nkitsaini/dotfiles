@@ -50,6 +50,10 @@
 
   home-manager.users.${username} = {
     imports = [ ../../packages/hm/setup-full.nix ];
+
+    kit.services = {
+      notes-sync.enable = true;
+    };
   };
 
   security.audit = {

@@ -2,8 +2,9 @@
   config,
   lib,
   pkgs,
+  system,
   ...
-}:
+}@inputs:
 
 with lib;
 
@@ -28,6 +29,7 @@ in
 
       # Live Serve (with hot-reloading) HTML, CSS etc.
       live-server
+      inputs.inputs.git_syncer.packages.${system}.default
     ];
   };
 }

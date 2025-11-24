@@ -44,20 +44,12 @@ rec {
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # TODO: This has been fixed in https://github.com/NixOS/nix/pull/10089
-    # Bring relevant code in this repo itself
-    #
-    # Nix doesn't have good support for importing flakes within same repo.
-    # if imported using path:... syntax, it uses narHash which might be missing
-    # from other developers machine.
-    # The way of merging inputs together and calling `outputs` directly works *until* inputs have duplicates
-    # So using seperate repo for this stuff. Ideally `dotfiles` repo can be used where you first push than nix flake update, but that seems confusing.
-    # To update use `nix flake lock --update-input volume_control_rs`
     volume_control_rs = {
       url = "path:softwares/volume_control";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.utils.follows = "flake-utils";
     };
+
   };
 
   outputs =
