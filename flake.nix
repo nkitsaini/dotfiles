@@ -111,7 +111,7 @@ rec {
       pkgs = import nixpkgs {
         system = system;
         overlays = [
-          inputs.nur.overlay
+          inputs.nur.overlays.default
           inputs.nixgl.overlay
         ];
         config = {

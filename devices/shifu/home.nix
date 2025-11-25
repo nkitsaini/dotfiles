@@ -7,8 +7,8 @@
     homeDirectory = "/home/${username}";
   in
   {
-    programs.git.userName = name;
-    programs.git.userEmail = email;
+    programs.git.settings.user.name = name;
+    programs.git.settings.user.email = email;
     programs.jujutsu.settings.user.name = name;
     programs.jujutsu.settings.user.email = email;
     home.username = username;
@@ -27,6 +27,10 @@
       "x-scheme-handler/slack" = [ "slack.desktop" ];
     };
     targets.genericLinux.enable = true;
+
+    kit.services = {
+      notes-sync.enable = true;
+    };
 
     programs.fish.shellAliases.rebuild-system = "home-manager switch --flake ${homeDirectory}/code/dotfiles/#shifu";
   }

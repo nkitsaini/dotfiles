@@ -5,8 +5,8 @@
   username = "asaini";
   homeDirectory = "/home/${username}";
 in {
-  programs.git.userName = name;
-  programs.git.userEmail = email;
+  programs.git.settings.user.name = name;
+  programs.git.settings.user.email = email;
   programs.jujutsu.settings.user.name = name;
   programs.jujutsu.settings.user.email = email;
   home.username = username;
@@ -40,4 +40,3 @@ in {
     xfce.xfwm4
   ];
 })
-

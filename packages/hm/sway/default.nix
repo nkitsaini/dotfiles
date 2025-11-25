@@ -2,7 +2,6 @@
 {
   pkgs,
   config,
-  system,
   inputs,
   nixGLCommandPrefix ? "",
   disableSwayLock ? false,
@@ -302,10 +301,10 @@ in
 
       ## Pulse Audio controls
       "XF86AudioRaiseVolume" = "exec --no-startup-id ${
-        inputs.volume_control_rs.defaultPackage.${system}
+        inputs.volume_control_rs.defaultPackage.${pkgs.stdenv.hostPlatform.system}
       }/bin/volume_control -- +0.05"; # increase sound volume
       "XF86AudioLowerVolume" = "exec --no-startup-id ${
-        inputs.volume_control_rs.defaultPackage.${system}
+        inputs.volume_control_rs.defaultPackage.${pkgs.stdenv.hostPlatform.system}
       }/bin/volume_control -- -0.05"; # decrease sound volume
       "XF86AudioMute" =
         "exec --no-startup-id ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; # mute sound

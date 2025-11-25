@@ -1,4 +1,4 @@
-{ config, system, pkgs, inputs, ... }:
+{ config, pkgs, inputs, ... }:
 let
   # Allow key overrides like <Ctrl+t> in firefox for default
   # bindings
@@ -30,7 +30,7 @@ in {
     unbind --mode=normal <C-f>
 
     # To open new tabs in personal container: bind <C-t> tabopen -c personal
-    # 
+    #
     # To view current autocmd's run `:viewconfig autocmd`
 
     command kit_status viewconfig autocmds
@@ -42,7 +42,7 @@ in {
   xdg.configFile."tridactyl/grayscale.js".source = pkgs.runCommand "tridactyl-grayscale-build" {} "${pkgs.bun}/bin/bun build ${./tridactyl_grayscale.ts} --outfile=$out";
 
   # TODO: Set `network.proxy.allow_hijacking_localhost=true` (about:config)
-  
+
   # remove after this: https://bugzilla.mozilla.org/show_bug.cgi?id=259356
   programs.firefox.policies = {
     # TODO: move everyone to `~/Downloads`, some tools just want to write to `~/Downloads` irrespective of your wish
@@ -51,8 +51,8 @@ in {
 
   programs.firefox.profiles."default" = {
     settings = {
-     "sidebar.revamp" = true; 
-     "sidebar.verticalTabs" = true; 
+     "sidebar.revamp" = true;
+     "sidebar.verticalTabs" = true;
     };
     # containers = {
     #   personal = {

@@ -1,2 +1,5 @@
-- git config
-- ssh config
+- Find a way to manage secrets
+  - Evaluate:
+    - Public repo with encrpted secrets
+    - Public repo (base) + Private repo (encrypted secrets, wrapper)
+    - Can I use Bitwarden?

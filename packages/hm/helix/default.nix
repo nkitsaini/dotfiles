@@ -2,7 +2,6 @@
   config,
   pkgs,
   inputs,
-  system,
   ...
 }:
 {
@@ -43,7 +42,7 @@
         tinymist
         biome
         pyright
-        dockerfile-language-server-nodejs
+        dockerfile-language-server
         docker-compose-language-service
         yaml-language-server
         ruff

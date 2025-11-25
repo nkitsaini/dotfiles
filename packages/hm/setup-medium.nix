@@ -89,7 +89,6 @@
       # pypy3.override (y: { sqlite = sqlite.overrideAttrs (x: { configureFlags = x.configureFlags ++ ["--soname=legacy"];});})
 
       usbutils
-      # inputs.nkitsaini_notes_utils.packages.${system}.default
 
       # I3 specific
       i3

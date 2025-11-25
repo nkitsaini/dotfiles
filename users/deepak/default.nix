@@ -9,8 +9,8 @@ in {
     home.username = username;
     home.homeDirectory = homeDirectory;
 
-    programs.git.userName = name;
-    programs.git.userEmail = email;
+    programs.git.settings.user.name = name;
+    programs.git.settings.user.email = email;
     programs.jujutsu.settings.user.name = name;
     programs.jujutsu.settings.user.email = email;
     programs.fish.shellAliases.rebuild-system =
