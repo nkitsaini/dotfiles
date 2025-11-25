@@ -9,18 +9,30 @@ import {
 	string,
 	number,
 	positional,
+	oneOf,
 	option,
 	optional,
 } from "cmd-ts";
 
 // --- Helper Functions ---
 
+type NotificationLevel = "critical" | "normal";
+let NOTIFICATION_LEVEL: NotificationLevel = "critical";
 /** Sends a desktop notification using notify-send */
 async function sendNotification(
 	title: string,
 	message: string,
-	level: "normal" | "critical" = "normal",
+	level: NotificationLevel = "normal",
 ) {
+	if (level !== "critical" || NOTIFICATION_LEVEL === "critical") {
+		console.log("Ignoring non-critical notification.", {
+			level,
+			title,
+			message,
+		});
+
+		return;
+	}
 	try {
 		await spawn(["notify-send", "-u", level, title, message]).exited;
 	} catch (e) {
@@ -207,6 +219,11 @@ const cmd = command({
 			type: optional(string),
 			description: "ntfy.sh channel to listen to for remote updates",
 		}),
+		notification_level: option({
+			long: "notification_level",
+			type: oneOf(["normal", "critical"] as const),
+			defaultValue: () => "critical" as const,
+		}),
 		ntfy_channel_file: option({
 			long: "ntfy-channel-file",
 			type: string,
@@ -232,10 +249,10 @@ const cmd = command({
 			}
 			args.ntfy_channel = (await file.text()).trim();
 		}
-
 		if (!args.ntfy_channel) {
 			throw new Error("ntfy channel must be specified (see help)");
 		}
+		NOTIFICATION_LEVEL = args.notification_level;
 		main(args.git_directory, args.cooldown_ms, args.ntfy_channel);
 	},
 });
