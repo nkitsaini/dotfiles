@@ -39,7 +39,7 @@
 
     attributes = [ "*.lockb binary diff=lockb" ];
     settings = {
-      aliases = {
+      alias = {
         l = "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset %C(yellow)%an%Creset' --abbrev-commit --date=relative";
         ls = "log --stat --oneline";
         pf = "push --force-with-lease";
