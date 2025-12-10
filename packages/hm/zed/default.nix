@@ -12,6 +12,7 @@
       # Nix support
       nil
       nixd
+      marksman
     ]
     ++ (
       if nixGLCommandPrefix != "" then
