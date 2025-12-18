@@ -1,5 +1,14 @@
-- Find a way to manage secrets
+- [ ] Find a way to manage secrets
   - Evaluate:
-    - Public repo with encrpted secrets
+    - Public repo with encrypted secrets
     - Public repo (base) + Private repo (encrypted secrets, wrapper)
     - Can I use Bitwarden?
+
+- [ ] Have a standard `kit-runtime-setup` command to do setup that doesn't belong to nix config
+  - Creating files that should not be in `/nix/store`
+    - Like `~/.ssh/nix_config` is symlinked
+    - Like `~/.ssh/config` import the above and is writable by user
+  - Copies k3d connection information etc.
+  - Showing instructions for how to do system setup in case the system is only home-manager based
+  - Should probably have `--dry-run` (changes that are going to be made), `--diff` (what has changed on disk)
+  - Be careful to not lose user files. Always, always, always backup!

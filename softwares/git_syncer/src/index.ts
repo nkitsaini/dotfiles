@@ -49,10 +49,12 @@ async function isBinaryFile(filePath: string): Promise<boolean> {
 // --- Core Logic ---
 
 /** Main Sync Function */
-async function syncChanges(log: Logger<unknown>, repository: string) {
+async function syncChanges(log: Logger<unknown>, repository: string, commitOnly = false) {
   log.info("[Sync] Processing changes...");
   try {
-    await pullUpdates(log, repository);
+    if (!commitOnly) {
+      await pullUpdates(log, repository);
+    }
 
     // 1. Get Status
     const statusOutput = await runCommand(
@@ -97,8 +99,12 @@ async function syncChanges(log: Logger<unknown>, repository: string) {
       );
       log.info(`[Sync] Committed ${filesToAdd.length} files.`);
 
-      await runCommand(["git", "push"], repository);
-      log.info("[Sync] Pushed to remote.");
+      if (!commitOnly) {
+        await runCommand(["git", "push"], repository);
+        log.info("[Sync] Pushed to remote.");
+      } else {
+        log.info(`[Sync] Committed ${filesToAdd.length} files (commit-only mode).`);
+      }
     } else {
       log.info("[Sync] No files to add.");
     }
@@ -174,12 +180,33 @@ async function runContinousSync(repository: string): Promise<() => void> {
 
   const sync = R.funnel(
     reportOnFailures(async () => {
-      return await syncChanges(log, repository);
+      return await syncChanges(log, repository, config.commit_only);
     }),
     {
       minQuietPeriodMs: config.push_debounce_period_ms,
     },
   );
+
+  watcher.on("all", (event, path) => {
+    log.info(`[Watch] ${event}: ${path}`);
+    sync.call();
+  });
+
+  // Initial Sync
+  sync.call()
+
+  const triggerCancels: (() => void)[] = [];
+
+  const cancel = () => {
+    watcher.close();
+    for (const cancel of triggerCancels) {
+      cancel();
+    }
+  };
+
+  if (config.commit_only) {
+    return cancel;
+  }
 
   const pull = R.funnel(
     reportOnFailures(async () => {
@@ -189,13 +216,6 @@ async function runContinousSync(repository: string): Promise<() => void> {
       minQuietPeriodMs: config.pull_debounce_period_ms,
     },
   );
-
-  watcher.on("all", (event, path) => {
-    log.info(`[Watch] ${event}: ${path}`);
-    sync.call();
-  });
-
-  const triggerCancels: (() => void)[] = [];
 
   for (const trigger of config.pull_triggers) {
     if (trigger.type === "recurring") {
@@ -218,16 +238,9 @@ async function runContinousSync(repository: string): Promise<() => void> {
     }
   }
 
-  // Initial Sync
-  sync.call()
 
   log.info(`[Setup] Initialized watch for repository: ${repository}`);
-  return () => {
-    watcher.close();
-    for (const cancel of triggerCancels) {
-      cancel();
-    }
-  };
+  return cancel
 }
 
 function retryableEventSource(
@@ -311,6 +324,9 @@ const cmd = command({
   },
   handler: async (args) => {
     attachNotificationTransport(LogLevel[args.notification_level]);
+    let log = logger.getSubLogger({name: "sdf", attributes: {a: 7} }, () => ({9: {memory: 3}}))
+    log.info("hello")
+    log.info("hello", {a: 1}, {b: 1})
     main([args.mainRepository, ...args.repositories]);
   },
 });

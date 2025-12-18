@@ -1,7 +1,6 @@
 {
   pkgs,
   config,
-  inputs,
   lib,
   module_inputs,
   ...
@@ -18,10 +17,10 @@ in
   options.kit.services.notes-sync = {
     enable = mkEnableOption "Enable syncing notes directory";
 
-    directory = mkOption {
-      type = types.str;
-      default = notesDirectory;
-      description = "Path to notes directory to sync";
+    repositories = mkOption {
+      type = types.listOf types.str;
+      default = [notesDirectory];
+      description = "Path to repositories to sync";
     };
   };
 
@@ -35,7 +34,9 @@ in
       };
 
       Service = {
-        ExecStart = "${git_syncer}/bin/git_syncer  --ntfy-channel-file ${notesDirectory}/.ntfy-channel ${notesDirectory}";
+        ExecStart = lib.concatStringsSep " " ([
+          "${git_syncer}/bin/git_syncer"
+        ] ++ cfg.repositories);
         Restart = "on-failure";
         RuntimeMaxSec = "5h";
       };

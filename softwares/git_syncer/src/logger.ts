@@ -1,6 +1,7 @@
 import { Logger } from "tslog";
 import util from "util";
 import { exec } from "child_process";
+import pino from 'pino'
 
 export enum LogLevel {
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -23,9 +24,8 @@ export const LEVELS = Object.keys(LogLevel).filter((k) =>
   isNaN(Number(k)),
 ) as Level[];
 
-export const logger = new Logger({});
-const skipNotificationKey = "skip_notification";  // used to avoid infinite loop
-
+export const logger = new Logger({ name: "main", type: "json"}, {9: {b: 8}});
+const skipNotificationKey = "skip_notification"; // used to avoid infinite loop
 
 export function attachNotificationTransport(level: LogLevel) {
   logger.attachTransport((log) => {
@@ -34,7 +34,7 @@ export function attachNotificationTransport(level: LogLevel) {
       return;
     }
     if (log["_meta"]["logLevelId"] < level) {
-      return
+      return;
     }
 
     let notificationLevel: "normal" | "critical" = "normal";
@@ -58,7 +58,9 @@ async function sendNotification(
     const execPromise = util.promisify(exec);
     const escapedTitle = title.replace(/"/g, '\\"');
     const escapedMessage = message.replace(/"/g, '\\"');
-    await execPromise(`notify-send -u ${level} "${escapedTitle}" "${escapedMessage}"`);
+    await execPromise(
+      `notify-send -u ${level} "${escapedTitle}" "${escapedMessage}"`,
+    );
   } catch (e) {
     logger.log(
       LogLevel.ERROR,

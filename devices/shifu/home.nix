@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
 (
   let
     name = "Ankit Saini";
@@ -29,7 +29,12 @@
     targets.genericLinux.enable = true;
 
     kit.services = {
-      notes-sync.enable = true;
+      notes-sync = {
+        enable = true;
+        repositories = pkgs.lib.mkOptionDefault [
+           "${config.home.homeDirectory}/workspace/notes"
+        ];
+      };
     };
 
     programs.fish.shellAliases.rebuild-system = "home-manager switch --flake ${homeDirectory}/code/dotfiles/#shifu";
