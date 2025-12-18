@@ -4,7 +4,7 @@
       "type": "object",
       "properties": {
         "commit_only": {
-          "const": false,
+          "type": "boolean",
           "default": false,
           "description": "If true, no pull or push will be attempted"
         },
