@@ -14,13 +14,13 @@ import {
   positional,
 } from "cmd-ts";
 import {
-  attachNotificationTransport,
+  configureLogging,
   LEVELS,
   logger,
   LogLevel,
 } from "./logger";
 import { readConfigForRepo } from "./config";
-import type { Logger } from "tslog";
+import type { Logger } from "@logtape/logtape";
 
 /** execute a shell command and return stdout or throw error */
 async function runCommand(cmd: string[], cwd: string) {
@@ -49,7 +49,7 @@ async function isBinaryFile(filePath: string): Promise<boolean> {
 // --- Core Logic ---
 
 /** Main Sync Function */
-async function syncChanges(log: Logger<unknown>, repository: string, commitOnly = false) {
+async function syncChanges(log: Logger, repository: string, commitOnly = false) {
   log.info("[Sync] Processing changes...");
   try {
     if (!commitOnly) {
@@ -109,13 +109,13 @@ async function syncChanges(log: Logger<unknown>, repository: string, commitOnly 
       log.info("[Sync] No files to add.");
     }
   } catch (error) {
-    log.error("[Sync] Error during sync:", error);
+    log.error("[Sync] Error during sync:", {error});
   }
 }
 
 /** Pull updates from remote */
 async function pullUpdates(
-  log: Logger<unknown>,
+  log: Logger,
   respository: string,
   errorOk = false,
 ) {
@@ -124,7 +124,7 @@ async function pullUpdates(
     await runCommand(["git", "pull"], respository);
     log.info("[Remote] Pulled successfully.");
   } catch (error) {
-    log.warn("[Remote] Pull failed (ignored):", error);
+    log.warn("[Remote] Pull failed (ignored):", {error});
     if (!errorOk) {
       throw error;
     }
@@ -152,17 +152,17 @@ function reportOnFailures(fn: () => Promise<void>): () => Promise<void> {
     } catch (e) {
       syncErrors.push(e);
       if (syncErrors.length >= 5) {
-        logger.error(`Too many errors occurred during syncs.`, e);
+        logger.error(`Too many errors occurred during syncs.`, {e});
         syncErrors.length = 0;
       } else {
-        logger.warn(`Error occurred during sync:`, e);
+        logger.warn(`Error occurred during sync:`, {e});
       }
     }
   };
 }
 
 async function runContinousSync(repository: string): Promise<() => void> {
-  const log = logger.getSubLogger({}, { repository });
+  const log = logger.with({ repository });
   await verifyGitRepository(repository);
 
   const config = await readConfigForRepo(repository);
@@ -244,7 +244,7 @@ async function runContinousSync(repository: string): Promise<() => void> {
 }
 
 function retryableEventSource(
-  log: Logger<unknown>,
+  log: Logger,
   url: string,
   onMessage: () => void,
 ): () => void {
@@ -263,7 +263,7 @@ function retryableEventSource(
     };
 
     eventSource.onerror = (err) => {
-      log.error(`[SSE] Connection error (will retry):`, err, { url });
+      log.error(`[SSE] Connection error (will retry):`, { url, err});
       if (eventSource) {
         eventSource.close();
         eventSource = null;
@@ -319,14 +319,11 @@ const cmd = command({
       long: "notification_level",
       type: oneOf(LEVELS),
       description: "Logs above this level will be sent as notification",
-      defaultValue: () => "ERROR" as const,
+      defaultValue: () => "error" as const,
     }),
   },
   handler: async (args) => {
-    attachNotificationTransport(LogLevel[args.notification_level]);
-    let log = logger.getSubLogger({name: "sdf", attributes: {a: 7} }, () => ({9: {memory: 3}}))
-    log.info("hello")
-    log.info("hello", {a: 1}, {b: 1})
+    configureLogging(LogLevel[args.notification_level]);
     main([args.mainRepository, ...args.repositories]);
   },
 });

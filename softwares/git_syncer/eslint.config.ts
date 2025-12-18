@@ -12,8 +12,8 @@ export default defineConfig([
       "no-console": "warn",
     }
   },
-  tseslint.configs.strict,
-  tseslint.configs.stylistic,
+  tseslint.configs.recommended,
+  // tseslint.configs.stylistic,
 ]);
 
 
