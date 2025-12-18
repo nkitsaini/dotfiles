@@ -56,6 +56,10 @@ export async function configureLogging(
         lowestLevel: "debug",
         sinks: ["console", "notification"],
       },
+      {
+        category: ["logtape", "meta"],
+        sinks: [],
+      },
     ],
   });
 }
