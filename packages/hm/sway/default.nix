@@ -12,7 +12,7 @@ let
   right = "l";
   up = "k";
   down = "j";
-  terminal_cmd = "${pkgs.wezterm}/bin/wezterm";
+  terminal_cmd = "${pkgs.ghostty}/bin/ghostty";
 
   sway_display_control = pkgs.writeShellApplication {
     name = "sway-display-control";

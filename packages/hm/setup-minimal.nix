@@ -70,7 +70,7 @@
     controlPath = "~/.ssh/master-%r@%n:%p";
     controlPersist = "no";
   };
-  programs.ssh.includes = ["${config.home.homeDirectory}/.ssh/user_config"];
+  programs.ssh.includes = [ "${config.home.homeDirectory}/.ssh/user_config" ];
 
   programs.ripgrep = {
     enable = true;
@@ -183,7 +183,11 @@
       zip
       unzip
       gnutar
-      rustup
+
+      (pkgs.rustup.overrideAttrs (old: {
+        # do not run rustup tests if cache is missing. They take forever.
+        doCheck = false;
+      }))
 
       qrencode
       s3fs

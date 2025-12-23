@@ -1,4 +1,9 @@
-{ config, pkgs, inputs, ... }:
+{
+  config,
+  pkgs,
+  inputs,
+  ...
+}:
 let
   # Allow key overrides like <Ctrl+t> in firefox for default
   # bindings
@@ -8,10 +13,14 @@ let
       perl -i -pne 's/reserved="true"/               /g' $out/lib/firefox/browser/omni.ja
     '';
   });
-in {
+in
+{
   programs.firefox.enable = true;
 
-  home.packages = with pkgs; [ xdg-desktop-portal-xapp xdg-desktop-portal-gtk ];
+  home.packages = with pkgs; [
+    xdg-desktop-portal-xapp
+    xdg-desktop-portal-gtk
+  ];
 
   programs.firefox.package = firefox_patched.override {
     # See nixpkgs' firefox/wrapper.nix to check which options you can use
@@ -24,7 +33,7 @@ in {
   # TODO: use absolute path to `hx`. It's not in helix_master/bin/hx but in
   # home-manager-path/bin/hx
   xdg.configFile."tridactyl/tridactylrc".text = ''
-    js tri.config.set("editorcmd", "${pkgs.wezterm}/bin/wezterm -e hx")
+    js tri.config.set("editorcmd", "${pkgs.ghostty}/bin/ghostty -e hx")
     js tri.config.set("theme", "shydactyl")
     bind --mode=normal <C-V> mode ignore
     unbind --mode=normal <C-f>
@@ -38,8 +47,12 @@ in {
     command kit_stop composite autocmddelete TriStart .* js -s -r ./autoclose.js | autocmddelete DocStart .* js -s -r ./autoclose.js | autocmddelete TriStart (www\.)?youtube.com js -s -r ./grayscale.js | autocmddelete DocStart (www\.)?youtube.com js -s -r ./grayscale.js
     command kit_grayscale_override js 'document.documentElement.style.filter = ""'
   '';
-  xdg.configFile."tridactyl/autoclose.js".source = pkgs.runCommand "tridactyl-autoclose-build" {} "${pkgs.bun}/bin/bun build ${./tridactyl_autoclose.ts} --outfile=$out";
-  xdg.configFile."tridactyl/grayscale.js".source = pkgs.runCommand "tridactyl-grayscale-build" {} "${pkgs.bun}/bin/bun build ${./tridactyl_grayscale.ts} --outfile=$out";
+  xdg.configFile."tridactyl/autoclose.js".source =
+    pkgs.runCommand "tridactyl-autoclose-build" { }
+      "${pkgs.bun}/bin/bun build ${./tridactyl_autoclose.ts} --outfile=$out";
+  xdg.configFile."tridactyl/grayscale.js".source =
+    pkgs.runCommand "tridactyl-grayscale-build" { }
+      "${pkgs.bun}/bin/bun build ${./tridactyl_grayscale.ts} --outfile=$out";
 
   # TODO: Set `network.proxy.allow_hijacking_localhost=true` (about:config)
 
@@ -51,8 +64,8 @@ in {
 
   programs.firefox.profiles."default" = {
     settings = {
-     "sidebar.revamp" = true;
-     "sidebar.verticalTabs" = true;
+      "sidebar.revamp" = true;
+      "sidebar.verticalTabs" = true;
     };
     # containers = {
     #   personal = {

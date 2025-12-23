@@ -8,5 +8,6 @@
 {
   imports = [
     ./k9s
+    ./ghostty
   ];
 }

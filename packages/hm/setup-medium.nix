@@ -8,7 +8,6 @@
 {
   imports = [
     ./setup-minimal.nix
-    ./wezterm
     ./firefox
     ./mpv
     ./theme
@@ -21,6 +20,8 @@
   modules.editors.emacs = {
     enable = false; # This is broken, need to delete emacs config altogether
   };
+
+  kit.programs.ghostty.enable = true;
 
   services.blueman-applet.enable = false; # Disabled as it enables auto-connect for some reason
 
@@ -77,7 +78,6 @@
       zed-editor
 
       alacritty-theme
-      wezterm
 
       eog
       seahorse # for keyring
