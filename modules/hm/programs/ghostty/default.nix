@@ -22,9 +22,10 @@ in
         "font-family" = "Noto Sans Mono";
         "font-size" = 14;
         "keybind" = "ctrl+[=esc:";
-        minimum-contrast = 1.5;
+        minimum-contrast = 1.3;
         bold-color = "bright";
         font-style-bold = false;
+        cursor-invert-fg-bg = true;
       };
     };
   };
