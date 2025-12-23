@@ -6,7 +6,8 @@
 }:
 {
   imports = [
-    ./hardware-configuration.nix
+    # ./hardware-configuration.nix
+    ../../hardware/ovh_vps.nix
     # TODO: clean the files too
     # ./wireguard.nix
     ./disco.nix
@@ -36,15 +37,17 @@
 
   # TODO: This is bad code. I need to refactor user handling.
   # The refactoring is is blocked on modules refactor in "modules/" folder.
-  users.users.${username}.hashedPassword = pkgs.lib.mkForce "$6$Pi4RhszjfUMHGAGc$uhXuc2lC0/LJevFwZW6dbSHgvGmw596HbNwVvi9.CUl8Z0SoWNezkcgoS5M9HBM.9R52qQVZwRIE4CbHeNHEY.";
+  users.users.${username}.hashedPassword =
+    pkgs.lib.mkForce "$6$Pi4RhszjfUMHGAGc$uhXuc2lC0/LJevFwZW6dbSHgvGmw596HbNwVvi9.CUl8Z0SoWNezkcgoS5M9HBM.9R52qQVZwRIE4CbHeNHEY.";
 
   home-manager.users.${username} = {
     imports = [
       ../../packages/hm/setup-minimal.nix
-      ../../packages/hm/notes-git-push
       ../../packages/hm/aria2/rpc-service.nix
     ];
   };
+
+  kit.services.k3s.enable = true;
 
   networking.firewall.allowedTCPPorts = [
     80
@@ -53,20 +56,20 @@
     9443
   ];
 
-  systemd.network.networks."20-wan" = {
-    matchConfig.Name = "enp1s0"; # either ens3 or enp1s0, check 'ip addr'
-    networkConfig = {
-      IPv6PrivacyExtensions = "yes";
-      DHCP = "ipv4";
-    };
-    address = [
-      # replace this subnet with the one assigned to your instance
-      "2a01:4f8:1c1c:d4da::1/64" # TODO: move this elsewhere
-    ];
-    routes = [
-      { Gateway = "fe80::1"; }
-    ];
-  };
+  # systemd.network.networks."20-wan" = {
+  #   matchConfig.Name = "enp1s0"; # either ens3 or enp1s0, check 'ip addr'
+  #   networkConfig = {
+  #     IPv6PrivacyExtensions = "yes";
+  #     DHCP = "ipv4";
+  #   };
+  #   address = [
+  #     # replace this subnet with the one assigned to your instance
+  #     "2a01:4f8:1c1c:d4da::1/64" # TODO: move this elsewhere
+  #   ];
+  #   routes = [
+  #     { Gateway = "fe80::1"; }
+  #   ];
+  # };
 
   boot.loader.grub = {
     enable = true;

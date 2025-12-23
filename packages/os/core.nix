@@ -80,7 +80,11 @@
     "fs.inotify.max_user_watches" = 524288;
     "fs.inotify.max_queued_events" = 524288;
     "fs.inotify.max_user_instances" = 524288;
+
+    "net.ipv4.tcp_congestion_control" = "bbr";
+    "net.core.default_qdisc" = "fq";
   };
+  boot.kernelModules = [ "tcp_bbr" ];
 
   # Record and preloads the binaries in memory
   # for fast startups

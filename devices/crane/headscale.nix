@@ -4,7 +4,43 @@ let
   derpPort = 3478;
 in
 {
-	# NOTE: This is deprecated. See crane2/headscale
+  # MIGRATION/BACKUP GUIDE:
+  #    Stop headscale on both: sudo systemctl stop headscale
+  #    Just copy /var/lib/headscale from one machine to another (while headscale is stopped.)
+  #    Fix permissions with:
+  # 			sudo chown -R headscale:headscale /var/lib/headscale
+  #       sudo chmod 644 /var/lib/headscale/*
+  #       sudo chmod 755 /var/lib/headscale/
+  #    Modify DNS for headscale.nkit.dev to new host IP (IMPORTANT: for both ipv4 and ipv6)
+  #    Setup the "headscale" servers tailscale client again. And set as exit-node
+  #      [See On cloud instructions below]
+  #    Start headscale on new host
+  #
+  #    ON clients restart tailscale via systemd or force stop on android (no re-auth required).
+  #    sudo systemctl restart tailscale
+  #
+  #    Test for debugging:
+  # 			`xh https://headscale.nkit.dev/health` (see IP with `curl -v` too)
+
+  # ref:
+  #  - https://headscale.net/exit-node/
+  #  - https://headscale.net/android-client/
+
+  # headscale users create <user>
+
+  # TODO: simplify the below stuff
+  # On Cloud:
+  #   tailscale up --login-server https://headscale.nkit.dev --ssh --advertise-exit-node
+  #   headscale nodes register ... --user <user>
+  #   headscale nodes list-routes
+  #   headscale nodes approve-routes -r "0.0.0.0/0,::/0" -i 1 # Or ID of route from list-routes
+
+  # On Android:
+  #   tailscale up --login-server https://headscale.nkit.dev
+  #   tailscale exit-node list
+  #   tailscale up --login-server https://headscale.nkit.dev --exit-node crane
+  #   headscale nodes register ... --user <user>
+
   services = {
     headscale = {
       enable = true;
@@ -44,7 +80,7 @@ in
         dns = {
           override_local_dns = true;
           nameservers.global = [ "1.1.1.1" ]; # TODO: and 100.100.100.100?
-          base_domain = "hs.nkit.dev";
+          base_domain = "nkit.home.arpa"; # To avoid random issue, never add a domain that has wildcard entry. (Tailscale -> DNS Search Domain -> Cloudflare)
         };
         # ip_prefixes = "100.64.0.0/24";
         # prefixes = {

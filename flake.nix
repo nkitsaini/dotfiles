@@ -188,11 +188,10 @@ rec {
       # 3. have home-manager config imported through default.nix
       # 4. manage disk through disko
       # ... or something I missed
-      nixosConfigurations.crane = mkSystem { hostname = "crane"; };
-      nixosConfigurations.crane2 = mkSystem {
+      nixosConfigurations.crane = mkSystem {
         hostname = "crane";
         autoIncludeDeviceModule = false;
-        extraModules = [ ./devices/crane2 ];
+        extraModules = [ ./devices/crane ];
       };
     };
   nixConfig = {
