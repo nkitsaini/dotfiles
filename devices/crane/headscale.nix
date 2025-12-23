@@ -30,7 +30,8 @@ in
 
   # TODO: simplify the below stuff
   # On Cloud:
-  #   tailscale up --login-server https://headscale.nkit.dev --ssh --advertise-exit-node
+  #   # NOTE: Don't add --ssh to `up` command, as that overrides default authorized_keys mechanism and I still haven't figured out how to do ACLs
+  #   tailscale up --login-server https://headscale.nkit.dev --advertise-exit-node
   #   headscale nodes register ... --user <user>
   #   headscale nodes list-routes
   #   headscale nodes approve-routes -r "0.0.0.0/0,::/0" -i 1 # Or ID of route from list-routes
