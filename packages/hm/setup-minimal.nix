@@ -213,6 +213,7 @@
       cargo-cross
       hyperfine
       bun
+      deno
       ncdu
       dua # ncdu alternative
       caddy
@@ -244,6 +245,7 @@
         # HACK: without `:e` otherwise norg doesn't load on default file
         exec nvim -c ':e'
       '')
+      # TODO: Include deno in path for yt-dlp
       (writeScriptBin "yt-dlp" ''
         #!${pkgs.dash}/bin/dash
         exec ${pkgs.uv}/bin/uv tool run --python 3.12 --with httpx --with requests --prerelease explicit yt-dlp@latest "$@"

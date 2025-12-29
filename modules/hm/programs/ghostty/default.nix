@@ -27,6 +27,7 @@ in
         font-style-bold = false;
         cursor-invert-fg-bg = true;
       };
+      systemd.enable = true;
     };
   };
 }
