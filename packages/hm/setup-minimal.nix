@@ -245,12 +245,20 @@
         # HACK: without `:e` otherwise norg doesn't load on default file
         exec nvim -c ':e'
       '')
-      # TODO: Include deno in path for yt-dlp
-      (writeScriptBin "yt-dlp" ''
-        #!${pkgs.dash}/bin/dash
-        exec ${pkgs.uv}/bin/uv tool run --python 3.12 --with httpx --with requests --prerelease explicit yt-dlp@latest "$@"
-      '')
+      (writeShellApplication {
+        name = "yt-dlp";
 
+        # 1. List packages here to add them to the script's PATH
+        runtimeInputs = [
+          pkgs.deno
+          pkgs.uv
+        ];
+
+        # 2. Write your script usually. Commands from the inputs above will just work.
+        text = ''
+            exec ${pkgs.uv}/bin/uv tool run --with secretstorage --python 3.12 --with httpx --with requests --prerelease explicit yt-dlp@latest "$@"
+        '';
+      })
       (writeScriptBin "copilot" ''
         #!${pkgs.dash}/bin/dash
         exec ${nodePackages.nodejs}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
