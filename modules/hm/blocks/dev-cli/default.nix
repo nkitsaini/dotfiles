@@ -28,6 +28,8 @@ in
 
       # Live Serve (with hot-reloading) HTML, CSS etc.
       live-server
+
+      dummyhttp
     ];
   };
 }
