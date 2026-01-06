@@ -1,3 +1,18 @@
+{ pkgs, ... }:
+let
+  themeToggleScript = pkgs.writeShellApplication {
+    name = "toggle-theme";
+
+    # 1. Define dependencies here so the script can find 'gsettings' and 'pkill'
+    runtimeInputs = [
+      pkgs.glib
+      pkgs.procps
+    ];
+
+    # 2. Read the external file content
+    text = builtins.readFile ./toggle-theme.sh;
+  };
+in
 {
   programs.waybar = {
     enable = true;
@@ -10,10 +25,15 @@
       "position" = "bottom"; # Waybar position (top|bottom|left|right)
       "height" = 24; # Waybar height (to be removed for auto height)
       # Choose the order of the modules
-      "modules-left" = ["sway/workspaces" "sway/mode" "sway/scratchpad"];
-      "modules-center" = [];
+      "modules-left" = [
+        "sway/workspaces"
+        "sway/mode"
+        "sway/scratchpad"
+      ];
+      "modules-center" = [ ];
       "modules-right" = [
         "mpd"
+        "custom/theme"
         "idle_inhibitor"
         "temperature"
         "cpu"
@@ -34,24 +54,38 @@
           "unlocked" = "";
         };
       };
-      "sway/mode" = {"format" = ''<span style="italic">{}</span>'';};
+      "sway/mode" = {
+        "format" = ''<span style="italic">{}</span>'';
+      };
       "sway/scratchpad" = {
         "format" = "{icon} {count}";
         "show-empty" = false;
-        "format-icons" = ["" ""];
+        "format-icons" = [
+          ""
+          ""
+        ];
         "tooltip" = true;
         "tooltip-format" = "{app}= {title}";
       };
       "mpd" = {
-        "format" = "  {title} - {artist} {stateIcon} [{elapsedTime=%M=%S}/{totalTime=%M=%S}] {consumeIcon}{randomIcon}{repeatIcon}{singleIcon}[{songPosition}/{queueLength}] [{volume}%]";
+        "format" =
+          "  {title} - {artist} {stateIcon} [{elapsedTime=%M=%S}/{totalTime=%M=%S}] {consumeIcon}{randomIcon}{repeatIcon}{singleIcon}[{songPosition}/{queueLength}] [{volume}%]";
         "format-disconnected" = " Disconnected";
         "format-stopped" = " {consumeIcon}{randomIcon}{repeatIcon}{singleIcon}Stopped";
         "unknown-tag" = "N/A";
         "interval" = 2;
-        "consume-icons" = {"on" = " ";};
-        "random-icons" = {"on" = " ";};
-        "repeat-icons" = {"on" = " ";};
-        "single-icons" = {"on" = "1 ";};
+        "consume-icons" = {
+          "on" = " ";
+        };
+        "random-icons" = {
+          "on" = " ";
+        };
+        "repeat-icons" = {
+          "on" = " ";
+        };
+        "single-icons" = {
+          "on" = "1 ";
+        };
         "state-icons" = {
           "paused" = "";
           "playing" = "";
@@ -74,24 +108,42 @@
         # "icon-size"= 21;
         "spacing" = 10;
       };
-      "clock" = {"format" = "{:%Y-%m-%d %H:%M %a}";};
+      "clock" = {
+        "format" = "{:%Y-%m-%d %H:%M %a}";
+      };
       "cpu" = {
         "format" = "  {usage}%";
         #        "tooltip"= false
       };
-      "memory" = {"format" = " {}%";};
+      "memory" = {
+        "format" = " {}%";
+      };
       "temperature" = {
         "thermal-zone" = 2;
         "hwmon-path" = "/sys/class/hwmon/hwmon1/temp1_input";
         "critical-threshold" = 80;
         "format-critical" = "{icon} {temperatureC}°C";
         "format" = "{icon} {temperatureC}°C";
-        "format-icons" = ["" "" ""];
+        "format-icons" = [
+          ""
+          ""
+          ""
+        ];
       };
       "backlight" = {
         # "device"= "acpi_video1";
         "format" = "{icon} {percent}%";
-        "format-icons" = ["" "" "" "" "" "" "" "" ""];
+        "format-icons" = [
+          ""
+          ""
+          ""
+          ""
+          ""
+          ""
+          ""
+          ""
+          ""
+        ];
       };
       "battery" = {
         "states" = {
@@ -104,7 +156,13 @@
         "format-plugged" = " {capacity}%";
         "format-alt" = "{icon} {time}";
 
-        "format-icons" = [" " " " " " " " " "];
+        "format-icons" = [
+          " "
+          " "
+          " "
+          " "
+          " "
+        ];
       };
       "network" = {
         "format-wifi" = "  {essid} ({signalStrength}%)";
@@ -119,15 +177,35 @@
         "format" = "{icon}  {volume}%";
         "format-muted" = "";
         "on-click" = "pavucontrol";
-        "format-icons" = ["" "" ""];
+        "format-icons" = [
+          ""
+          ""
+          ""
+        ];
       };
       "pulseaudio" = {
         "format" = "{icon}  {volume}%";
         "format-muted" = " {format_source}";
         "on-click" = "pavucontrol";
         "format-icons" = {
-          "default" = ["" "" ""];
+          "default" = [
+            ""
+            ""
+            ""
+          ];
         };
+      };
+      "custom/theme" = {
+        "format" = "{}";
+        "return-type" = "json";
+        # Point this to your script path
+        "exec" = "${themeToggleScript}/bin/toggle-theme";
+        # Run the script with the 'toggle' argument on click
+        "on-click" = "${themeToggleScript}/bin/toggle-theme toggle";
+        # The signal number must match the script (RTMIN+8)
+        "signal" = 8;
+        "interval" = "once";
+        "tooltip" = true;
       };
     };
     style = builtins.readFile ./style.css;

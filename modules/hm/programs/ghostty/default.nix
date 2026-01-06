@@ -18,7 +18,7 @@ in
     programs.ghostty = {
       enable = true;
       settings = {
-        theme = "Gruvbox Light";
+        theme = "light:Gruvbox Light,dark:Gruvbox Dark";
         "font-family" = "Noto Sans Mono";
         "font-size" = 14;
         "keybind" = "ctrl+[=esc:";
