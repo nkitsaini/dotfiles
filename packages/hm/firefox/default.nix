@@ -32,27 +32,42 @@ in
 
   # TODO: use absolute path to `hx`. It's not in helix_master/bin/hx but in
   # home-manager-path/bin/hx
-  xdg.configFile."tridactyl/tridactylrc".text = ''
-    js tri.config.set("editorcmd", "${pkgs.ghostty}/bin/ghostty -e hx")
-    js tri.config.set("theme", "shydactyl")
-    bind --mode=normal <C-V> mode ignore
-    unbind --mode=normal <C-f>
+  xdg.configFile."tridactyl/tridactylrc".text =
+    let
+      kitAutocmds = [
+        "TriStart .* js -s -r ./autoclose.js"
+        "DocStart .* js -s -r ./autoclose.js"
+        "TriStart (www\\.)?youtube.com js -s -r ./grayscale.js"
+        "DocStart (www\\.)?youtube.com js -s -r ./grayscale.js"
+        "DocStart .* js -s -r ./location.js"
+      ];
+      mkAutocmd = cmd: "autocmd ${cmd}";
+      mkAutocmdDelete = cmd: "autocmddelete ${cmd}";
+      kitSetup = pkgs.lib.concatMapStringsSep " | " mkAutocmd kitAutocmds;
+      kitStop = pkgs.lib.concatMapStringsSep " | " mkAutocmdDelete kitAutocmds;
+    in
+    ''
+      js tri.config.set("editorcmd", "${pkgs.ghostty}/bin/ghostty -e hx")
+      js tri.config.set("theme", "shydactyl")
+      bind --mode=normal <C-V> mode ignore
+      unbind --mode=normal <C-f>
 
-    # To open new tabs in personal container: bind <C-t> tabopen -c personal
-    #
-    # To view current autocmd's run `:viewconfig autocmd`
+      # To open new tabs in personal container: bind <C-t> tabopen -c personal
+      #
+      # To view current autocmd's run `:viewconfig autocmd`
 
-    command kit_status viewconfig autocmds
-    command kit_setup composite autocmd TriStart .* js -s -r ./autoclose.js | autocmd DocStart .* js -s -r ./autoclose.js | autocmd TriStart (www\.)?youtube.com js -s -r ./grayscale.js | autocmd DocStart (www\.)?youtube.com js -s -r ./grayscale.js
-    command kit_stop composite autocmddelete TriStart .* js -s -r ./autoclose.js | autocmddelete DocStart .* js -s -r ./autoclose.js | autocmddelete TriStart (www\.)?youtube.com js -s -r ./grayscale.js | autocmddelete DocStart (www\.)?youtube.com js -s -r ./grayscale.js
-    command kit_grayscale_override js 'document.documentElement.style.filter = ""'
-  '';
+      command kit_status viewconfig autocmds
+      command kit_setup composite ${kitSetup}
+      command kit_stop composite ${kitStop}
+      command kit_grayscale_override js 'document.documentElement.style.filter = ""'
+    '';
   xdg.configFile."tridactyl/autoclose.js".source =
     pkgs.runCommand "tridactyl-autoclose-build" { }
       "${pkgs.bun}/bin/bun build ${./tridactyl_autoclose.ts} --outfile=$out";
   xdg.configFile."tridactyl/grayscale.js".source =
     pkgs.runCommand "tridactyl-grayscale-build" { }
       "${pkgs.bun}/bin/bun build ${./tridactyl_grayscale.ts} --outfile=$out";
+  xdg.configFile."tridactyl/location.example.js".source = ./tridactyl_location.js;
 
   # TODO: Set `network.proxy.allow_hijacking_localhost=true` (about:config)
 

@@ -153,6 +153,74 @@
   # environment.
   home.packages =
     with pkgs;
+    let
+      # Helper function to create a script that builds and runs a shoal project
+      mkShoalScript =
+        name: projectPath:
+        writeShellApplication {
+          inherit name;
+          runtimeInputs = [ pkgs.fd ];
+          text = ''
+            tool_dir="${config.home.homeDirectory}/code/shoal/${projectPath}"
+
+            root_link="$tool_dir/result-app"
+            result_bin="$tool_dir/result-bin"
+            rebuild=0
+
+            # 1. Check if the GC root link exists at all
+            if [ ! -L "$root_link" ] || [ ! -L "$result_bin" ]; then
+                rebuild=1
+            else
+                # 2. Check if any file is newer than the result link.
+                #    We use fd to respect .gitignore and check timestamps efficiently.
+
+                # Get the mtime of the symlink itself
+                link_time=$(stat -c %Y "$root_link")
+
+                # fd --changed-after checks timestamps internally and respects .gitignore
+                # We exclude result* symlinks explicitly
+                # We pipe to head -n 1 to stop at the first match (lazy check)
+                newer_file=$(fd --type f --exclude 'result*' --changed-after "@$link_time" . "$tool_dir" | head -n 1)
+
+                if [ -n "$newer_file" ]; then
+                    rebuild=1
+                fi
+            fi
+
+            # 3. If a rebuild is triggered (or first run)
+            if [ "$rebuild" -eq 1 ]; then
+                echo "🔄 Source changed or no root found. Rebuilding..." >&2
+
+                # Calculate the system type once
+                system=$(nix eval --raw --impure --expr builtins.currentSystem)
+
+                # We create a wrapper derivation that depends on the flake app's program.
+                # This forces Nix to build exactly what 'nix run' would run (including dependencies),
+                # and allows us to create a persistent GC root for it.
+                nix build --impure --expr "
+                let
+                  pkgs = import <nixpkgs> {};
+                  flake = builtins.getFlake \"$tool_dir\";
+                  program = flake.apps.\"$system\".default.program;
+                in
+                  pkgs.runCommand \"shoal-gc-root\" {} '''
+                    mkdir -p \$out/bin
+                    ln -s \''${program} \$out/bin/run
+                  '''
+                " --out-link "$root_link" > /dev/null
+
+                # Resolve the actual binary path from the wrapper
+                prog=$(readlink -f "$root_link/bin/run")
+
+                # Create a symlink to the binary for direct execution
+                ln -sf "$prog" "$result_bin"
+            fi
+
+            # 4. Run the cached binary (use the symlink to the actual binary)
+            exec "$result_bin" "$@"
+          '';
+        };
+    in
     [
       # # Adds the 'hello' command to your environment. It prints a friendly
       # # "Hello, world!" when run.
@@ -256,7 +324,7 @@
 
         # 2. Write your script usually. Commands from the inputs above will just work.
         text = ''
-            exec ${pkgs.uv}/bin/uv tool run --with secretstorage --python 3.12 --with httpx --with requests --prerelease explicit yt-dlp@latest "$@"
+          exec ${pkgs.uv}/bin/uv tool run --with secretstorage --python 3.12 --with httpx --with requests --prerelease explicit yt-dlp@latest "$@"
         '';
       })
       (writeScriptBin "copilot" ''
@@ -264,50 +332,14 @@
         exec ${nodePackages.nodejs}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
       '')
 
-      (writeScriptBin "audiobook_generator" ''
-        #!${pkgs.dash}/bin/dash
-        exec nix run ${config.home.homeDirectory}/code/shoal/audiobook_generator --  "$@"
-      '')
-      (writeScriptBin "hh" ''
-        #!${pkgs.dash}/bin/dash
-        exec nix run ${config.home.homeDirectory}/code/shoal/helios_helper -- "$@"
-      '')
-      (writeShellApplication {
-        name = "bw-util";
-        text = ''
-          exec nix run ${config.home.homeDirectory}/code/shoal/bitwarden_util -- "$@"
-        '';
-      })
-      (writeShellApplication {
-        name = "notes-util";
-        text = ''
-          exec nix run ${config.home.homeDirectory}/code/shoal/notes_utils -- "$@"
-        '';
-      })
-      (writeShellApplication {
-        name = "audio_cleaner";
-        text = ''
-          exec nix run ${config.home.homeDirectory}/code/shoal/audio_cleaner -- "$@"
-        '';
-      })
-      (writeShellApplication {
-        name = "mit_ocw_utils";
-        text = ''
-          exec nix run ${config.home.homeDirectory}/code/shoal/mit_ocw_utils -- "$@"
-        '';
-      })
-      (writeShellApplication {
-        name = "make_public";
-        text = ''
-          exec nix run ${config.home.homeDirectory}/code/shoal/make_public -- "$@"
-        '';
-      })
-      (writeShellApplication {
-        name = "cuckoo_controller";
-        text = ''
-          exec nix run ${config.home.homeDirectory}/code/shoal/cuckoo_controller -- "$@"
-        '';
-      })
+      (mkShoalScript "audiobook_generator" "audiobook_generator")
+      (mkShoalScript "hh" "helios_helper")
+      (mkShoalScript "bw-util" "bitwarden_util")
+      (mkShoalScript "notes-util" "notes_utils")
+      (mkShoalScript "audio_cleaner" "audio_cleaner")
+      (mkShoalScript "mit_ocw_utils" "mit_ocw_utils")
+      (mkShoalScript "make_public" "make_public")
+      (mkShoalScript "cuckoo_controller" "cuckoo_controller")
 
       # I3 specific
       trashy
