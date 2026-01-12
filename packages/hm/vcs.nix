@@ -95,6 +95,7 @@
       };
       rebase = {
         autostash = true;
+        updateRefs = true;
       };
       commit = {
         verbose = true;

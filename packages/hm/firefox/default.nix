@@ -35,8 +35,9 @@ in
   xdg.configFile."tridactyl/tridactylrc".text =
     let
       kitAutocmds = [
-        "TriStart .* js -s -r ./autoclose.js"
-        "DocStart .* js -s -r ./autoclose.js"
+        # TODO: `.*.*` as tridactyl uses the regex as key, so it needs to be unique and not conflict with ./location.js rule
+        "TriStart .*.* js -s -r ./autoclose.js"
+        "DocStart .*.* js -s -r ./autoclose.js"
         "TriStart (www\\.)?youtube.com js -s -r ./grayscale.js"
         "DocStart (www\\.)?youtube.com js -s -r ./grayscale.js"
         "DocStart .* js -s -r ./location.js"
