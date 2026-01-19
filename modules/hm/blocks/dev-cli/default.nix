@@ -30,6 +30,7 @@ in
       live-server
 
       dummyhttp
+      opencode
     ];
   };
 }
