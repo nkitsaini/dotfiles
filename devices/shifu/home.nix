@@ -22,6 +22,7 @@
       pkgs.nixgl.nixVulkanIntel
       pkgs.nixgl.nixGLIntel
       pkgs.wireplumber
+      pkgs.awscli2
     ];
     xdg.mimeApps.associations.added = {
       "x-scheme-handler/slack" = [ "slack.desktop" ];
