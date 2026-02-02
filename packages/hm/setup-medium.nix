@@ -74,7 +74,7 @@
       pavucontrol
       qpdf
 
-      xfce.thunar
+      thunar
       nautilus
 
       zellij

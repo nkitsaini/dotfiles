@@ -114,28 +114,12 @@ in
 
   services.swayidle = {
     enable = true;
-    events = [
-      {
-        event = "before-sleep";
-        command = "${pkgs.playerctl}/bin/playerctl pause";
-      }
-      {
-        event = "before-sleep";
-        command = swaylock_cmd;
-      }
-      {
-        event = "lock";
-        command = swaylock_cmd;
-      }
-      {
-        event = "after-resume";
-        command = turn_on_output_cmd;
-      }
-      {
-        event = "unlock";
-        command = turn_on_output_cmd;
-      }
-    ];
+    events = {
+      "before-sleep" = "${pkgs.playerctl}/bin/playerctl pause; ${swaylock_cmd}";
+      "lock" = swaylock_cmd;
+      "after-resume" = turn_on_output_cmd;
+      "unlock" = turn_on_output_cmd;
+    };
     timeouts = [
       {
         timeout = 1200; # Use idlelock on waybar while watching long videos etc.

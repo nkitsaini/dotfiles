@@ -302,7 +302,7 @@
       ascii
 
       # Code specific
-      nixfmt-rfc-style
+      nixfmt
       ruff
       lazygit
       nodePackages.nodejs

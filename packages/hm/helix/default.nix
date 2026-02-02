@@ -331,7 +331,7 @@
           {
             name = "nix";
             formatter = {
-              command = "${pkgs.nixfmt-rfc-style}/bin/nixfmt";
+              command = "${pkgs.nixfmt}/bin/nixfmt";
             };
           }
         ];
