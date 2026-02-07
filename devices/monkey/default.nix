@@ -53,6 +53,7 @@
 
     kit.services = {
       notes-sync.enable = true;
+      restic.enable = true;
     };
   };
 

@@ -269,7 +269,7 @@
       nmap
       minio-client
       ffmpeg
-      kopia
+      restic
       rclone
       ddcutil
       tmux

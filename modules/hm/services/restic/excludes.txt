@@ -1,0 +1,198 @@
+# -----------------------------------------------------------------------------
+# SYSTEM & MOUNTS (CRITICAL)
+# -----------------------------------------------------------------------------
+# Prevent infinite loops and backing up hardware/temp paths
+/mnt
+/media
+/run
+/dev
+/proc
+/sys
+/tmp
+/var/tmp
+/lost+found
+/swapfile
+/pagefile.sys
+
+# User-created mount points (often found in $HOME)
+# Exclude the directory itself to prevent traversing mounted drives
+~/mnt
+*/mnt
+
+# -----------------------------------------------------------------------------
+# GENERAL CACHES & TRASH
+# -----------------------------------------------------------------------------
+# Standard Freedesktop cache (covers many Linux apps automatically)
+.cache
+.local/share/Trash
+Trash
+Downloads
+downloads
+
+# OS Metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# -----------------------------------------------------------------------------
+# BROWSERS (Chromium, Brave, Firefox)
+# -----------------------------------------------------------------------------
+# Browser caches are massive and change thousands of files daily.
+# These patterns target Electron apps (VS Code, Obsidian, Discord) and Browsers.
+*/Cache
+*/Code Cache
+*/GPUCache
+*/ScriptCache
+*/blob_storage
+*/Service Worker/CacheStorage
+*/Service Worker/ScriptCache
+
+# Specific Browser Profiles (optional extra safety)
+.config/google-chrome/*/Default/Cache
+.config/chromium/*/Default/Cache
+.config/BraveSoftware/*/Default/Cache
+.mozilla/firefox/*.default*/cache2
+
+# -----------------------------------------------------------------------------
+# DEVELOPMENT: LANGUAGES & TOOLCHAINS
+# -----------------------------------------------------------------------------
+
+# --- Lean (Theorem Prover) ---
+# .elan contains toolchains (can be re-downloaded via elan)
+.elan
+lake-packages
+build
+
+# --- Rust ---
+# Registry and git checkouts can be re-fetched. Toolchains can be re-installed.
+.cargo/registry
+.cargo/git
+.cargo/bin
+.rustup
+target
+
+# --- Python ---
+__pycache__
+*.pyc
+.venv
+venv
+env
+.tox
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# --- Node / JS ---
+node_modules
+.npm
+.yarn
+.pnpm-store
+pnpm/store
+bower_components
+
+# --- Go ---
+go/pkg
+go/bin
+
+# --- Flutter / Dart ---
+.dart_tool
+.dart_server
+.dartServer
+.pub-cache
+flutter/bin/cache
+*.apk
+*.ap_
+
+# --- Java / Android ---
+.gradle
+local.properties
+captures
+build/
+avd
+
+# --- C/C++ ---
+cmake-build-debug
+cmake-build-release
+compile_commands.json
+
+# --- Infrastructure ---
+.terraform
+.terraform.lock.hcl
+.vagrant
+.box
+*.qcow2
+*.vmdk
+*.vdi
+*.iso
+
+# -----------------------------------------------------------------------------
+# DEVELOPMENT: EDITORS & IDEs
+# -----------------------------------------------------------------------------
+
+# --- VS Code ---
+# Keep User/settings.json, but drop caches and local history
+.config/Code/CachedData
+.config/Code/User/History
+.config/Code/User/workspaceStorage
+.config/Code/logs
+.vscode/extensions
+
+# --- Emacs ---
+# eln-cache is for native compilation artifacts (rebuildable)
+.emacs.d/eln-cache
+.emacs.d/auto-save-list
+.emacs.d/elpa
+# If using Doom Emacs
+.emacs.d/.local
+
+# --- Zed ---
+.local/share/zed
+*.miniprof
+
+#
+
+# --- JetBrains (IntelliJ, Android Studio, etc.) ---
+# 'system' contains indices and caches. 'config' contains settings.
+.local/share/JetBrains/*/system
+
+# -----------------------------------------------------------------------------
+# AI & LLMs
+# -----------------------------------------------------------------------------
+
+# --- Ollama ---
+# The 'models' directory is massive (blobs). Keep the config, drop the weights.
+.ollama/models
+
+# --- HuggingFace ---
+.cache/huggingface
+
+# -----------------------------------------------------------------------------
+# APPS & KNOWLEDGE BASE
+# -----------------------------------------------------------------------------
+
+# --- Obsidian ---
+# Obsidian itself uses Electron (caught by general Cache rules),
+# but individual vaults have internal caches.
+.obsidian/cache
+.obsidian/workspace
+
+# --- Docker / Containers ---
+.local/share/containers
+.local/share/docker
+.docker/run
+.docker/desktop
+/var/lib/docker
+/var/lib/containers
+
+# -----------------------------------------------------------------------------
+# GAMING
+# -----------------------------------------------------------------------------
+
+# --- Steam ---
+# Catch the massive game downloads in default Linux locations
+.local/share/Steam/
+
+# --- Wine / Proton ---
+# Prefix folders are often huge and reproducible
+pfx
+.wine

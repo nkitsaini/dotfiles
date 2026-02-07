@@ -8,5 +8,6 @@
 {
   imports = [
     ./notes-sync
+    ./restic
   ];
 }

@@ -13,14 +13,14 @@
 
     [[search_dirs]]
     path = "${config.home.homeDirectory}/code"
-    depth = 4
+    depth = 3
 
     [[search_dirs]]
     path = "${config.home.homeDirectory}/external"
-    depth = 4
+    depth = 3
 
     [[search_dirs]]
     path = "${config.home.homeDirectory}/workspace"
-    depth = 4
+    depth = 3
   '';
 }

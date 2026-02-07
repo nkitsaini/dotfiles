@@ -1,15 +1,15 @@
 // Needs to be manually registered using:
-// 
+//
 // autocmd TriStart .* js -s -r ./autoclose.js
 // autocmd DocStart .* js -s -r ./autoclose.js
 
+import type { browser } from "./tridactyl";
+
 const TAB_LIMIT = 3;
 
-declare const tri: any;
-type CWindow = typeof window & {auto_tab_closer_tridactyl?: AutoCloser};
+type CWindow = typeof window & { auto_tab_closer_tridactyl?: AutoCloser };
 
 const win: CWindow = window;
-
 
 function log(msg: string) {
 	console.log(`[AutoTabCloser] ${msg}`);
@@ -30,7 +30,7 @@ class AutoCloser {
 	#isInactive: boolean;
 	#listener: () => void;
 	lastActiveAt: TimestampMs | null;
-	inactivityDuration: TimestampMs
+	inactivityDuration: TimestampMs;
 
 	constructor(
 		inactivityDuration: TimestampMs = 1000 * 60 * 20 /* 20 minutes */,
@@ -42,7 +42,7 @@ class AutoCloser {
 		} else {
 			this.lastActiveAt = null;
 		}
-		this.inactivityDuration = inactivityDuration
+		this.inactivityDuration = inactivityDuration;
 
 		this.#listener = () => {
 			this.#isInactive = document.hidden;
@@ -56,12 +56,12 @@ class AutoCloser {
 		};
 		log(`Registering at ${new Date(this.#openedAt)}`);
 		this.#attachListeners();
-		this.#resetTimeout()
+		this.#resetTimeout();
 	}
 
 	static register(inactivityDuration?: TimestampMs) {
 		if (win.auto_tab_closer_tridactyl) {
-			win.auto_tab_closer_tridactyl.delete()
+			win.auto_tab_closer_tridactyl.delete();
 			// throw new Error("[AutoTabCloser] Already Registered");
 		}
 		win.auto_tab_closer_tridactyl = new AutoCloser(inactivityDuration);
@@ -72,8 +72,7 @@ class AutoCloser {
 	}
 
 	async currentWindowClosableTabs() {
-		let windowTabs = await tri.browserBg.tabs.query({currentWindow: true,
-		});
+		let windowTabs = await tri.browserBg.tabs.query({ currentWindow: true });
 		let answer: any[] = [];
 		for (const t of windowTabs) {
 			if (await this.#safeToClose(t)) {
@@ -81,7 +80,6 @@ class AutoCloser {
 			}
 		}
 		return answer.length;
-		
 	}
 
 	async #resetTimeout() {
@@ -90,19 +88,18 @@ class AutoCloser {
 			this.#timeout = null;
 		}
 
-		let tab = await this.#ownTab()
+		let tab = await this.#ownTab();
 		if (!(await this.#safeToClose(tab))) {
-			log("Tab is not safe to close. Ignoring.")
-			return
+			log("Tab is not safe to close. Ignoring.");
+			return;
 		}
 		if (this.#isInactive) {
 			let openTabs = await this.currentWindowClosableTabs();
 			if (openTabs <= TAB_LIMIT) {
 				log(`Only ${openTabs} extra tabs open. Will recheck in 5 minutes.`);
-			this.#timeout = setTimeout(() => this.#resetTimeout(), 5 * 1000);
+				this.#timeout = setTimeout(() => this.#resetTimeout(), 5 * 1000);
 
-				return
-				
+				return;
 			}
 			assert(this.lastActiveAt !== null);
 			let closeTime = this.lastActiveAt + this.inactivityDuration;
@@ -115,23 +112,29 @@ class AutoCloser {
 		}
 	}
 
-	async #ownTab() {
+	async #ownTab(): Promise<browser.tabs.Tab> {
 		return await tri.webext.ownTab();
 	}
 
-	async #safeToClose(tab) {
+	async #safeToClose(tab: browser.tabs.Tab) {
 		let sharingState = tab.sharingState;
-		if (tab.pinned || tab.audible || sharingState?.camera || sharingState?.micrphone || sharingState?.screen) {
-			return false
+		if (
+			tab.pinned ||
+			tab.audible ||
+			sharingState?.camera ||
+			sharingState?.microphone ||
+			sharingState?.screen
+		) {
+			return false;
 		}
-		return true
+		return true;
 	}
 
 	async #closeTab() {
-		let tab = await this.#ownTab()
+		let tab = await this.#ownTab();
 		if (!(await this.#safeToClose(tab))) {
-			log("Tab is not safe to close. Ignoring.")
-			return
+			log("Tab is not safe to close. Ignoring.");
+			return;
 		}
 		tri.browserBg.tabs.remove((await this.#ownTab()).id);
 	}
@@ -148,4 +151,3 @@ class AutoCloser {
 // for debugging
 // window.AutoCloser = AutoCloser;
 AutoCloser.register();
-
