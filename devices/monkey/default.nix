@@ -40,7 +40,7 @@
     ../../packages/os/games.nix
     ../../packages/os/torrent.nix
     ../../packages/os/open-webui
-    ../../packages/os/ipfs
+    # ../../packages/os/ipfs # build fails
 
     ../../users/kit
     ../../users/root
