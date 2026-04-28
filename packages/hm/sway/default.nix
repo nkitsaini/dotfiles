@@ -176,9 +176,7 @@ in
     "DBUS_SESSION_BUS_ADDRESS"
   ];
   wayland.windowManager.sway.systemd.extraCommands = [
-    # Restart portal services so they pick up the fresh Wayland session
-    # environment. Matches what dbus-sway-environment does on NixOS.
-    "systemctl --user stop xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk 2>/dev/null; systemctl --user start xdg-desktop-portal-wlr xdg-desktop-portal-gtk xdg-desktop-portal 2>/dev/null || true"
+    "systemctl --user stop xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk 2>/dev/null; systemctl --user start --no-block xdg-desktop-portal-wlr xdg-desktop-portal-gtk xdg-desktop-portal 2>/dev/null || true"
   ];
   wayland.windowManager.sway.xwayland = true;
   wayland.windowManager.sway.extraSessionCommands = ''
