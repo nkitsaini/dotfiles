@@ -42,6 +42,7 @@
   };
   xdg.userDirs = {
     enable = true;
+    setSessionVariables = true;
     createDirectories = true;
     desktop = "Desktop";
     publicShare = "share";

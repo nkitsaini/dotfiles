@@ -113,6 +113,12 @@ rec {
         overlays = [
           inputs.nur.overlays.default
           inputs.nixgl.overlay
+          # cli-helpers tests fail upstream (ANSI escape code mismatch); disable to unblock build
+          (final: prev: {
+            python313Packages = prev.python313Packages.overrideScope (pyFinal: pyPrev: {
+              cli-helpers = pyPrev.cli-helpers.overridePythonAttrs { doCheck = false; };
+            });
+          })
         ];
         config = {
           allowUnfree = true;

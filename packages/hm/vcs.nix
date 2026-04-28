@@ -35,6 +35,7 @@
     # username and email are defined
     # by device specific config
     enable = true;
+    signing.format = "openpgp";
     lfs.enable = true;
 
     attributes = [ "*.lockb binary diff=lockb" ];

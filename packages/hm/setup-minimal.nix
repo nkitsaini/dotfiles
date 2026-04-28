@@ -305,7 +305,7 @@
       nixfmt
       ruff
       lazygit
-      nodePackages.nodejs
+      nodejs
       (writeScriptBin "notes" ''
         #!${pkgs.dash}/bin/dash
         cd ${config.home.homeDirectory}/code/notes
@@ -329,7 +329,7 @@
       })
       (writeScriptBin "copilot" ''
         #!${pkgs.dash}/bin/dash
-        exec ${nodePackages.nodejs}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
+        exec ${nodejs}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
       '')
 
       (mkShoalScript "audiobook_generator" "audiobook_generator")

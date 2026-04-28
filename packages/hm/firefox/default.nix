@@ -16,6 +16,7 @@ let
 in
 {
   programs.firefox.enable = true;
+  programs.firefox.configPath = ".mozilla/firefox";
 
   home.packages = with pkgs; [
     xdg-desktop-portal-xapp

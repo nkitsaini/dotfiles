@@ -8,6 +8,7 @@
     mediainfo
   ];
   programs.yazi.enable = true;
+  programs.yazi.shellWrapperName = "yy";
   programs.yazi.settings = {
     opener = {
       video = [{ run = ''mpv -d "$1"''; }];

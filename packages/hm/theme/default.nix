@@ -1,7 +1,7 @@
 # From: https://discourse.nixos.org/t/struggling-to-configure-gtk-qt-theme-on-laptop/42268
 # - https://discourse.nixos.org/t/struggling-to-configure-gtk-qt-theme-on-laptop/42268/4
 # - https://discourse.nixos.org/t/struggling-to-configure-gtk-qt-theme-on-laptop/42268/10
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 {
   # Installing breeze-qt6 installs kwallet, which in turn gets registered as dbus service, which in turn is detected by Brave browser and started on startup.
   # This makes kwallet ask for password. We mask the services to stop kwallet from starting.
@@ -30,6 +30,7 @@
 
   gtk = {
     enable = true;
+    gtk4.theme = config.gtk.theme;
     theme = {
       name = "Breeze";
       package = pkgs.kdePackages.breeze-gtk;

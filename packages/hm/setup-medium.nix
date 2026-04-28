@@ -70,7 +70,7 @@
       glib
 
       vlc
-      xorg.xset # I see a vlc warning reguarding xset missing. Just in case.
+      xset # I see a vlc warning reguarding xset missing. Just in case.
       pavucontrol
       qpdf
 
@@ -111,7 +111,7 @@
       texliveMedium
 
       # Xorg
-      xorg.xev
+      xev
 
       vulkan-tools
 
