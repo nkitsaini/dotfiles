@@ -66,6 +66,14 @@ rec {
       ...
     }@inputs:
     let
+      # cli-helpers tests fail upstream (ANSI escape code mismatch); disable to unblock build.
+      # Needed in both `pkgs` (for homeConfigurations) and `nixpkgs.overlays` (for nixosConfigurations).
+      cliHelpersOverlay = final: prev: {
+        python313Packages = prev.python313Packages.overrideScope (pyFinal: pyPrev: {
+          cli-helpers = pyPrev.cli-helpers.overridePythonAttrs { doCheck = false; };
+        });
+      };
+
       mkSystem =
         {
           hostname,
@@ -95,6 +103,8 @@ rec {
                   trusted-public-keys = nixConfig.extra-trusted-public-keys;
                 };
 
+                nixpkgs.overlays = [ cliHelpersOverlay ];
+
                 home-manager.sharedModules = [
                   inputs.kit.hm.default
                 ];
@@ -113,12 +123,7 @@ rec {
         overlays = [
           inputs.nur.overlays.default
           inputs.nixgl.overlay
-          # cli-helpers tests fail upstream (ANSI escape code mismatch); disable to unblock build
-          (final: prev: {
-            python313Packages = prev.python313Packages.overrideScope (pyFinal: pyPrev: {
-              cli-helpers = pyPrev.cli-helpers.overridePythonAttrs { doCheck = false; };
-            });
-          })
+          cliHelpersOverlay
         ];
         config = {
           allowUnfree = true;
