@@ -30,11 +30,10 @@
       ]);
   };
 
+  # Replace the default nix GC with a smarter version that always preserves
+  # a minimum number of generations regardless of age.
   nix = {
-    gc = {
-      automatic = true;
-      options = "--delete-older-than 30d";
-    };
+    gc.automatic = false;
     optimise.automatic = true;
     settings = {
       cores = 0;
@@ -48,6 +47,73 @@
         "nix-command"
         "flakes"
       ];
+    };
+  };
+
+  systemd.services.nix-gc-safe = {
+    description = "Nix Garbage Collection (preserves minimum generations)";
+    script = ''
+      set -euo pipefail
+
+      min_keep=7
+      max_days=30
+      cutoff_date=$(date -d "$max_days days ago" +%Y-%m-%d)
+
+      delete_old_generations() {
+        local profile="$1"
+
+        if [ ! -e "$profile" ]; then
+          return
+        fi
+
+        local count=0
+        local to_delete=()
+
+        while IFS= read -r line; do
+          [ -z "$line" ] && continue
+
+          count=$((count + 1))
+
+          if [ "$count" -le "$min_keep" ]; then
+            continue
+          fi
+
+          local gen_num gen_date
+          gen_num=$(echo "$line" | awk '{print $1}')
+          gen_date=$(echo "$line" | awk '{print $2}')
+
+          if [[ "$gen_date" < "$cutoff_date" || "$gen_date" == "$cutoff_date" ]]; then
+            to_delete+=("$gen_num")
+          fi
+        done < <(nix-env -p "$profile" --list-generations | sort -rn)
+
+        if [ ''${#to_delete[@]} -gt 0 ]; then
+          echo "Deleting ''${#to_delete[@]} old generations from $profile"
+          nix-env -p "$profile" --delete-generations ''${to_delete[@]}
+        else
+          echo "No old generations to delete from $profile"
+        fi
+      }
+
+      delete_old_generations /nix/var/nix/profiles/system
+
+      for profile_dir in /nix/var/nix/profiles/per-user/*/; do
+        [ -d "$profile_dir" ] || continue
+        for profile in "''${profile_dir}profile" "''${profile_dir}home-manager"; do
+          [ -e "$profile" ] && delete_old_generations "$profile"
+        done
+      done
+
+      nix-store --gc
+    '';
+    serviceConfig.Type = "oneshot";
+  };
+
+  systemd.timers.nix-gc-safe = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
     };
   };
 
