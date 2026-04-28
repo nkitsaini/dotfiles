@@ -31,13 +31,11 @@ let
 
   turn_off_output_cmd = "${sway_display_control}/bin/sway-display-control off";
   turn_on_output_cmd = "${sway_display_control}/bin/sway-display-control on";
-  # Can't get PAM to work on non-nixos (ubuntu) with swaylock
-  # It seems like the solution but didn't bother: https://github.com/NixOS/nixpkgs/issues/158025#issuecomment-1616807870
-  swaylock_cmd =
+  lock_cmd =
     if disableSwayLock then
       turn_off_output_cmd
     else
-      "${pkgs.swaylock}/bin/swaylock -i ${(import ../../shared/wallpapers.nix).wallpaper3} --color '#100B1B' -fF";
+      "${pkgs.gtklock}/bin/gtklock -b ${(import ../../shared/wallpapers.nix).wallpaper3}";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
@@ -70,7 +68,7 @@ in
 
   home.packages = with pkgs; [
     wl-clipboard
-    swaylock
+    gtklock
     swayidle
     sway_display_control
     xwayland
@@ -115,15 +113,15 @@ in
   services.swayidle = {
     enable = true;
     events = {
-      "before-sleep" = "${pkgs.playerctl}/bin/playerctl pause; ${swaylock_cmd}";
-      "lock" = swaylock_cmd;
+      "before-sleep" = "${pkgs.playerctl}/bin/playerctl pause; ${lock_cmd}";
+      "lock" = lock_cmd;
       "after-resume" = turn_on_output_cmd;
       "unlock" = turn_on_output_cmd;
     };
     timeouts = [
       {
         timeout = 1200; # Use idlelock on waybar while watching long videos etc.
-        command = swaylock_cmd;
+        command = lock_cmd;
       }
       {
         timeout = 3600;

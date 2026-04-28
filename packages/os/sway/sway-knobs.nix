@@ -46,7 +46,7 @@ in
   # Ideally, I should mix this with home-manager config.
   # But don't want to figure out user stuff
   security.polkit.enable = true;
-  security.pam.services.swaylock = { };
+  security.pam.services.gtklock = { };
   programs.dconf.enable = true;
 
   hardware.graphics = {
