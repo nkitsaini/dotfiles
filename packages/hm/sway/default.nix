@@ -161,6 +161,25 @@ in
   wayland.windowManager.sway.enable = true;
   # wayland.windowManager.sway.checkConfig = false; # https://discourse.nixos.org/t/services-xserver-xkb-extralayouts-doesnt-seem-to-be-compatible-with-sway/46128
   wayland.windowManager.sway.systemd.enable = true;
+  wayland.windowManager.sway.systemd.variables = [
+    "DISPLAY"
+    "WAYLAND_DISPLAY"
+    "SWAYSOCK"
+    "XDG_CURRENT_DESKTOP"
+    "XDG_SESSION_TYPE"
+    "NIXOS_OZONE_WL"
+    "XCURSOR_THEME"
+    "XCURSOR_SIZE"
+    # Portal-launched apps (e.g. Cursor from cursor:// URLs) and portal
+    # services themselves need this to reach the session bus. Without it,
+    # screenshare breaks when portals restart mid-session.
+    "DBUS_SESSION_BUS_ADDRESS"
+  ];
+  wayland.windowManager.sway.systemd.extraCommands = [
+    # Restart portal services so they pick up the fresh Wayland session
+    # environment. Matches what dbus-sway-environment does on NixOS.
+    "systemctl --user stop xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk 2>/dev/null; systemctl --user start xdg-desktop-portal-wlr xdg-desktop-portal-gtk xdg-desktop-portal 2>/dev/null || true"
+  ];
   wayland.windowManager.sway.xwayland = true;
   wayland.windowManager.sway.extraSessionCommands = ''
     # For some reason, this script is also run while `nixos-rebuild`, when the ~/.xsession is not available (different fs). So conditional execution.
