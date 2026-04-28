@@ -173,9 +173,6 @@ in
     # screenshare breaks when portals restart mid-session.
     "DBUS_SESSION_BUS_ADDRESS"
   ];
-  wayland.windowManager.sway.systemd.extraCommands = [
-    "systemctl --user stop xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk 2>/dev/null; systemctl --user start --no-block xdg-desktop-portal-wlr xdg-desktop-portal-gtk xdg-desktop-portal 2>/dev/null || true"
-  ];
   wayland.windowManager.sway.xwayland = true;
   wayland.windowManager.sway.extraSessionCommands = ''
     # For some reason, this script is also run while `nixos-rebuild`, when the ~/.xsession is not available (different fs). So conditional execution.
