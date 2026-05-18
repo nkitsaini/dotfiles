@@ -29,13 +29,34 @@ let
     '';
   };
 
+  # TODO: replace with in-house write of wayland lock (both suspend and startup)
+  # gtklock has no built-in single-instance guard (jovanlanik/gtklock#130):
+  # a second invocation while one is already running fails with "Failed to
+  # lock session" but leaves a confusing stacked surface state. swayidle
+  # calls lock_cmd from up to three places (1200s timeout, lock event,
+  # before-sleep), so without this wrapper users see multiple unlock
+  # prompts in a row after wake.
+  gtklock_single_instance = pkgs.writeShellApplication {
+    name = "gtklock-single-instance";
+    runtimeInputs = with pkgs; [
+      gtklock
+      procps
+    ];
+    text = ''
+      if pgrep -x gtklock >/dev/null 2>&1; then
+        exit 0
+      fi
+      exec gtklock "$@"
+    '';
+  };
+
   turn_off_output_cmd = "${sway_display_control}/bin/sway-display-control off";
   turn_on_output_cmd = "${sway_display_control}/bin/sway-display-control on";
   lock_cmd =
     if disableSwayLock then
       turn_off_output_cmd
     else
-      "${pkgs.gtklock}/bin/gtklock -b ${(import ../../shared/wallpapers.nix).wallpaper3}";
+      "${gtklock_single_instance}/bin/gtklock-single-instance -b ${(import ../../shared/wallpapers.nix).wallpaper3}";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
@@ -115,7 +136,14 @@ in
     events = {
       "before-sleep" = "${pkgs.playerctl}/bin/playerctl pause; ${lock_cmd}";
       "lock" = lock_cmd;
-      "after-resume" = turn_on_output_cmd;
+      # Restart swayidle after every resume. swayidle does not reset its
+      # idle timers on wake (swaywm/swayidle#156), so if the system was
+      # suspended via the 3600s timeout, the same notification can re-fire
+      # immediately on resume and trigger another suspend cycle. Restarting
+      # the service re-arms all timers from zero. --no-block so this
+      # command returns before systemd kills the current swayidle instance.
+      "after-resume" =
+        "${turn_on_output_cmd}; ${pkgs.systemd}/bin/systemctl --user --no-block restart swayidle.service";
       "unlock" = turn_on_output_cmd;
     };
     timeouts = [
