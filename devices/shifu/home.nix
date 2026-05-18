@@ -24,6 +24,7 @@
       pkgs.wireplumber
       pkgs.awscli2
       pkgs.code-cursor
+      pkgs.cursor-cli
     ];
     xdg.mimeApps.associations.added = {
       "x-scheme-handler/slack" = [ "slack.desktop" ];
