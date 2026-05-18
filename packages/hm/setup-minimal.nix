@@ -112,6 +112,11 @@
   services.batsignal = {
     enable = true;
   };
+  # batsignal can be slow to react to SIGTERM right after start (it blocks on
+  # UPower / D-Bus during init). Shorten the stop timeout so a misbehaving
+  # graphical-session.target teardown can't block user-session startup for the
+  # full 90s systemd default.
+  systemd.user.services.batsignal.Service.TimeoutStopSec = "5s";
   services.network-manager-applet.enable = true;
 
   xdg.configFile."nixpkgs/config.nix".text = ''

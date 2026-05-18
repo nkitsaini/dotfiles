@@ -174,11 +174,21 @@ in
     "DBUS_SESSION_BUS_ADDRESS"
   ];
   wayland.windowManager.sway.xwayland = true;
+  # Source ~/.xprofile (not ~/.xsession). ~/.xsession is the home-manager X11
+  # session entrypoint: it starts hm-graphical-session.target then immediately
+  # stops graphical-session.target and busy-loops waiting for units to deactivate.
+  # When sourced from the sway wrapper there is no session command to bracket,
+  # so the stop fires straight away and the loop pegs at ~90s on any unit that
+  # doesn't promptly handle SIGTERM (batsignal in particular). ~/.xprofile only
+  # sets up env vars (hm-session-vars.sh, .profile, systemctl import-environment),
+  # which is what's actually wanted here. Real session lifecycle is handled by
+  # the home-manager sway systemd integration (sway.systemd.enable / variables
+  # above) plus sway's own `exec systemctl --user start sway-session.target`.
   wayland.windowManager.sway.extraSessionCommands = ''
-    # For some reason, this script is also run while `nixos-rebuild`, when the ~/.xsession is not available (different fs). So conditional execution.
+    # For some reason, this script is also run while `nixos-rebuild`, when the ~/.xprofile is not available (different fs). So conditional execution.
     # $HOME at that time is /homeless-shelter, which builder uses
     if [ "$HOME" == "${config.home.homeDirectory}" ]; then
-      source ${config.home.homeDirectory}/.xsession
+      source ${config.home.homeDirectory}/.xprofile
     fi
   '';
   wayland.windowManager.sway.wrapperFeatures = {
