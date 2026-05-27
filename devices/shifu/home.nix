@@ -25,6 +25,10 @@
       pkgs.awscli2
       pkgs.code-cursor
       pkgs.cursor-cli
+      pkgs.mariadb.client
+      pkgs.cloudflared
+      pkgs.hubble
+      pkgs.entr
     ];
     xdg.mimeApps.associations.added = {
       "x-scheme-handler/slack" = [ "slack.desktop" ];

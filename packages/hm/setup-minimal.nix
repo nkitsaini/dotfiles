@@ -267,7 +267,17 @@
       gcc
       python312
       python312Packages.ipython
-      python312Packages.pipx
+      (python312Packages.pipx.overridePythonAttrs (old: {
+        # upstream tests in tests/test_package_specifier.py compare formatted
+        # package specs and fail on a benign whitespace diff (`black @ http…`
+        # vs `black@ http…`). pytestCheckHook runs in preDistPhases and
+        # ignores `doCheck`, so we extend the existing `disabledTests` list
+        # with the two affected test functions. The pipx binary is unchanged.
+        disabledTests = (old.disabledTests or [ ]) ++ [
+          "test_fix_package_name"
+          "test_parse_specifier_for_metadata"
+        ];
+      }))
       python312Packages.tkinter # for turtle
       sd
       rsync
