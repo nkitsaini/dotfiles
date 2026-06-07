@@ -475,8 +475,16 @@ in
 
           Environment = mkEnvironment backup ++ [ "RESTIC_CACHE_DIR=%C/${serviceName}" ];
 
+          # `restic unlock` is run before each operation so a stale lock left
+          # behind by a previously killed run (suspend, reboot, network drop,
+          # OOM, ...) does not block all subsequent runs. `restic backup` will
+          # not clear stale locks on its own; without this, an interrupted
+          # backup can leave the repository locked indefinitely.
           ExecStart =
-            lib.optional doBackup backupCmd
+            lib.optionals doBackup [
+              unlockCmd
+              backupCmd
+            ]
             ++ lib.optionals doPrune [
               unlockCmd
               forgetCmd
