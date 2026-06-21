@@ -1,0 +1,514 @@
+#!/usr/bin/env python3
+"""
+camera-ctl -- interactive camera settings manager (v4l2 frontend)
+
+Usage:
+  camera-ctl                              # fully interactive
+  camera-ctl --camera-like EMEET          # pre-select camera by name substring
+  camera-ctl --camera-like EMEET --exposure=700
+  camera-ctl --camera-like EMEET --exposure=auto
+"""
+
+import argparse
+import re
+import subprocess
+import sys
+import termios
+import tty
+from dataclasses import dataclass
+
+
+# ------------------------------------------------------------------------------
+# ANSI helpers
+# ------------------------------------------------------------------------------
+
+RESET   = "\033[0m"
+BOLD    = "\033[1m"
+DIM     = "\033[2m"
+GREEN   = "\033[32m"
+CYAN    = "\033[36m"
+YELLOW  = "\033[33m"
+RED     = "\033[31m"
+
+
+def c(color: str, text: str) -> str:
+    return f"{color}{text}{RESET}"
+
+
+def header(title: str) -> None:
+    bar = "-" * 58
+    print(f"\n{c(CYAN, bar)}")
+    print(f"{c(BOLD + CYAN, '  [camera-ctl]  ' + title)}")
+    print(f"{c(CYAN, bar)}\n")
+
+
+def info(msg: str) -> None:
+    print(f"  {c(CYAN, '>')} {msg}")
+
+
+def success(msg: str) -> None:
+    print(f"  {c(GREEN, 'OK')} {msg}")
+
+
+def warn(msg: str) -> None:
+    print(f"  {c(YELLOW, '!!')} {msg}")
+
+
+def error(msg: str) -> None:
+    print(f"  {c(RED, 'ERR')} {msg}", file=sys.stderr)
+
+
+# ------------------------------------------------------------------------------
+# Low-level terminal key reading
+# ------------------------------------------------------------------------------
+
+def _read_key() -> str:
+    """Read a single key press; handles arrow-key escape sequences."""
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        ch = sys.stdin.read(1)
+        if ch == "\x1b":
+            ch2 = sys.stdin.read(1)
+            if ch2 == "[":
+                ch3 = sys.stdin.read(1)
+                return f"\x1b[{ch3}"
+            return ch
+        return ch
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
+# ------------------------------------------------------------------------------
+# Interactive menu (arrow-key driven)
+# ------------------------------------------------------------------------------
+
+def interactive_select(
+    prompt: str,
+    options: list[str],
+    descriptions: list[str] | None = None,
+) -> int:
+    """
+    Render an arrow-key menu.  Returns chosen index, or -1 on q/Ctrl-C.
+
+    The renderer tracks exactly how many terminal lines it wrote and erases
+    them (cursor-up + erase-line) before each redraw, so it never bleeds
+    into surrounding output.
+    """
+    if not options:
+        return -1
+    if descriptions is None:
+        descriptions = [""] * len(options)
+
+    idx = 0
+    lines_drawn = 0
+
+    def _erase() -> None:
+        nonlocal lines_drawn
+        if lines_drawn == 0:
+            return
+        # Erase current line then walk upward erasing each previous line.
+        sys.stdout.write("\r\033[2K")
+        for _ in range(lines_drawn - 1):
+            sys.stdout.write("\033[1A\033[2K")
+        sys.stdout.flush()
+        lines_drawn = 0
+
+    def _draw() -> None:
+        nonlocal lines_drawn
+        _erase()
+        buf: list[str] = []
+        buf.append(f"  {c(BOLD, prompt)}\n")
+        for i, (opt, desc) in enumerate(zip(options, descriptions)):
+            if i == idx:
+                marker = c(GREEN + BOLD, " > ")
+                name   = c(BOLD, opt)
+                note   = c(DIM, f"  {desc}") if desc else ""
+            else:
+                marker = "   "
+                name   = c(DIM, opt)
+                note   = c(DIM, f"  {desc}") if desc else ""
+            buf.append(f"{marker}{name}{note}\n")
+        text = "".join(buf)
+        sys.stdout.write(text)
+        sys.stdout.flush()
+        lines_drawn = len(buf)
+
+    _draw()
+
+    while True:
+        key = _read_key()
+        if key in ("\x1b[A", "k"):           # up
+            idx = (idx - 1) % len(options)
+        elif key in ("\x1b[B", "j"):         # down
+            idx = (idx + 1) % len(options)
+        elif key in ("\r", "\n", " "):       # confirm
+            _erase()
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            return idx
+        elif key in ("q", "\x03", "\x04"):   # quit / Ctrl-C / Ctrl-D
+            _erase()
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            return -1
+        _draw()
+
+
+# ------------------------------------------------------------------------------
+# v4l2 wrappers
+# ------------------------------------------------------------------------------
+
+@dataclass
+class VideoDevice:
+    name: str           # human-readable card name
+    device: str         # /dev/videoN (primary node used for controls)
+    nodes: list[str]    # all /dev/videoN nodes belonging to this card
+    is_visible: bool    # False for IR / metadata-only cameras
+
+
+@dataclass
+class CameraControls:
+    has_auto_exposure: bool    = False
+    has_exposure_abs: bool     = False
+    exposure_min: int          = 1
+    exposure_max: int          = 10000
+    exposure_current: int      = 500
+    auto_exposure_current: int = 1   # 1=manual  3=aperture-priority (V4L2)
+
+
+def _run(cmd: list[str], check: bool = True) -> str:
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, check=check)
+        return r.stdout
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(
+            f"Command failed: {' '.join(cmd)}\n{e.stderr.strip()}"
+        ) from e
+    except FileNotFoundError:
+        raise RuntimeError(f"Command not found: {cmd[0]}")
+
+
+def list_devices() -> list[VideoDevice]:
+    """Parse `v4l2-ctl --list-devices` output into VideoDevice objects."""
+    try:
+        raw = _run(["v4l2-ctl", "--list-devices"])
+    except RuntimeError as e:
+        error(str(e))
+        return []
+
+    devices: list[VideoDevice] = []
+    current_name: str | None = None
+    current_nodes: list[str] = []
+
+    def _flush() -> None:
+        if current_name and current_nodes:
+            video_nodes = [
+                n for n in current_nodes
+                if re.match(r"^/dev/video\d+$", n.strip())
+            ]
+            if not video_nodes:
+                return
+            primary = video_nodes[0].strip()
+            is_vis  = _is_visible_camera(current_name)
+            devices.append(VideoDevice(
+                name=current_name.strip(),
+                device=primary,
+                nodes=[n.strip() for n in video_nodes],
+                is_visible=is_vis,
+            ))
+
+    for line in raw.splitlines():
+        if not line.startswith("\t") and line.strip():
+            _flush()
+            current_name  = line.rstrip(":")
+            current_nodes = []
+        elif line.startswith("\t"):
+            current_nodes.append(line.strip())
+
+    _flush()
+    return devices
+
+
+def _is_visible_camera(name: str) -> bool:
+    """Return False for cameras that are IR, depth, or metadata-only."""
+    lower = name.lower()
+    skip_words = ["ir camera", "infrared", "depth", "metadata", "audio", "hid"]
+    return not any(w in lower for w in skip_words)
+
+
+def get_controls(device: str) -> CameraControls:
+    """Query exposure-related controls on a device via v4l2-ctl."""
+    ctrl = CameraControls()
+    try:
+        raw = _run(["v4l2-ctl", "-d", device, "--list-ctrls-menus"])
+    except RuntimeError:
+        return ctrl
+
+    for line in raw.splitlines():
+        if "auto_exposure" in line:
+            ctrl.has_auto_exposure = True
+            m = re.search(r"value=(\d+)", line)
+            if m:
+                ctrl.auto_exposure_current = int(m.group(1))
+        if "exposure_time_absolute" in line:
+            ctrl.has_exposure_abs = True
+            for pat, attr in [
+                (r"min=(\d+)",   "exposure_min"),
+                (r"max=(\d+)",   "exposure_max"),
+                (r"value=(\d+)", "exposure_current"),
+            ]:
+                m = re.search(pat, line)
+                if m:
+                    setattr(ctrl, attr, int(m.group(1)))
+
+    return ctrl
+
+
+def set_exposure(device: str, value: int | str) -> None:
+    """
+    Apply exposure setting to device.
+
+    value='auto'  ->  aperture-priority auto-exposure (auto_exposure=3)
+    value=<int>   ->  manual mode (auto_exposure=1) + exposure_time_absolute
+    """
+    if value == "auto":
+        _run(["v4l2-ctl", "-d", device, "-c", "auto_exposure=3"])
+        success(f"Auto-exposure enabled on {device}")
+    else:
+        exp = int(value)
+        _run(["v4l2-ctl", "-d", device, "-c", "auto_exposure=1"])
+        _run(["v4l2-ctl", "-d", device, "-c", f"exposure_time_absolute={exp}"])
+        success(f"Exposure set to {exp} (manual) on {device}")
+
+
+# ------------------------------------------------------------------------------
+# Interactive flows
+# ------------------------------------------------------------------------------
+
+def pick_camera(
+    devices: list[VideoDevice],
+    camera_like: str | None,
+) -> VideoDevice | None:
+    visible = [d for d in devices if d.is_visible]
+
+    if not visible:
+        error("No usable (visible) cameras found.")
+        return None
+
+    if camera_like:
+        matches = [d for d in visible if camera_like.lower() in d.name.lower()]
+        if len(matches) == 1:
+            success(f"Auto-selected: {matches[0].name}  ({matches[0].device})")
+            return matches[0]
+        elif len(matches) > 1:
+            warn(f"Multiple cameras match '{camera_like}' -- please choose:")
+        else:
+            warn(f"No camera matching '{camera_like}' found -- please choose:")
+
+    header("Select Camera")
+    opts  = [d.name   for d in visible]
+    descs = [d.device for d in visible]
+    idx   = interactive_select(
+        "Up/Down or j/k, Enter to select, q to quit",
+        opts, descs,
+    )
+    if idx < 0:
+        return None
+    return visible[idx]
+
+
+def pick_exposure(
+    device_path: str,
+    controls: CameraControls,
+    exposure_arg: str | None,
+) -> None:
+    if exposure_arg is not None:
+        val: int | str = "auto" if exposure_arg.lower() == "auto" else exposure_arg
+        set_exposure(device_path, val)
+        return
+
+    header("Exposure Settings")
+
+    current_mode = "auto" if controls.auto_exposure_current == 3 else "manual"
+    current_exp  = controls.exposure_current
+
+    info(f"Current mode    : {c(YELLOW, current_mode)}")
+    if controls.has_exposure_abs:
+        info(f"Current exposure: {c(YELLOW, str(current_exp))}")
+        info(f"Allowed range   : {controls.exposure_min} - {controls.exposure_max}")
+    print()
+
+    # Preset values drawn from shell history
+    PRESETS = [
+        300, 400, 450, 500, 550, 600, 650, 700,
+        800, 900, 1000, 1100, 1200, 1300, 1500, 1600, 1800, 2000,
+    ]
+
+    opts = [
+        "Auto (aperture-priority)",
+        *[f"Manual - {v}" for v in PRESETS],
+        "Manual - enter custom value",
+    ]
+    descs = [
+        "let the camera decide",
+        *(("<-- current" if v == current_exp else "") for v in PRESETS),
+        "",
+    ]
+
+    choice = interactive_select(
+        "Choose exposure  (Up/Down or j/k, Enter to confirm, q to cancel)",
+        opts,
+        descs,
+    )
+
+    if choice < 0:
+        warn("Cancelled.")
+        return
+
+    if choice == 0:
+        set_exposure(device_path, "auto")
+    elif choice <= len(PRESETS):
+        set_exposure(device_path, PRESETS[choice - 1])
+    else:
+        print(
+            f"\n  Enter custom exposure value "
+            f"[{controls.exposure_min}-{controls.exposure_max}]: ",
+            end="",
+            flush=True,
+        )
+        raw = input().strip()
+        if not raw.isdigit():
+            error("Invalid value -- must be an integer.")
+            return
+        val = int(raw)
+        if not (controls.exposure_min <= val <= controls.exposure_max):
+            warn(
+                f"Value {val} is outside allowed range "
+                f"[{controls.exposure_min}-{controls.exposure_max}], applying anyway."
+            )
+        set_exposure(device_path, val)
+
+
+def more_settings_loop(device_path: str) -> None:
+    """Post-action loop: change again, inspect controls, or quit."""
+    while True:
+        print()
+        opts  = ["Change exposure again", "Show current controls", "Quit"]
+        descs = ["", f"v4l2-ctl -d {device_path} --list-ctrls", ""]
+        idx   = interactive_select("What next?", opts, descs)
+
+        if idx == 0:
+            controls = get_controls(device_path)
+            pick_exposure(device_path, controls, None)
+        elif idx == 1:
+            print()
+            try:
+                raw = _run(["v4l2-ctl", "-d", device_path, "--list-ctrls-menus"])
+            except RuntimeError as e:
+                error(str(e))
+                continue
+            for line in raw.splitlines():
+                if "exposure" in line.lower():
+                    print(f"  {c(YELLOW, line)}")
+                else:
+                    print(f"  {c(DIM, line)}")
+        else:
+            break
+
+
+# ------------------------------------------------------------------------------
+# Entry point
+# ------------------------------------------------------------------------------
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        prog="camera-ctl",
+        description="Interactive camera settings manager (v4l2 frontend).",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  camera-ctl
+  camera-ctl --camera-like EMEET
+  camera-ctl --camera-like EMEET --exposure=700
+  camera-ctl --camera-like EMEET --exposure=auto
+  camera-ctl --list
+  camera-ctl --all-cameras
+""",
+    )
+    p.add_argument(
+        "--camera-like",
+        metavar="NAME",
+        help="Pre-select a camera whose name contains NAME (case-insensitive).",
+    )
+    p.add_argument(
+        "--exposure",
+        metavar="VALUE",
+        help="Set exposure: an integer (manual) or 'auto'.",
+    )
+    p.add_argument(
+        "--all-cameras",
+        action="store_true",
+        help="Include infrared / depth / metadata cameras in listings.",
+    )
+    p.add_argument(
+        "--list",
+        action="store_true",
+        help="List available cameras and exit.",
+    )
+    return p.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+
+    print(f"\n{c(BOLD + CYAN, '  camera-ctl')}{c(DIM, ' -- v4l2 camera settings manager')}")
+    print(c(DIM, "  Up/Down or j/k, Enter to confirm, q/Ctrl-C to cancel\n"))
+
+    all_devs = list_devices()
+
+    if args.list:
+        header("Available Cameras")
+        for d in all_devs:
+            tag = "" if d.is_visible else c(DIM, "  [hidden/IR]")
+            print(f"  {c(BOLD, d.device)}  {d.name}{tag}")
+            for n in d.nodes[1:]:
+                print(f"    {c(DIM, n)}")
+        return
+
+    devs = all_devs if args.all_cameras else [d for d in all_devs if d.is_visible]
+
+    if not devs:
+        error("No cameras detected. Is v4l2-ctl installed and are devices connected?")
+        sys.exit(1)
+
+    # Stage 1: camera selection
+    cam = pick_camera(devs, args.camera_like)
+    if cam is None:
+        sys.exit(0)
+
+    info(f"Device: {c(BOLD, cam.device)}  ({cam.name})")
+    print()
+
+    # Stage 2: read controls
+    controls = get_controls(cam.device)
+    if not controls.has_auto_exposure and not controls.has_exposure_abs:
+        warn("This camera does not report exposure controls via v4l2.")
+
+    # Stage 3: exposure
+    pick_exposure(cam.device, controls, args.exposure)
+
+    # Stage 4: interactive loop (skipped in non-interactive / scripted mode)
+    if args.exposure is None:
+        more_settings_loop(cam.device)
+
+    print(f"\n{c(GREEN, '  Done.')}\n")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(f"\n\n{c(DIM, '  Interrupted.')}\n")
+        sys.exit(0)

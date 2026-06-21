@@ -16,6 +16,7 @@
     ./activity_watch
     ./meditation-bell
     ./emacs
+    ./camera-ctl
   ];
   modules.editors.emacs = {
     enable = false; # This is broken, need to delete emacs config altogether
@@ -85,7 +86,6 @@
 
       alacritty-theme
 
-      # control camera aperture
       v4l-utils
 
       unrar
