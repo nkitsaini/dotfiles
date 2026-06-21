@@ -8,5 +8,6 @@
 {
   imports = [
     ./dev-cli
+    ./agentic-coding
   ];
 }

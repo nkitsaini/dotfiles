@@ -22,6 +22,9 @@
   };
 
   kit.programs.ghostty.enable = true;
+  kit.blocks = {
+    agentic-coding.enable = true;
+  };
 
   services.blueman-applet.enable = false; # Disabled as it enables auto-connect for some reason
 
@@ -81,6 +84,11 @@
       zed-editor
 
       alacritty-theme
+
+      # control camera aperture
+      v4l-utils
+
+      unrar
 
       eog
       seahorse # for keyring
