@@ -27,7 +27,12 @@
     ../../packages/os/docker_swarm.nix
     ../../packages/os/caddy
     ../../packages/os/aria2
-    ../../packages/os/aria2/caddy_rpc_integration.nix
+    # HM-BUILD-FIX(2026-05-27): drop caddy_rpc_integration.nix import
+    # Device(s): crane
+    # Blocks: caddy on crane no longer serves the AriaNg web UI at aria2.nkit.dev (the /jsonrpc reverse-proxy and the static UI under ${pkgs.ariang}/share/ariang are both gone). aria2 RPC daemon itself is still installed by ../../packages/os/aria2.
+    # Reason: `pkgs.ariang-1.3.13` fails to build on the current nixpkgs pin — its bundled package-lock.json is out of sync with package.json ("Invalid: lock file's angular-input-dropdown@ does not satisfy angular-input-dropdown@1.1.2"), so `npm ci` aborts in the npmConfigHook. None of `makeCacheWritable`, `npmFlags = [ "--legacy-peer-deps" ]`, or `npmDepsFetcherVersion = 2` fix a lockfile mismatch; this needs an upstream fix to the ariang derivation in nixpkgs.
+    # Revisit-when: after next `nix flake update` bumps nixpkgs past the ariang package-lock fix (re-try `nix build .#nixosConfigurations.crane.config.system.build.toplevel` — when `pkgs.ariang` evaluates clean, uncomment the line below).
+    # ../../packages/os/aria2/caddy_rpc_integration.nix
 
     ./headscale.nix
     ./docker-registry.nix

@@ -29,6 +29,7 @@
       pkgs.cloudflared
       pkgs.hubble
       pkgs.entr
+      pkgs.dbeaver-bin
     ];
     xdg.mimeApps.associations.added = {
       "x-scheme-handler/slack" = [ "slack.desktop" ];
