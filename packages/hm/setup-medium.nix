@@ -89,6 +89,8 @@
       v4l-utils
 
       unrar
+      # csv wrangler
+      xan
 
       eog
       seahorse # for keyring
