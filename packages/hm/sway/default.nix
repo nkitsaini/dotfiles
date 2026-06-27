@@ -12,7 +12,20 @@ let
   right = "l";
   up = "k";
   down = "j";
-  terminal_cmd = "${pkgs.ghostty}/bin/ghostty";
+  # Single launcher for every "open a terminal" path (the Mod+Return bind and
+  # rofi's `-terminal`). `+new-window` uses ghostty's D-Bus IPC: it opens a window
+  # in the already-running instance (no cold start) and relies on D-Bus activation
+  # to start ghostty when nothing is running. This is much faster than plain
+  # `ghostty`, which re-reads config, inspects the environment and re-initializes
+  # GTK on every launch. Wrapped in a script so the value stays a single token
+  # (rofi's `-terminal` expects one executable) and so rofi's appended `-e <cmd>`
+  # is forwarded correctly (`+new-window -e` is honored since ghostty 1.3.0). The
+  # D-Bus/systemd activation files come from programs.ghostty.systemd.enable (set
+  # in the ghostty module). See https://ghostty.org/docs/linux/systemd
+  terminal_launcher = pkgs.writeShellScriptBin "ghostty-launch" ''
+    exec ${pkgs.ghostty}/bin/ghostty +new-window "$@"
+  '';
+  terminal_cmd = "${terminal_launcher}/bin/ghostty-launch";
 
   sway_display_control = pkgs.writeShellApplication {
     name = "sway-display-control";
