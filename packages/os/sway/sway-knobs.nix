@@ -73,6 +73,19 @@ in
   xdg.portal.config.common.default = "*";
   xdg.portal.enable = true;
   xdg.portal.wlr.enable = true;
+  # Without settings, xdg-desktop-portal-wlr falls back to its default screencast
+  # "chooser", which probes wmenu/wofi/rofi/bemenu/fuzzel on $PATH. The portal
+  # systemd service has a minimal PATH (none of those are present), so output
+  # selection fails with "wlroots: no output found" and screenshare never starts.
+  # Pin the chooser to rofi by absolute store path so the broken service PATH is
+  # irrelevant; -dmenu makes rofi read the piped output list (eDP-1, HDMI-A-1, ...).
+  # Note: no wlroots chooser supports preview/thumbnails (upstream PRs #59/#105/#228
+  # were never merged); the protocol only returns an output/window name.
+  xdg.portal.wlr.settings.screencast = {
+    chooser_type = "dmenu";
+    chooser_cmd = "${pkgs.rofi}/bin/rofi -dmenu -p 'Share output'";
+    max_fps = 30;
+  };
   xdg.portal.extraPortals = [
     pkgs.xdg-desktop-portal-gtk
     pkgs.xdg-desktop-portal
