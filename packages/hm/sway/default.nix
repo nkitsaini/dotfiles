@@ -42,34 +42,24 @@ let
     '';
   };
 
-  # TODO: replace with in-house write of wayland lock (both suspend and startup)
-  # gtklock has no built-in single-instance guard (jovanlanik/gtklock#130):
-  # a second invocation while one is already running fails with "Failed to
-  # lock session" but leaves a confusing stacked surface state. swayidle
-  # calls lock_cmd from up to three places (1200s timeout, lock event,
-  # before-sleep), so without this wrapper users see multiple unlock
-  # prompts in a row after wake.
-  gtklock_single_instance = pkgs.writeShellApplication {
-    name = "gtklock-single-instance";
-    runtimeInputs = with pkgs; [
-      gtklock
-      procps
-    ];
-    text = ''
-      if pgrep -x gtklock >/dev/null 2>&1; then
-        exit 0
-      fi
-      exec gtklock "$@"
-    '';
-  };
-
   turn_off_output_cmd = "${sway_display_control}/bin/sway-display-control off";
   turn_on_output_cmd = "${sway_display_control}/bin/sway-display-control on";
+  # Locking goes through a dedicated systemd user service (defined below)
+  # instead of launching gtklock straight from swayidle. Two reasons:
+  #   1. swayidle fires the lock command from several places (1200s timeout,
+  #      lock event, before-sleep). `systemctl start` on an already-active
+  #      service is a no-op, so we get single-instance locking for free and
+  #      never end up with stacked lock surfaces (the old symptom where you
+  #      had to type the password two or three times).
+  #   2. The service runs in its own cgroup. The after-resume handler restarts
+  #      swayidle.service to re-arm idle timers (swaywm/swayidle#156); when
+  #      gtklock was a child of swayidle that restart killed the locker and
+  #      the screen silently unlocked after suspend/resume.
   lock_cmd =
     if disableSwayLock then
       turn_off_output_cmd
     else
-      "${gtklock_single_instance}/bin/gtklock-single-instance -b ${(import ../../shared/wallpapers.nix).wallpaper3}";
+      "${pkgs.systemd}/bin/systemctl --user start gtklock.service";
   out_laptop = "eDP-1";
   out_monitor = "HDMI-A-1";
 
@@ -384,6 +374,31 @@ in
         "Escape" = "mode default";
         "Return" = "mode default";
       };
+    };
+  };
+
+  # Screen locker as its own service. Started via `systemctl --user start
+  # gtklock.service` from swayidle's timeout/lock/before-sleep commands.
+  # Living in a separate cgroup is what makes the locker survive both the
+  # after-resume swayidle restart and the suspend/resume cycle, so the screen
+  # stays locked until the password is actually entered.
+  systemd.user.services.gtklock = {
+    Unit = {
+      Description = "gtklock screen locker";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+      # Don't try to lock when there is no Wayland session to lock.
+      ConditionEnvironment = "WAYLAND_DISPLAY";
+    };
+    Service = {
+      Type = "simple";
+      ExecStart = "${pkgs.gtklock}/bin/gtklock -b ${wallpaper}";
+      # gtklock exits 0 once the user authenticates. Any non-zero exit (e.g.
+      # it lost its Wayland connection) means the screen is no longer locked,
+      # so bring the locker back rather than leaving the session exposed.
+      # A successful unlock does not trigger a restart.
+      Restart = "on-failure";
+      RestartSec = 1;
     };
   };
 
