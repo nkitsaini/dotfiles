@@ -117,6 +117,40 @@
     };
   };
 
+  # NixOS only ships `services.btrfs.autoScrub` (integrity), not a balance
+  # module. Without periodic balance, btrfs eventually allocates 100% of the
+  # disk into chunks; once `unallocated` hits 0, metadata can't grow and writes
+  # fail with ENOSPC even though `df` reports free space. This reclaims
+  # mostly-empty block groups back to unallocated to keep that headroom.
+  systemd.services.btrfs-balance = {
+    description = "Periodic btrfs balance to keep unallocated space healthy";
+    path = [ pkgs.btrfs-progs ];
+    script = ''
+      set -eu
+      for usage in 10 20 30 40 50; do
+        btrfs balance start -dusage=$usage / || true
+      done
+      for usage in 5 10 20 30; do
+        btrfs balance start -musage=$usage / || true
+      done
+    '';
+    serviceConfig = {
+      Type = "oneshot";
+      TimeoutStartSec = "infinity";
+      Nice = 19;
+      IOSchedulingClass = "idle";
+    };
+  };
+
+  systemd.timers.btrfs-balance = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "weekly";
+      Persistent = true;
+      RandomizedDelaySec = "1h";
+    };
+  };
+
   # better timesync for unstable internet connections
   services.chrony.enable = true;
   services.timesyncd.enable = false;
