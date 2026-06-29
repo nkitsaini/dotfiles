@@ -7,6 +7,10 @@
       osd-bar = "no";
       # osc = "no";
       border = "no";
+
+      # Prefer H.264 (AVC) when streaming via yt-dlp. The AMD iGPU (Lucienne,
+      # VCN 2.x) has no hardware AV1 decoder, so AV1 would be CPU-decoded.
+      ytdl-raw-options = "format-sort=[vcodec:h264]";
     };
     bindings = {
       h = "script-binding uosc/playlist";
