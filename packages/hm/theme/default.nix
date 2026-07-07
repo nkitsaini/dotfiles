@@ -65,7 +65,9 @@
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       gtk-theme = "Breeze";
-      color-scheme = "prefer-light";
+      # color-scheme is intentionally not set here: it is owned by the
+      # time-of-day reconciler in ../darkmode. Setting it statically would
+      # reset the scheme to light on every `home-manager switch`.
     };
 
     # For Gnome shell

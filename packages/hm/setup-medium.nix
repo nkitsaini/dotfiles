@@ -12,6 +12,7 @@
     ./firefox
     ./mpv
     ./theme
+    ./darkmode
     ./zed
     ./sioyek
     ./activity_watch
