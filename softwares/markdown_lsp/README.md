@@ -14,9 +14,10 @@ It focuses on the things that make editing Markdown pleasant:
   - **`./` / `../`** — everything is offered **relative** (walking up as needed);
   - **`/`** — everything is offered **absolute** (workspace-root relative).
 
-  Directories re-trigger completion so you can keep narrowing. The walk is
-  bounded (depth, a scan budget and a result cap) so it stays fast in large
-  trees.
+  Directories re-trigger completion so you can keep narrowing. The walk uses
+  ripgrep's `ignore` crate, so it **respects `.gitignore` / `.ignore`** and skips
+  hidden files by default (both configurable), and is bounded (depth, a scan
+  budget and a result cap) so it stays fast in large trees.
 - **Quick `@` / `/` commands**: type a trigger character at the start of a line
   (or after a space) to open a small insert menu, à la Notion/Slack:
   - **dates & times** — `now` (`14:30`), `today` / `tomorrow` / `yesterday`
@@ -54,14 +55,22 @@ It focuses on the things that make editing Markdown pleasant:
   consolidate the definitions under a `# References` heading at the bottom of the
   file — and back again. Available as an on-demand code action / command, and
   (optionally) via `textDocument/formatting`.
+- **Daily / journal notes**: a command (`openDailyNote`, exposed as *Open
+  today's / yesterday's / tomorrow's journal note* code actions) that opens the
+  dated note — creating it from a configurable template the first time, like
+  `cp journal/template.md journal/2026-07-07.md`, and just opening it thereafter.
 - **Folding** at heading/section, list, code-block, block-quote, table and
   front-matter granularity.
 - **Broken-link diagnostics**: warns when a link/image points at a local file
   that does not exist.
 - **Document outline** (headings) and **hover** (a link's resolved target and
   whether it exists).
-- A **command-line mode** (`markdown-lsp format` / `markdown-lsp lint`) so the
-  same formatter and broken-link checker can run in scripts and CI.
+- **Project config file**: an optional `.markdown-lsp.json` at the workspace
+  root, deep-merged over the editor's settings, so project conventions (journal
+  template, formatting, …) are portable across Zed / Neovim / VS Code / the CLI.
+- A **command-line mode** (`markdown-lsp format` / `inline` / `lint`, accepting
+  files *or* directories) so the same formatter and broken-link checker can run
+  in scripts and CI.
 
 It speaks standard LSP over stdio, uses **incremental** text synchronisation,
 negotiates the position encoding (UTF-8 / UTF-16), and caches per-document
@@ -185,7 +194,11 @@ markdown-lsp config          # emit default settings as JSON
     "paths": true,
     // Extensions floated to the top of the completion list, highest first.
     "prioritizeExtensions": [".md", ".markdown"],
+    // Offer hidden (dot) files/directories.
     "showHiddenFiles": false,
+    // Respect .gitignore / .ignore / git excludes when walking the workspace
+    // (so ignored files — node_modules, build output, … — aren't offered).
+    "gitignore": true,
     // Search the whole workspace tree (fuzzy), not just the current directory.
     // When false, only the immediate directory is offered (no walking up/down).
     "deepPaths": true,
@@ -223,15 +236,52 @@ markdown-lsp config          # emit default settings as JSON
     "dateFormat": "%Y-%m-%d",
     "dateTimeFormat": "%Y-%m-%d %H:%M"
   },
+  "journal": {
+    // Directory (relative to the workspace root) holding the daily notes.
+    "directory": "journal",
+    // Template copied into a new note (relative to the workspace root). When
+    // null or missing, a minimal note with a date heading is created instead.
+    "template": null,
+    // `chrono` strftime format for a note's file name.
+    "filenameFormat": "%Y-%m-%d.md"
+  },
   // Parse GitHub Flavored Markdown (tables, task lists, autolinks, ...).
   "gfm": true
 }
 ```
 
+### Project config file
+
+Besides the client's `initializationOptions`, the server reads an optional
+**`.markdown-lsp.json`** at the workspace root. It uses the exact same schema as
+above (no wrapper key needed), and is **deep-merged over** the editor settings
+key by key — so a project can pin, say, its journal template while each
+developer keeps their personal preferences for everything else:
+
+```jsonc
+// .markdown-lsp.json  (committed to the repo)
+{
+  "journal": { "directory": "journal", "template": "journal/template.md" }
+}
+```
+
+Precedence is *defaults → editor settings → project file* (project wins). The
+file is re-read on `initialize`, on `didChangeConfiguration`, and whenever it
+changes on disk. Keeping it in the repo makes project conventions **portable
+across editors** — Zed, Neovim, VS Code, and the CLI all pick up the same
+settings.
+
+*How other tools do this:* Prettier (`.prettierrc`), ESLint (`.eslintrc`),
+markdownlint (`.markdownlint.json`), rustfmt (`rustfmt.toml`) and EditorConfig
+(`.editorconfig`) all use a discovered dotfile at (or above) the project root;
+Ruff/Black read a `[tool.*]` table in `pyproject.toml`. We follow the same
+convention with a single JSON file at the workspace root that mirrors the LSP
+settings schema.
+
 ## Commands & code actions
 
-Four code actions and the equivalent `workspace/executeCommand` commands are
-provided:
+These code actions and the equivalent `workspace/executeCommand` commands are
+provided (all appear in the editor's code-action menu for any Markdown file):
 
 | Command | Effect |
 | --- | --- |
@@ -239,11 +289,36 @@ provided:
 | `markdown-lsp.inlineReferences` | The inverse: expand reference links back to inline links and drop the definitions (edits the buffer). |
 | `markdown-lsp.convertToInline` | Replace the **selection** (or whole document) *in place* with its inlined form. |
 | `markdown-lsp.copyAsInlined` | Put the **selection** (or whole document), links expanded inline, on the **system clipboard** — *without* editing the buffer. |
+| `markdown-lsp.openDailyNote` | Open the journal note for `today + <offset>` days, creating it from the template if it doesn't exist. Argument: an integer day offset (`0` today, `-1` yesterday, `1` tomorrow). |
 
 `moveReferencesToBottom` / `inlineReferences` take the document URI as their only
 argument. `convertToInline` and `copyAsInlined` take the URI plus an optional
 selection `Range` as a second argument (an empty/absent range means the whole
-document).
+document). `openDailyNote` takes the day offset.
+
+### Daily / journal notes
+
+`openDailyNote` is the equivalent of `cp journal/template.md journal/2026-07-07.md`
+(when the target doesn't exist yet) followed by opening it — and just opens the
+file when it already exists, never overwriting your notes. The path and template
+come from the [`journal`](#configuration) config, and references are resolved
+against the workspace root. Three code actions are offered — **Open today's /
+yesterday's / tomorrow's journal note** — so they're one code-action menu away
+in any Markdown file. From Neovim you can bind them directly:
+
+```lua
+-- Today / yesterday's note.
+vim.keymap.set("n", "<leader>jt", function()
+  vim.lsp.buf.execute_command({ command = "markdown-lsp.openDailyNote", arguments = { 0 } })
+end)
+vim.keymap.set("n", "<leader>jy", function()
+  vim.lsp.buf.execute_command({ command = "markdown-lsp.openDailyNote", arguments = { -1 } })
+end)
+```
+
+The server creates the note and asks the editor to open it via
+`window/showDocument`, so it needs a client that supports that (Zed, Neovim, VS
+Code all do).
 
 ### Inlining links: copy vs. convert
 
@@ -280,11 +355,18 @@ The same binary doubles as a CLI. With no subcommand it speaks LSP over stdio
 (as above); with `format` / `lint` it runs the formatter and broken-link checker
 directly — handy for scripts, pre-commit hooks and CI.
 
+`format`, `inline` and `lint` accept **files or directories** — a directory is
+searched recursively for `*.md` / `*.markdown`, so `markdown-lsp format .`
+handles a whole tree. The walk uses ripgrep's `ignore` crate, so it **respects
+`.gitignore` / `.ignore`** and **skips hidden files** by default (which also
+prunes `node_modules`, `target`, `.git`, …). Override with `--no-ignore` and
+`--hidden`.
+
 ```bash
 # Format: normalise tables (and optionally consolidate references).
 markdown-lsp format README.md            # print the formatted result to stdout
-markdown-lsp format --write docs/*.md    # rewrite files in place
-markdown-lsp format --check docs/*.md    # exit non-zero if anything is unformatted
+markdown-lsp format --write .            # rewrite every Markdown file under cwd
+markdown-lsp format --check docs/        # exit non-zero if anything is unformatted
 markdown-lsp format --move-references notes.md   # also move refs to the bottom
 cat notes.md | markdown-lsp format --stdin       # read stdin, write stdout
 
@@ -293,7 +375,7 @@ markdown-lsp inline notes.md | wl-copy           # copy a self-contained version
 cat notes.md | markdown-lsp inline --stdin       # read stdin, write stdout
 
 # Lint: report links/images pointing at files that do not exist.
-markdown-lsp lint docs/*.md                       # "path:line:col: message", exit 1 on findings
+markdown-lsp lint .                               # recurse the current directory
 markdown-lsp lint --root . --no-images README.md
 
 # Misc: print an example config (all defaults) or this README.
@@ -304,8 +386,10 @@ markdown-lsp readme                               # print the README
 `format` flags: `-w/--write`, `--check`, `-r/--move-references`, `--no-tables`,
 `--references-heading <NAME>`, `--stdin`. `inline` flags:
 `--references-heading <NAME>`, `--stdin`. `lint` flags: `--root <DIR>`,
-`--no-images`. `config` and `readme` take no arguments. All exit `0` when clean,
-`1` on findings / changes, `2` on usage errors.
+`--no-images`. `format` / `inline` / `lint` also take `--no-ignore` (don't
+respect `.gitignore`) and `--hidden` (include hidden files) for their directory
+walk. `config` and `readme` take no arguments. All exit `0` when clean, `1` on
+findings / changes, `2` on usage errors.
 
 ## How it works
 

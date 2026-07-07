@@ -16,6 +16,7 @@ pub struct Config {
     pub diagnostics: DiagnosticsConfig,
     pub formatting: FormattingConfig,
     pub snippets: SnippetsConfig,
+    pub journal: JournalConfig,
     /// Parse GitHub Flavored Markdown (tables, task lists, autolinks, ...).
     pub gfm: bool,
 }
@@ -28,6 +29,7 @@ impl Default for Config {
             diagnostics: DiagnosticsConfig::default(),
             formatting: FormattingConfig::default(),
             snippets: SnippetsConfig::default(),
+            journal: JournalConfig::default(),
             gfm: true,
         }
     }
@@ -35,12 +37,13 @@ impl Default for Config {
 
 /// Top-level configuration keys we recognise (used to tell *our* settings apart
 /// from unrelated payloads some clients send in `didChangeConfiguration`).
-const KNOWN_KEYS: [&str; 6] = [
+const KNOWN_KEYS: [&str; 7] = [
     "folding",
     "completion",
     "diagnostics",
     "formatting",
     "snippets",
+    "journal",
     "gfm",
 ];
 
@@ -58,19 +61,84 @@ impl Config {
     /// a good `initializationOptions` config with an unrelated payload — the
     /// bug that stopped `textDocument/formatting` from moving references.
     pub fn try_from_json(value: &serde_json::Value) -> Option<Self> {
-        for key in ["markdown-lsp", "markdownLsp", "markdown"] {
-            if let Some(inner) = value.get(key) {
-                if !inner.is_null() {
-                    return serde_json::from_value(inner.clone()).ok();
-                }
+        if !looks_like_ours(value) {
+            return None;
+        }
+        Self::try_from_json_lenient(value)
+    }
+
+    /// Resolve the effective config from two optional layers, with the project
+    /// file taking precedence over the client's settings (both over defaults):
+    ///
+    /// 1. `client` — the editor's `initializationOptions` /
+    ///    `didChangeConfiguration` (per-user, per-editor).
+    /// 2. `project` — a `.markdown-lsp.json` at the workspace root (per-project,
+    ///    editor-agnostic).
+    ///
+    /// Objects are deep-merged key by key so a project can override just the
+    /// keys it cares about (e.g. `journal.template`) and inherit the rest.
+    pub fn resolve(
+        client: Option<&serde_json::Value>,
+        project: Option<&serde_json::Value>,
+    ) -> Self {
+        let client = client.map(unwrap_wrapper).unwrap_or(serde_json::Value::Null);
+        let project = project.map(unwrap_wrapper).unwrap_or(serde_json::Value::Null);
+        let merged = merge_values(client, project);
+        serde_json::from_value(merged).unwrap_or_default()
+    }
+
+    /// Deserialize after stripping an optional wrapper key, without the
+    /// "does this look like ours" gate.
+    fn try_from_json_lenient(value: &serde_json::Value) -> Option<Self> {
+        serde_json::from_value(unwrap_wrapper(value)).ok()
+    }
+}
+
+/// Whether `value` carries our settings (a recognised wrapper key, or one of the
+/// known top-level sections). Used to ignore unrelated `didChangeConfiguration`
+/// payloads some clients send.
+pub fn looks_like_ours(value: &serde_json::Value) -> bool {
+    for key in ["markdown-lsp", "markdownLsp", "markdown"] {
+        if value.get(key).is_some_and(|inner| !inner.is_null()) {
+            return true;
+        }
+    }
+    value
+        .as_object()
+        .is_some_and(|obj| KNOWN_KEYS.iter().any(|k| obj.contains_key(*k)))
+}
+
+/// Strip an optional `markdown-lsp` / `markdownLsp` / `markdown` wrapper key,
+/// returning the inner object (or the value unchanged when unwrapped).
+fn unwrap_wrapper(value: &serde_json::Value) -> serde_json::Value {
+    for key in ["markdown-lsp", "markdownLsp", "markdown"] {
+        if let Some(inner) = value.get(key) {
+            if !inner.is_null() {
+                return inner.clone();
             }
         }
-        let obj = value.as_object()?;
-        if KNOWN_KEYS.iter().any(|k| obj.contains_key(*k)) {
-            serde_json::from_value(value.clone()).ok()
-        } else {
-            None
+    }
+    value.clone()
+}
+
+/// Deep-merge two JSON values, with `over` winning: objects merge key by key,
+/// while arrays and scalars from `over` replace `base`. A `null` in `over` is
+/// treated as "unset" and leaves `base` intact.
+fn merge_values(base: serde_json::Value, over: serde_json::Value) -> serde_json::Value {
+    use serde_json::Value;
+    match (base, over) {
+        (Value::Object(mut b), Value::Object(o)) => {
+            for (k, v) in o {
+                let merged = match b.remove(&k) {
+                    Some(existing) => merge_values(existing, v),
+                    None => v,
+                };
+                b.insert(k, merged);
+            }
+            Value::Object(b)
         }
+        (base, Value::Null) => base,
+        (_, over) => over,
     }
 }
 
@@ -110,6 +178,9 @@ pub struct CompletionConfig {
     pub prioritize_extensions: Vec<String>,
     /// Offer dotfiles / hidden directories.
     pub show_hidden_files: bool,
+    /// Respect `.gitignore` / `.ignore` / git excludes (and global gitignore)
+    /// when walking the workspace, so ignored files aren't offered.
+    pub gitignore: bool,
     /// Also offer files in nested directories, fuzzy-matched (fzf style), not
     /// just entries of the immediate directory.
     pub deep_paths: bool,
@@ -127,6 +198,7 @@ impl Default for CompletionConfig {
             paths: true,
             prioritize_extensions: vec![".md".to_string(), ".markdown".to_string()],
             show_hidden_files: false,
+            gitignore: true,
             deep_paths: true,
             deep_paths_max_depth: 8,
             max_items: 256,
@@ -227,5 +299,64 @@ impl Default for SnippetsConfig {
             date_format: "%Y-%m-%d".to_string(),
             date_time_format: "%Y-%m-%d %H:%M".to_string(),
         }
+    }
+}
+
+/// Daily-note ("journal") commands.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct JournalConfig {
+    /// Directory (relative to the workspace root, unless absolute) that holds
+    /// the daily notes.
+    pub directory: String,
+    /// Optional template copied into a new note. Relative paths resolve against
+    /// the workspace root. When unset (or missing on disk), a minimal note with
+    /// a date heading is created instead.
+    pub template: Option<String>,
+    /// [`chrono`] format string for a note's file name.
+    pub filename_format: String,
+}
+
+impl Default for JournalConfig {
+    fn default() -> Self {
+        Self {
+            directory: "journal".to_string(),
+            template: Some("journal/template.md".to_string()),
+            filename_format: "%Y-%m-%d.md".to_string(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn project_file_overrides_client_but_keeps_other_keys() {
+        let client = json!({
+            "formatting": { "moveReferencesToBottom": false, "referencesHeading": "Links" },
+            "gfm": true
+        });
+        let project = json!({
+            "journal": { "template": "journal/template.md" },
+            "formatting": { "moveReferencesToBottom": true }
+        });
+        let cfg = Config::resolve(Some(&client), Some(&project));
+
+        // Project wins on the key it sets...
+        assert!(cfg.formatting.move_references_to_bottom);
+        // ...but the client's sibling key is preserved (deep merge, not replace).
+        assert_eq!(cfg.formatting.references_heading, "Links");
+        // ...and project-only keys apply.
+        assert_eq!(cfg.journal.template.as_deref(), Some("journal/template.md"));
+    }
+
+    #[test]
+    fn resolve_tolerates_missing_layers_and_wrappers() {
+        assert!(!Config::resolve(None, None).journal.directory.is_empty());
+        let wrapped = json!({ "markdown-lsp": { "gfm": false } });
+        let cfg = Config::resolve(Some(&wrapped), None);
+        assert!(!cfg.gfm);
     }
 }

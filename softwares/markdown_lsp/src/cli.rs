@@ -2,10 +2,14 @@
 //! an editor.
 //!
 //! ```text
-//! markdown-lsp format [--write|--check] [--move-references] [--no-tables] [FILES...]
-//! markdown-lsp inline [--references-heading NAME] [--stdin] [FILES...]
-//! markdown-lsp lint   [--root DIR] [--no-images] FILES...
+//! markdown-lsp format [--write|--check] [--move-references] [--no-tables] [PATHS...]
+//! markdown-lsp inline [--references-heading NAME] [--stdin] [PATHS...]
+//! markdown-lsp lint   [--root DIR] [--no-images] PATHS...
 //! ```
+//!
+//! `PATHS` may be files *or* directories: directories are searched recursively
+//! for Markdown files (`*.md` / `*.markdown`), so `markdown-lsp format .`
+//! formats every Markdown file under the current directory.
 //!
 //! With no subcommand the binary speaks LSP over stdio (see `main.rs`).
 
@@ -62,11 +66,19 @@ pub fn print_help() {
 \n\
 USAGE:\n\
     markdown-lsp                       Run the language server over stdio (default)\n\
-    markdown-lsp format [OPTIONS] [FILES...]\n\
-    markdown-lsp inline [OPTIONS] [FILES...]\n\
-    markdown-lsp lint   [OPTIONS] FILES...\n\
+    markdown-lsp format [OPTIONS] [PATHS...]\n\
+    markdown-lsp inline [OPTIONS] [PATHS...]\n\
+    markdown-lsp lint   [OPTIONS] PATHS...\n\
     markdown-lsp config                Print an example config (all defaults) as JSON\n\
     markdown-lsp readme                Print the README to stdout\n\
+\n\
+PATHS may be files or directories; directories are searched recursively for\n\
+Markdown files (*.md / *.markdown). E.g. `markdown-lsp format .`\n\
+By default the walk respects .gitignore/.ignore and skips hidden files.\n\
+\n\
+DIRECTORY WALK OPTIONS (format / inline / lint):\n\
+        --no-ignore         Do not respect .gitignore / .ignore files\n\
+        --hidden            Include hidden (dot) files and directories\n\
 \n\
 FORMAT OPTIONS:\n\
     -w, --write             Rewrite files in place (default: print to stdout)\n\
@@ -100,6 +112,7 @@ fn cmd_format(args: &[String]) -> i32 {
     let mut write = false;
     let mut check = false;
     let mut use_stdin = false;
+    let mut walk = WalkOpts::default();
     let mut cfg = FormattingConfig {
         move_references_to_bottom: false,
         format_tables: true,
@@ -113,6 +126,8 @@ fn cmd_format(args: &[String]) -> i32 {
             "-w" | "--write" => write = true,
             "--check" => check = true,
             "--stdin" => use_stdin = true,
+            "--no-ignore" => walk.gitignore = false,
+            "--hidden" => walk.hidden = true,
             "-r" | "--move-references" => cfg.move_references_to_bottom = true,
             "--no-tables" => cfg.format_tables = false,
             "--references-heading" => match it.next() {
@@ -140,6 +155,7 @@ fn cmd_format(args: &[String]) -> i32 {
         return 0;
     }
 
+    let files = expand_inputs(&files, walk);
     let mut changed = false;
     let mut had_error = false;
     for file in &files {
@@ -190,6 +206,7 @@ fn cmd_format(args: &[String]) -> i32 {
 /// `markdown-lsp inline notes.md | pbcopy`.
 fn cmd_inline(args: &[String]) -> i32 {
     let mut use_stdin = false;
+    let mut walk = WalkOpts::default();
     let mut references_heading = "References".to_string();
     let mut files: Vec<String> = Vec::new();
 
@@ -197,6 +214,8 @@ fn cmd_inline(args: &[String]) -> i32 {
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--stdin" => use_stdin = true,
+            "--no-ignore" => walk.gitignore = false,
+            "--hidden" => walk.hidden = true,
             "--references-heading" => match it.next() {
                 Some(v) => references_heading = v.clone(),
                 None => {
@@ -222,6 +241,7 @@ fn cmd_inline(args: &[String]) -> i32 {
         return 0;
     }
 
+    let files = expand_inputs(&files, walk);
     let mut had_error = false;
     for file in &files {
         let source = match std::fs::read_to_string(file) {
@@ -257,6 +277,7 @@ pub struct LintIssue {
 fn cmd_lint(args: &[String]) -> i32 {
     let mut root: Option<PathBuf> = None;
     let mut check_images = true;
+    let mut walk = WalkOpts::default();
     let mut files: Vec<String> = Vec::new();
 
     let mut it = args.iter();
@@ -270,6 +291,8 @@ fn cmd_lint(args: &[String]) -> i32 {
                 }
             },
             "--no-images" => check_images = false,
+            "--no-ignore" => walk.gitignore = false,
+            "--hidden" => walk.hidden = true,
             "-h" | "--help" => {
                 print_help();
                 return 0;
@@ -287,6 +310,7 @@ fn cmd_lint(args: &[String]) -> i32 {
         return 2;
     }
 
+    let files = expand_inputs(&files, walk);
     let root = root
         .or_else(|| std::env::current_dir().ok())
         .map(|p| crate::uri::normalize(&p));
@@ -369,6 +393,78 @@ fn read_stdin() -> String {
     buf
 }
 
+// ---------------------------------------------------------------------------
+// Path expansion (files + directories)
+// ---------------------------------------------------------------------------
+
+/// Markdown file extensions recognised when walking directories.
+const MARKDOWN_EXTS: &[&str] = &["md", "markdown"];
+
+/// How a directory walk should treat ignored / hidden files.
+#[derive(Debug, Clone, Copy)]
+struct WalkOpts {
+    /// Respect `.gitignore` / `.ignore` / git excludes (default true).
+    gitignore: bool,
+    /// Include hidden (dot) files and directories (default false).
+    hidden: bool,
+}
+
+impl Default for WalkOpts {
+    fn default() -> Self {
+        Self {
+            gitignore: true,
+            hidden: false,
+        }
+    }
+}
+
+/// Expand `inputs` into a list of files: directory arguments are searched
+/// recursively for Markdown files (via ripgrep's [`ignore`] walker, so
+/// `.gitignore` and hidden files are honoured per `opts`); everything else is
+/// passed through untouched so non-existent files still surface a per-file
+/// error later.
+fn expand_inputs(inputs: &[String], opts: WalkOpts) -> Vec<String> {
+    let mut out = Vec::new();
+    for input in inputs {
+        let path = Path::new(input);
+        if path.is_dir() {
+            collect_markdown(path, opts, &mut out);
+        } else {
+            out.push(input.clone());
+        }
+    }
+    out
+}
+
+/// Recursively collect Markdown files under `dir` into `out`, sorted for
+/// deterministic output.
+fn collect_markdown(dir: &Path, opts: WalkOpts, out: &mut Vec<String>) {
+    let mut builder = ignore::WalkBuilder::new(dir);
+    builder
+        .hidden(!opts.hidden)
+        .parents(opts.gitignore)
+        .git_ignore(opts.gitignore)
+        .git_global(opts.gitignore)
+        .git_exclude(opts.gitignore)
+        .ignore(opts.gitignore)
+        .require_git(false)
+        .sort_by_file_name(|a, b| a.cmp(b));
+
+    for entry in builder.build().flatten() {
+        let is_file = entry.file_type().map(|t| t.is_file()).unwrap_or(false);
+        if is_file && is_markdown(entry.path()) {
+            out.push(entry.path().to_string_lossy().into_owned());
+        }
+    }
+}
+
+fn is_markdown(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map(|ext| MARKDOWN_EXTS.iter().any(|m| ext.eq_ignore_ascii_case(m)))
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -410,5 +506,68 @@ mod tests {
         let out = formatting::format_document("a | b | c\n", true, &cfg);
         assert!(out.contains("| a"));
         assert!(out.contains("| ---"));
+    }
+
+    fn names_of(paths: &[String]) -> Vec<String> {
+        paths
+            .iter()
+            .map(|p| Path::new(p).file_name().unwrap().to_string_lossy().into_owned())
+            .collect()
+    }
+
+    #[test]
+    fn expand_inputs_walks_directories_for_markdown() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::write(dir.path().join("b.markdown"), "").unwrap();
+        fs::write(dir.path().join("c.txt"), "").unwrap(); // non-md
+        fs::create_dir(dir.path().join("sub")).unwrap();
+        fs::write(dir.path().join("sub/d.md"), "").unwrap();
+
+        let names = names_of(&expand_inputs(
+            &[dir.path().to_string_lossy().into_owned()],
+            WalkOpts::default(),
+        ));
+        assert!(names.contains(&"a.md".to_string()), "got {names:?}");
+        assert!(names.contains(&"b.markdown".to_string()), "got {names:?}");
+        assert!(names.contains(&"d.md".to_string()), "nested; got {names:?}");
+        assert!(!names.contains(&"c.txt".to_string()), "non-md excluded");
+    }
+
+    #[test]
+    fn expand_inputs_respects_gitignore_and_hidden_by_default() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join(".gitignore"), "ignored/\nsecret.md\n").unwrap();
+        fs::write(dir.path().join("keep.md"), "").unwrap();
+        fs::write(dir.path().join("secret.md"), "").unwrap(); // gitignored
+        fs::write(dir.path().join(".hidden.md"), "").unwrap(); // hidden
+        fs::create_dir(dir.path().join("ignored")).unwrap();
+        fs::write(dir.path().join("ignored/x.md"), "").unwrap(); // gitignored dir
+        let arg = dir.path().to_string_lossy().into_owned();
+
+        // Defaults: gitignore + hidden are honoured.
+        let names = names_of(&expand_inputs(std::slice::from_ref(&arg), WalkOpts::default()));
+        assert_eq!(names, vec!["keep.md".to_string()], "default walk; got {names:?}");
+
+        // Overrides bring the ignored/hidden files back.
+        let all = names_of(&expand_inputs(
+            std::slice::from_ref(&arg),
+            WalkOpts { gitignore: false, hidden: true },
+        ));
+        assert!(all.contains(&"secret.md".to_string()), "no-ignore; got {all:?}");
+        assert!(all.contains(&".hidden.md".to_string()), "hidden; got {all:?}");
+        assert!(all.contains(&"x.md".to_string()), "ignored dir; got {all:?}");
+    }
+
+    #[test]
+    fn expand_inputs_passes_through_files() {
+        let dir = tempdir().unwrap();
+        let f = dir.path().join("note.md");
+        fs::write(&f, "").unwrap();
+        let arg = f.to_string_lossy().into_owned();
+        assert_eq!(
+            expand_inputs(std::slice::from_ref(&arg), WalkOpts::default()),
+            vec![arg]
+        );
     }
 }

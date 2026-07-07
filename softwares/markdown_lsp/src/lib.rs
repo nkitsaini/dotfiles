@@ -16,6 +16,7 @@ pub mod document;
 pub mod encoding;
 pub mod features;
 pub mod fuzzy;
+pub mod journal;
 pub mod links;
 pub mod server;
 pub mod uri;

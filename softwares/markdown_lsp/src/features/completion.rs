@@ -23,9 +23,9 @@
 //! The walk is breadth-first and bounded (depth, a scan budget and a result
 //! cap) so it stays cheap even in large trees.
 
-use std::collections::VecDeque;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path};
 
+use ignore::WalkBuilder;
 use ropey::Rope;
 use tower_lsp_server::ls_types::{
     Command, CompletionItem, CompletionItemKind, CompletionTextEdit, Position, Range, TextEdit,
@@ -39,9 +39,6 @@ use crate::links::has_scheme;
 /// Hard cap on directory entries examined during a single completion request,
 /// regardless of configuration. Protects against pathological trees.
 const WALK_BUDGET: usize = 8192;
-
-/// Directories we never descend into for deep completion (build/VCS noise).
-const SKIP_DIRS: &[&str] = &[".git", "node_modules", "target"];
 
 /// How the user anchored the destination they're typing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -178,8 +175,12 @@ pub(crate) fn workspace_files(
         .collect()
 }
 
-/// Walk `scope` (breadth-first, bounded), presenting and scoring each entry,
-/// then sort best-first and cap to `config.max_items`.
+/// Walk `scope` (bounded), presenting and scoring each entry, then sort
+/// best-first and cap to `config.max_items`.
+///
+/// Uses ripgrep's [`ignore`] walker so `.gitignore` / `.ignore` / git excludes
+/// and hidden files are honoured per `config` — which also prunes the usual
+/// heavy directories (`node_modules`, `target`, `.git`) for free.
 fn collect(
     scope: &Path,
     doc_dir: Option<&Path>,
@@ -189,59 +190,67 @@ fn collect(
     max_depth: usize,
 ) -> Vec<Candidate> {
     let mut matcher = PathMatcher::new(&ctx.query);
+    // Reveal hidden entries when the query itself targets a dotfile.
     let query_is_hidden = ctx.query.rsplit('/').next().is_some_and(|s| s.starts_with('.'));
+    let show_hidden = config.show_hidden_files || query_is_hidden;
 
     let mut out: Vec<Candidate> = Vec::new();
-    let mut budget = WALK_BUDGET;
-    let mut queue: VecDeque<(PathBuf, usize)> = VecDeque::new();
-    queue.push_back((scope.to_path_buf(), 0));
 
-    while let Some((dir, depth)) = queue.pop_front() {
-        let entries = match std::fs::read_dir(&dir) {
+    for entry in build_walker(scope, max_depth, show_hidden, config.gitignore)
+        .build()
+        .take(WALK_BUDGET)
+    {
+        let entry = match entry {
             Ok(e) => e,
             Err(_) => continue,
         };
-        let entry_depth = depth + 1;
-
-        for entry in entries.flatten() {
-            if budget == 0 {
-                break;
-            }
-            budget -= 1;
-
-            let name = entry.file_name().to_string_lossy().into_owned();
-            if name.starts_with('.') && !config.show_hidden_files && !query_is_hidden {
-                continue;
-            }
-            let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
-            let path = entry.path();
-
-            if let Some((display, is_down)) = present(&path, is_dir, doc_dir, root, ctx.mode) {
-                if let Some(score) = matcher.score(&display) {
-                    out.push(Candidate {
-                        display,
-                        is_dir,
-                        is_down,
-                        depth: entry_depth,
-                        score,
-                        name: name.clone(),
-                    });
-                }
-            }
-
-            if is_dir && entry_depth < max_depth && should_descend(&name, config.show_hidden_files) {
-                queue.push_back((path, entry_depth));
-            }
+        // Skip the scope root itself.
+        if entry.depth() == 0 {
+            continue;
         }
+        let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
+        let path = entry.path();
 
-        if budget == 0 {
-            break;
+        if let Some((display, is_down)) = present(path, is_dir, doc_dir, root, ctx.mode) {
+            if let Some(score) = matcher.score(&display) {
+                out.push(Candidate {
+                    display,
+                    is_dir,
+                    is_down,
+                    depth: entry.depth(),
+                    score,
+                    name: entry.file_name().to_string_lossy().into_owned(),
+                });
+            }
         }
     }
 
     sort_candidates(&mut out, config);
     out.truncate(config.max_items);
     out
+}
+
+/// A configured [`ignore`] walker: depth-bounded, honouring hidden-file and
+/// gitignore preferences. `.gitignore` is applied even outside a git repo
+/// (`require_git(false)`) so Markdown workspaces that aren't git repos still get
+/// the expected behaviour.
+fn build_walker(
+    scope: &Path,
+    max_depth: usize,
+    show_hidden: bool,
+    gitignore: bool,
+) -> WalkBuilder {
+    let mut builder = WalkBuilder::new(scope);
+    builder
+        .max_depth(Some(max_depth))
+        .hidden(!show_hidden)
+        .parents(gitignore)
+        .git_ignore(gitignore)
+        .git_global(gitignore)
+        .git_exclude(gitignore)
+        .ignore(gitignore)
+        .require_git(false);
+    builder
 }
 
 /// Compute the presented path for `path` under the active [`Mode`], plus whether
@@ -327,17 +336,6 @@ fn rel_path(from: &Path, to: &Path) -> Option<String> {
     } else {
         Some(parts.join("/"))
     }
-}
-
-/// Whether the deep walk should descend into a subdirectory.
-fn should_descend(name: &str, show_hidden: bool) -> bool {
-    if SKIP_DIRS.contains(&name) {
-        return false;
-    }
-    if name.starts_with('.') && !show_hidden {
-        return false;
-    }
-    true
 }
 
 /// Order candidates best-first: higher fuzzy score, then nearer (down before
@@ -500,6 +498,28 @@ mod tests {
 
         let items = complete_at("see [x](./al", 12, &CompletionConfig::default(), &doc, dir.path());
         assert_eq!(labels(&items), vec!["./alpha.md"]);
+    }
+
+    #[test]
+    fn respects_gitignore_by_default() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join(".gitignore"), "ignored.md\n").unwrap();
+        fs::write(dir.path().join("kept.md"), "").unwrap();
+        fs::write(dir.path().join("ignored.md"), "").unwrap();
+        let doc = dir.path().join("index.md");
+
+        let items = complete_at("see [x](./", 10, &CompletionConfig::default(), &doc, dir.path());
+        let ls = labels(&items);
+        assert!(ls.contains(&"./kept.md".to_string()), "got {ls:?}");
+        assert!(!ls.contains(&"./ignored.md".to_string()), "gitignored; got {ls:?}");
+
+        // Disabling the gitignore option surfaces the ignored file again.
+        let cfg = CompletionConfig {
+            gitignore: false,
+            ..CompletionConfig::default()
+        };
+        let items = complete_at("see [x](./", 10, &cfg, &doc, dir.path());
+        assert!(labels(&items).contains(&"./ignored.md".to_string()));
     }
 
     #[test]

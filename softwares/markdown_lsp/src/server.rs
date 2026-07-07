@@ -21,13 +21,17 @@ use crate::features::{
     completion, diagnostics, document_link, folding, formatting, hover, navigation, snippets,
     symbols,
 };
-use crate::uri;
+use crate::{journal, uri};
 
 const CMD_MOVE_REFS: &str = "markdown-lsp.moveReferencesToBottom";
 const CMD_INLINE_REFS: &str = "markdown-lsp.inlineReferences";
 const CMD_COPY_INLINED: &str = "markdown-lsp.copyAsInlined";
 const CMD_CONVERT_INLINE: &str = "markdown-lsp.convertToInline";
+const CMD_DAILY_NOTE: &str = "markdown-lsp.openDailyNote";
 const DIAGNOSTIC_DEBOUNCE: Duration = Duration::from_millis(200);
+
+/// Project-level config file, discovered at the workspace root.
+const PROJECT_CONFIG_FILE: &str = ".markdown-lsp.json";
 
 /// Shared, cloneable server state so background tasks (debounced diagnostics)
 /// can outlive a single request.
@@ -36,8 +40,16 @@ struct ServerState {
     documents: DashMap<String, Document>,
     analyses: DashMap<String, Arc<Analysis>>,
     config: RwLock<Config>,
+    /// The editor's settings (initializationOptions / didChangeConfiguration),
+    /// kept so the effective config can be re-resolved when the project file
+    /// changes.
+    client_options: RwLock<Option<serde_json::Value>>,
     encoding: RwLock<PositionEncoding>,
     workspace_root: RwLock<Option<PathBuf>>,
+    /// Whether the client advertised support for `window/showDocument`. When it
+    /// doesn't, opening a journal note falls back to a `showMessage` with the
+    /// note's path instead of silently doing nothing.
+    supports_show_document: RwLock<bool>,
 }
 
 impl ServerState {
@@ -119,8 +131,10 @@ impl Backend {
                 documents: DashMap::new(),
                 analyses: DashMap::new(),
                 config: RwLock::new(Config::default()),
+                client_options: RwLock::new(None),
                 encoding: RwLock::new(PositionEncoding::Utf16),
                 workspace_root: RwLock::new(None),
+                supports_show_document: RwLock::new(false),
             }),
         }
     }
@@ -149,6 +163,38 @@ impl Backend {
 
     async fn workspace_root(&self) -> Option<PathBuf> {
         self.state.workspace_root.read().await.clone()
+    }
+
+    /// Read + parse the project config file at the workspace root, if present.
+    /// Invalid JSON is reported and ignored (falling back to client settings).
+    async fn read_project_config(&self) -> Option<serde_json::Value> {
+        let root = self.state.workspace_root.read().await.clone()?;
+        let path = root.join(PROJECT_CONFIG_FILE);
+        let text = std::fs::read_to_string(&path).ok()?;
+        match serde_json::from_str::<serde_json::Value>(&text) {
+            Ok(value) => Some(value),
+            Err(e) => {
+                self.state
+                    .client
+                    .show_message(
+                        MessageType::WARNING,
+                        format!("{PROJECT_CONFIG_FILE}: invalid JSON ({e}); ignoring"),
+                    )
+                    .await;
+                None
+            }
+        }
+    }
+
+    /// Re-resolve the effective config from the client's settings plus the
+    /// project file (the latter wins), then refresh caches and diagnostics.
+    async fn reload_config(&self) {
+        let client = self.state.client_options.read().await.clone();
+        let project = self.read_project_config().await;
+        let resolved = Config::resolve(client.as_ref(), project.as_ref());
+        *self.state.config.write().await = resolved;
+        self.state.analyses.clear();
+        self.state.revalidate_all().await;
     }
 
     /// Compute the formatted document for one of the reference transforms.
@@ -188,10 +234,18 @@ impl LanguageServer for Backend {
             .unwrap_or(PositionEncoding::Utf16);
         *self.state.encoding.write().await = enc;
 
-        // Initial configuration from the client.
-        if let Some(opts) = params.initialization_options {
-            *self.state.config.write().await = Config::from_json(opts);
-        }
+        // Remember whether the client can honour `window/showDocument`, so the
+        // journal-note command can fall back gracefully when it can't.
+        *self.state.supports_show_document.write().await = params
+            .capabilities
+            .window
+            .as_ref()
+            .and_then(|w| w.show_document.as_ref())
+            .is_some_and(|c| c.support);
+
+        // Remember the client's settings so the effective config can be
+        // re-resolved later (e.g. when the project file changes).
+        *self.state.client_options.write().await = params.initialization_options.clone();
 
         // Determine a workspace root for absolute-path resolution.
         let root = params
@@ -204,6 +258,11 @@ impl LanguageServer for Backend {
                 params.root_uri.as_ref().and_then(uri::to_path)
             });
         *self.state.workspace_root.write().await = root;
+
+        // Resolve config = defaults <- client settings <- project file.
+        let project = self.read_project_config().await;
+        *self.state.config.write().await =
+            Config::resolve(params.initialization_options.as_ref(), project.as_ref());
 
         Ok(InitializeResult {
             server_info: Some(ServerInfo {
@@ -289,16 +348,25 @@ impl LanguageServer for Backend {
         // borrowed adapter) send an empty/unrelated `settings` object here,
         // which previously reset the config to defaults and silently disabled
         // formatting features configured via `initializationOptions`.
-        if let Some(cfg) = Config::try_from_json(&params.settings) {
-            *self.state.config.write().await = cfg;
-            self.state.analyses.clear();
-            self.state.revalidate_all().await;
+        if crate::config::looks_like_ours(&params.settings) {
+            *self.state.client_options.write().await = Some(params.settings);
+            // Re-resolve against the project file (which keeps priority).
+            self.reload_config().await;
         }
     }
 
-    async fn did_change_watched_files(&self, _: DidChangeWatchedFilesParams) {
-        // A target file may have appeared or disappeared; re-check open docs.
-        self.state.revalidate_all().await;
+    async fn did_change_watched_files(&self, params: DidChangeWatchedFilesParams) {
+        // If the project config file changed, re-resolve settings (this also
+        // revalidates). Otherwise a target file may have appeared/disappeared,
+        // so just re-check open docs.
+        let config_changed = params.changes.iter().any(|c| {
+            uri::to_path(&c.uri).is_some_and(|p| p.ends_with(PROJECT_CONFIG_FILE))
+        });
+        if config_changed {
+            self.reload_config().await;
+        } else {
+            self.state.revalidate_all().await;
+        }
     }
 
     async fn folding_range(&self, params: FoldingRangeParams) -> Result<Option<Vec<FoldingRange>>> {
@@ -504,6 +572,27 @@ impl LanguageServer for Backend {
                 CMD_CONVERT_INLINE,
                 vec![uri_arg, range_arg],
             ),
+            // Journal notes: not tied to the cursor, but offered here so they can
+            // be triggered from the editor's code-action menu. The argument is a
+            // day offset from today.
+            command_action(
+                "Markdown: Open today's journal note",
+                CodeActionKind::EMPTY,
+                CMD_DAILY_NOTE,
+                vec![serde_json::Value::from(0i64)],
+            ),
+            command_action(
+                "Markdown: Open yesterday's journal note",
+                CodeActionKind::EMPTY,
+                CMD_DAILY_NOTE,
+                vec![serde_json::Value::from(-1i64)],
+            ),
+            command_action(
+                "Markdown: Open tomorrow's journal note",
+                CodeActionKind::EMPTY,
+                CMD_DAILY_NOTE,
+                vec![serde_json::Value::from(1i64)],
+            ),
         ];
         Ok(Some(actions))
     }
@@ -512,33 +601,18 @@ impl LanguageServer for Backend {
         &self,
         params: ExecuteCommandParams,
     ) -> Result<Option<serde_json::Value>> {
-        let Some(doc_uri) = params
-            .arguments
-            .first()
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<Uri>().ok())
-        else {
-            return Ok(None);
-        };
-
-        // An optional second argument is the current selection [`Range`]; an
-        // empty/absent range means "the whole document".
-        let range = params
-            .arguments
-            .get(1)
-            .and_then(|v| serde_json::from_value::<Range>(v.clone()).ok())
-            .filter(|r| r.start != r.end);
-
+        let args = &params.arguments;
         match params.command.as_str() {
             CMD_MOVE_REFS | CMD_INLINE_REFS => {
-                let inline = params.command == CMD_INLINE_REFS;
-                self.apply_reference_transform(doc_uri, inline).await;
+                let Some(uri) = arg_uri(args, 0) else { return Ok(None) };
+                self.apply_reference_transform(uri, params.command == CMD_INLINE_REFS).await;
                 Ok(None)
             }
             // Inline the selection (or whole document) *in place* by editing the
             // buffer.
             CMD_CONVERT_INLINE => {
-                self.apply_inline(doc_uri, range).await;
+                let Some(uri) = arg_uri(args, 0) else { return Ok(None) };
+                self.apply_inline(uri, arg_range(args, 1)).await;
                 Ok(None)
             }
             // Put the inlined Markdown on the system clipboard *without* touching
@@ -546,11 +620,19 @@ impl LanguageServer for Backend {
             // programmatic clients). References are resolved against the whole
             // document, so a copied selection is self-contained.
             CMD_COPY_INLINED => {
-                let Some(text) = self.inlined_markdown(&doc_uri, range).await else {
+                let Some(uri) = arg_uri(args, 0) else { return Ok(None) };
+                let Some(text) = self.inlined_markdown(&uri, arg_range(args, 1)).await else {
                     return Ok(None);
                 };
                 self.copy_to_clipboard(text.clone()).await;
                 Ok(Some(serde_json::Value::String(text)))
+            }
+            // Open (creating from the template if needed) the daily note for
+            // `today + <offset>` days. Argument 0 is the integer offset.
+            CMD_DAILY_NOTE => {
+                let offset = args.first().and_then(|v| v.as_i64()).unwrap_or(0);
+                self.open_daily_note(offset).await;
+                Ok(None)
             }
             _ => Ok(None),
         }
@@ -664,6 +746,87 @@ impl Backend {
         };
         self.state.client.show_message(kind, message).await;
     }
+
+    /// Open the journal note for `today + offset_days`, creating it from the
+    /// configured template (or a minimal default) when it doesn't exist yet.
+    async fn open_daily_note(&self, offset_days: i64) {
+        let Some(root) = self.workspace_root().await else {
+            self.state
+                .client
+                .show_message(
+                    MessageType::ERROR,
+                    "Journal notes need a workspace folder; open one first.".to_string(),
+                )
+                .await;
+            return;
+        };
+        let config = self.config().await;
+        let date = chrono::Local::now().date_naive() + chrono::Duration::days(offset_days);
+
+        let note = match journal::ensure(&root, &config.journal, date) {
+            Ok(note) => note,
+            Err(e) => {
+                self.state
+                    .client
+                    .show_message(MessageType::ERROR, format!("Could not open journal note: {e}"))
+                    .await;
+                return;
+            }
+        };
+
+        let Some(uri) = uri::from_path(&note.path) else {
+            return;
+        };
+
+        // Open in a background task so this `executeCommand` reply is sent
+        // *first*. Some clients (e.g. Zed) only act on a server->client
+        // `window/showDocument` once the command that triggered it has returned;
+        // awaiting the open inline is what makes "nothing jumps" happen. If the
+        // client can't show documents (or the request fails), fall back to a
+        // message naming the note so it's never a silent no-op.
+        let state = self.state.clone();
+        let supported = *self.state.supports_show_document.read().await;
+        let path = note.path.display().to_string();
+        tokio::spawn(async move {
+            if supported {
+                match state
+                    .client
+                    .show_document(ShowDocumentParams {
+                        uri,
+                        external: Some(false),
+                        take_focus: Some(true),
+                        selection: None,
+                    })
+                    .await
+                {
+                    Ok(true) => return,
+                    Ok(false) => {}
+                    Err(e) => {
+                        state
+                            .client
+                            .log_message(MessageType::WARNING, format!("showDocument failed: {e}"))
+                            .await;
+                    }
+                }
+            }
+            state
+                .client
+                .show_message(MessageType::INFO, format!("Journal note ready: {path}"))
+                .await;
+        });
+    }
+}
+
+/// Parse the `i`th command argument as a document [`Uri`].
+fn arg_uri(args: &[serde_json::Value], i: usize) -> Option<Uri> {
+    args.get(i)?.as_str()?.parse::<Uri>().ok()
+}
+
+/// Parse the `i`th command argument as a non-empty selection [`Range`].
+fn arg_range(args: &[serde_json::Value], i: usize) -> Option<Range> {
+    args.get(i)
+        .and_then(|v| serde_json::from_value::<Range>(v.clone()).ok())
+        .filter(|r| r.start != r.end)
 }
 
 fn encoding_kind(enc: PositionEncoding) -> PositionEncodingKind {
@@ -708,6 +871,7 @@ fn server_capabilities(encoding: PositionEncodingKind) -> ServerCapabilities {
                 CMD_INLINE_REFS.to_string(),
                 CMD_COPY_INLINED.to_string(),
                 CMD_CONVERT_INLINE.to_string(),
+                CMD_DAILY_NOTE.to_string(),
             ],
             ..Default::default()
         }),

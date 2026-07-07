@@ -27,6 +27,8 @@ globset = "0.4"
 dashmap = "6"
 nucleo-matcher = "0.3.1"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
+# ripgrep's directory walker: respects .gitignore / .ignore / hidden files.
+ignore = "0.4"
 
 [dev-dependencies]
 tempfile = "3"
