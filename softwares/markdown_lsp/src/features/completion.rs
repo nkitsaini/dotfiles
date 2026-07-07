@@ -1,0 +1,634 @@
+//! Path completion inside link / image destinations.
+//!
+//! Completion is driven by the *text around the cursor* rather than the AST:
+//! while typing `[x](./pa` the destination isn't a valid link yet, so there is
+//! no reliable node to attach to. We scan the current line back to the opening
+//! `](` and, if the partial destination looks like a path, offer matching files
+//! from the workspace, fuzzy-matched fzf-style (via [`crate::fuzzy`], backed by
+//! nucleo).
+//!
+//! ## Scope & presentation
+//!
+//! By default we search the **whole workspace tree** (from the workspace root),
+//! so a nearby file can be completed without first typing `../`. How each hit is
+//! *presented* depends on the prefix the user has typed:
+//!
+//! * bare (no prefix) — files at or below the current document's directory are
+//!   offered as **relative** links (`./b.md`, `./test/c.md`); files that require
+//!   walking up are offered as **absolute** links (`/shared/x.md`);
+//! * explicit `./` or `../` — **everything** is offered relative (walking up
+//!   with `../` as needed);
+//! * explicit `/` — **everything** is offered absolute (workspace-root relative).
+//!
+//! The walk is breadth-first and bounded (depth, a scan budget and a result
+//! cap) so it stays cheap even in large trees.
+
+use std::collections::VecDeque;
+use std::path::{Component, Path, PathBuf};
+
+use ropey::Rope;
+use tower_lsp_server::ls_types::{
+    Command, CompletionItem, CompletionItemKind, CompletionTextEdit, Position, Range, TextEdit,
+};
+
+use crate::config::CompletionConfig;
+use crate::encoding::{char_to_position, position_to_char, PositionEncoding};
+use crate::fuzzy::PathMatcher;
+use crate::links::has_scheme;
+
+/// Hard cap on directory entries examined during a single completion request,
+/// regardless of configuration. Protects against pathological trees.
+const WALK_BUDGET: usize = 8192;
+
+/// Directories we never descend into for deep completion (build/VCS noise).
+const SKIP_DIRS: &[&str] = &[".git", "node_modules", "target"];
+
+/// How the user anchored the destination they're typing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    /// No `./` or `/` prefix: relative for down/parallel, absolute for up.
+    Bare,
+    /// Explicit `./` or `../`: everything presented relative.
+    Relative,
+    /// Explicit `/`: everything presented absolute (workspace-root relative).
+    Absolute,
+}
+
+/// The parsed "we are inside a link destination" context.
+struct PathContext {
+    mode: Mode,
+    /// The full destination text typed so far (also used as the fuzzy query).
+    query: String,
+}
+
+/// A scored completion candidate before it becomes a [`CompletionItem`].
+struct Candidate {
+    /// The complete path to insert, e.g. `./test/c.md`, `../a.md` or `/x.md`.
+    display: String,
+    is_dir: bool,
+    /// Whether the target is at/under the current document's directory.
+    is_down: bool,
+    depth: usize,
+    /// Fuzzy score (higher is better); `0` for an empty query.
+    score: u32,
+    name: String,
+}
+
+/// Produce path completions for the given cursor position.
+pub fn complete(
+    rope: &Rope,
+    position: Position,
+    enc: PositionEncoding,
+    config: &CompletionConfig,
+    doc_path: Option<&Path>,
+    workspace_root: Option<&Path>,
+) -> Vec<CompletionItem> {
+    if !config.paths {
+        return Vec::new();
+    }
+
+    let cursor_char = position_to_char(rope, position, enc);
+    let line_idx = rope.char_to_line(cursor_char);
+    let line_start_char = rope.line_to_char(line_idx);
+    let before: String = rope.slice(line_start_char..cursor_char).chars().collect();
+
+    let ctx = match detect_context(&before) {
+        Some(ctx) => ctx,
+        None => return Vec::new(),
+    };
+
+    let doc_dir = doc_path.and_then(Path::parent);
+    // Absolute mode always resolves from the workspace root; the others fall
+    // back to it too (so bare queries can reach files above the document).
+    let root = match workspace_root.or(doc_dir) {
+        Some(r) => r,
+        None => return Vec::new(),
+    };
+
+    // When deep search is off, restrict to the document's own directory (for
+    // absolute mode, the root) and don't recurse.
+    let (scope, max_depth): (&Path, usize) = if config.deep_paths {
+        (root, config.deep_paths_max_depth.max(1))
+    } else {
+        let base = match ctx.mode {
+            Mode::Absolute => root,
+            _ => doc_dir.unwrap_or(root),
+        };
+        (base, 1)
+    };
+
+    let candidates = collect(scope, doc_dir, root, &ctx, config, max_depth);
+
+    // The edit replaces the entire destination typed so far, since each item is
+    // a complete path (relative or absolute).
+    let replace_len = ctx.query.chars().count();
+    let replace_range = Range::new(
+        char_to_position(rope, cursor_char.saturating_sub(replace_len), enc),
+        position,
+    );
+
+    candidates
+        .into_iter()
+        .enumerate()
+        .map(|(rank, c)| make_item(c, rank, &replace_range))
+        .collect()
+}
+
+/// A workspace file surfaced for the snippet (`@`/`/`) menu, already presented
+/// as a link destination.
+pub(crate) struct FileHit {
+    /// Presented destination, e.g. `./notes.md` or `/shared/x.md`.
+    pub display: String,
+    /// The file's name (with extension).
+    pub name: String,
+}
+
+/// Walk the workspace (bare mode, deep + fuzzy per `config`) and return the
+/// matching **files** (never directories), best-first. Shared with the snippet
+/// menu, which turns each hit into a `[stem](display)` inline link. The path
+/// style matches bare path completion: files at/below the document are
+/// relative, files above it are absolute.
+pub(crate) fn workspace_files(
+    query: &str,
+    config: &CompletionConfig,
+    doc_path: Option<&Path>,
+    workspace_root: Option<&Path>,
+) -> Vec<FileHit> {
+    let doc_dir = doc_path.and_then(Path::parent);
+    let root = match workspace_root.or(doc_dir) {
+        Some(r) => r,
+        None => return Vec::new(),
+    };
+    let ctx = PathContext {
+        mode: Mode::Bare,
+        query: query.to_string(),
+    };
+    let (scope, max_depth): (&Path, usize) = if config.deep_paths {
+        (root, config.deep_paths_max_depth.max(1))
+    } else {
+        (doc_dir.unwrap_or(root), 1)
+    };
+    collect(scope, doc_dir, root, &ctx, config, max_depth)
+        .into_iter()
+        .filter(|c| !c.is_dir)
+        .map(|c| FileHit {
+            display: c.display,
+            name: c.name,
+        })
+        .collect()
+}
+
+/// Walk `scope` (breadth-first, bounded), presenting and scoring each entry,
+/// then sort best-first and cap to `config.max_items`.
+fn collect(
+    scope: &Path,
+    doc_dir: Option<&Path>,
+    root: &Path,
+    ctx: &PathContext,
+    config: &CompletionConfig,
+    max_depth: usize,
+) -> Vec<Candidate> {
+    let mut matcher = PathMatcher::new(&ctx.query);
+    let query_is_hidden = ctx.query.rsplit('/').next().is_some_and(|s| s.starts_with('.'));
+
+    let mut out: Vec<Candidate> = Vec::new();
+    let mut budget = WALK_BUDGET;
+    let mut queue: VecDeque<(PathBuf, usize)> = VecDeque::new();
+    queue.push_back((scope.to_path_buf(), 0));
+
+    while let Some((dir, depth)) = queue.pop_front() {
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let entry_depth = depth + 1;
+
+        for entry in entries.flatten() {
+            if budget == 0 {
+                break;
+            }
+            budget -= 1;
+
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with('.') && !config.show_hidden_files && !query_is_hidden {
+                continue;
+            }
+            let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
+            let path = entry.path();
+
+            if let Some((display, is_down)) = present(&path, is_dir, doc_dir, root, ctx.mode) {
+                if let Some(score) = matcher.score(&display) {
+                    out.push(Candidate {
+                        display,
+                        is_dir,
+                        is_down,
+                        depth: entry_depth,
+                        score,
+                        name: name.clone(),
+                    });
+                }
+            }
+
+            if is_dir && entry_depth < max_depth && should_descend(&name, config.show_hidden_files) {
+                queue.push_back((path, entry_depth));
+            }
+        }
+
+        if budget == 0 {
+            break;
+        }
+    }
+
+    sort_candidates(&mut out, config);
+    out.truncate(config.max_items);
+    out
+}
+
+/// Compute the presented path for `path` under the active [`Mode`], plus whether
+/// it is at/under the document's directory. Returns `None` when it can't be
+/// expressed (e.g. the document's own directory, or a divergent drive/root).
+fn present(
+    path: &Path,
+    is_dir: bool,
+    doc_dir: Option<&Path>,
+    root: &Path,
+    mode: Mode,
+) -> Option<(String, bool)> {
+    let doc_rel = doc_dir.and_then(|d| rel_path(d, path));
+    let is_down = doc_rel.as_deref().is_some_and(|r| !r.starts_with(".."));
+
+    let display = match mode {
+        Mode::Absolute => absolute_display(root, path, is_dir)?,
+        Mode::Relative => match &doc_rel {
+            Some(r) => relative_display(r, is_dir)?,
+            None => absolute_display(root, path, is_dir)?,
+        },
+        Mode::Bare => {
+            if is_down {
+                relative_display(doc_rel.as_deref()?, is_dir)?
+            } else {
+                absolute_display(root, path, is_dir)?
+            }
+        }
+    };
+    Some((display, is_down))
+}
+
+fn relative_display(rel: &str, is_dir: bool) -> Option<String> {
+    if rel == "." {
+        return None; // the document's own directory
+    }
+    let base = if rel == ".." || rel.starts_with("../") {
+        rel.to_string()
+    } else {
+        format!("./{rel}")
+    };
+    Some(if is_dir { format!("{base}/") } else { base })
+}
+
+fn absolute_display(root: &Path, path: &Path, is_dir: bool) -> Option<String> {
+    let rel = rel_path(root, path)?;
+    if rel == "." || rel.starts_with("..") {
+        return None; // outside the workspace root
+    }
+    let base = format!("/{rel}");
+    Some(if is_dir { format!("{base}/") } else { base })
+}
+
+/// Lexical relative path from `from` to `to` using `/` separators and `..` as
+/// needed. `None` if they don't share a common prefix (e.g. different drives).
+fn rel_path(from: &Path, to: &Path) -> Option<String> {
+    let f: Vec<Component> = from.components().collect();
+    let t: Vec<Component> = to.components().collect();
+
+    let mut i = 0;
+    while i < f.len() && i < t.len() && f[i] == t[i] {
+        i += 1;
+    }
+
+    let mut parts: Vec<String> = Vec::new();
+    for c in &f[i..] {
+        match c {
+            Component::Normal(_) => parts.push("..".to_string()),
+            Component::CurDir => {}
+            _ => return None,
+        }
+    }
+    for c in &t[i..] {
+        match c {
+            Component::Normal(s) => parts.push(s.to_string_lossy().into_owned()),
+            Component::CurDir => {}
+            _ => return None,
+        }
+    }
+
+    if parts.is_empty() {
+        Some(".".to_string())
+    } else {
+        Some(parts.join("/"))
+    }
+}
+
+/// Whether the deep walk should descend into a subdirectory.
+fn should_descend(name: &str, show_hidden: bool) -> bool {
+    if SKIP_DIRS.contains(&name) {
+        return false;
+    }
+    if name.starts_with('.') && !show_hidden {
+        return false;
+    }
+    true
+}
+
+/// Order candidates best-first: higher fuzzy score, then nearer (down before
+/// up), shallower, prioritized extension, and finally alphabetically.
+fn sort_candidates(cands: &mut [Candidate], config: &CompletionConfig) {
+    cands.sort_by(|a, b| {
+        b.score
+            .cmp(&a.score)
+            .then(b.is_down.cmp(&a.is_down))
+            .then(a.depth.cmp(&b.depth))
+            .then(ext_bucket(&a.name, a.is_dir, config).cmp(&ext_bucket(&b.name, b.is_dir, config)))
+            .then(a.display.len().cmp(&b.display.len()))
+            .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+    });
+}
+
+/// Detect whether the cursor sits inside an (unclosed) link/image destination
+/// and, if so, classify the destination's prefix.
+fn detect_context(before: &str) -> Option<PathContext> {
+    let open = before.rfind("](")?;
+    let mut partial = &before[open + 2..];
+
+    // A closed destination or a title / whitespace means we're no longer in the
+    // path segment.
+    if partial.contains(')') || partial.contains(char::is_whitespace) {
+        return None;
+    }
+    // Angle-bracketed destinations: `](<path`.
+    if let Some(stripped) = partial.strip_prefix('<') {
+        partial = stripped;
+    }
+    // Never complete over an external URL or a bare anchor.
+    if partial.starts_with('#') || partial.contains("://") || has_scheme(partial) {
+        return None;
+    }
+
+    let mode = if partial.starts_with('/') {
+        Mode::Absolute
+    } else if partial.starts_with("./")
+        || partial.starts_with("../")
+        || partial == "."
+        || partial == ".."
+    {
+        Mode::Relative
+    } else {
+        Mode::Bare
+    };
+
+    Some(PathContext {
+        mode,
+        query: partial.to_string(),
+    })
+}
+
+fn make_item(cand: Candidate, rank: usize, replace_range: &Range) -> CompletionItem {
+    // Re-trigger completion after entering a directory so the user can keep
+    // narrowing without pressing the trigger key again.
+    let command = if cand.is_dir {
+        Some(Command {
+            title: "Suggest".to_string(),
+            command: "editor.action.triggerSuggest".to_string(),
+            arguments: None,
+        })
+    } else {
+        None
+    };
+
+    let kind = if cand.is_dir {
+        CompletionItemKind::FOLDER
+    } else {
+        CompletionItemKind::FILE
+    };
+
+    // Preserve our ranking on clients that honour `sortText`, while `filterText`
+    // (the full path) lets clients that fuzzy-filter keep every entry.
+    let sort_text = format!("{rank:06}");
+
+    CompletionItem {
+        label: cand.display.clone(),
+        kind: Some(kind),
+        sort_text: Some(sort_text),
+        filter_text: Some(cand.display.clone()),
+        text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+            range: *replace_range,
+            new_text: cand.display,
+        })),
+        command,
+        ..Default::default()
+    }
+}
+
+/// Extension-priority bucket: prioritized extensions first, then other files,
+/// then directories.
+fn ext_bucket(name: &str, is_dir: bool, config: &CompletionConfig) -> u8 {
+    if is_dir {
+        2
+    } else if config
+        .prioritize_extensions
+        .iter()
+        .any(|ext| name.to_lowercase().ends_with(&ext.to_lowercase()))
+    {
+        0
+    } else {
+        1
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    fn labels(items: &[CompletionItem]) -> Vec<String> {
+        let mut l: Vec<String> = items.iter().map(|i| i.label.clone()).collect();
+        l.sort();
+        l
+    }
+
+    fn complete_at(
+        text: &str,
+        cursor: u32,
+        cfg: &CompletionConfig,
+        doc: &Path,
+        root: &Path,
+    ) -> Vec<CompletionItem> {
+        let rope = Rope::from_str(text);
+        complete(
+            &rope,
+            Position::new(0, cursor),
+            PositionEncoding::Utf16,
+            cfg,
+            Some(doc),
+            Some(root),
+        )
+    }
+
+    #[test]
+    fn relative_prefix_lists_relative_paths() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("notes.md"), "").unwrap();
+        fs::write(dir.path().join("other.txt"), "").unwrap();
+        fs::create_dir(dir.path().join("sub")).unwrap();
+        let doc = dir.path().join("index.md");
+        fs::write(&doc, "").unwrap();
+
+        let items = complete_at("see [x](./", 10, &CompletionConfig::default(), &doc, dir.path());
+        assert_eq!(
+            labels(&items),
+            vec!["./index.md", "./notes.md", "./other.txt", "./sub/"]
+        );
+    }
+
+    #[test]
+    fn filters_by_fuzzy_query() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("alpha.md"), "").unwrap();
+        fs::write(dir.path().join("beta.md"), "").unwrap();
+        let doc = dir.path().join("index.md");
+
+        let items = complete_at("see [x](./al", 12, &CompletionConfig::default(), &doc, dir.path());
+        assert_eq!(labels(&items), vec!["./alpha.md"]);
+    }
+
+    #[test]
+    fn deep_completion_finds_nested_file() {
+        // a.md, b.md, test/k.md — from a.md, `[k](./` surfaces ./test/k.md.
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::write(dir.path().join("b.md"), "").unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        let doc = dir.path().join("a.md");
+
+        let items = complete_at("[k](./", 6, &CompletionConfig::default(), &doc, dir.path());
+        assert!(
+            labels(&items).contains(&"./test/k.md".to_string()),
+            "got {:?}",
+            labels(&items)
+        );
+
+        let items = complete_at("[k](./k", 7, &CompletionConfig::default(), &doc, dir.path());
+        assert!(
+            labels(&items).contains(&"./test/k.md".to_string()),
+            "got {:?}",
+            labels(&items)
+        );
+    }
+
+    #[test]
+    fn bare_query_reaches_parent_as_absolute() {
+        // From test/k.md, a bare `a` should offer the root's a.md as ABSOLUTE
+        // (it requires walking up), while a sibling is relative.
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        fs::write(dir.path().join("test/sibling.md"), "").unwrap();
+        let doc = dir.path().join("test/k.md");
+
+        let items = complete_at("[a](a", 5, &CompletionConfig::default(), &doc, dir.path());
+        let ls = labels(&items);
+        assert!(ls.contains(&"/a.md".to_string()), "up file absolute; got {ls:?}");
+    }
+
+    #[test]
+    fn bare_query_prefers_relative_for_siblings() {
+        let dir = tempdir().unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        fs::write(dir.path().join("test/sibling.md"), "").unwrap();
+        let doc = dir.path().join("test/k.md");
+
+        let items = complete_at("[s](sib", 7, &CompletionConfig::default(), &doc, dir.path());
+        let ls = labels(&items);
+        assert!(ls.contains(&"./sibling.md".to_string()), "sibling relative; got {ls:?}");
+    }
+
+    #[test]
+    fn explicit_relative_walks_up() {
+        // `../` from test/k.md offers the root's a.md as a relative path.
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        let doc = dir.path().join("test/k.md");
+
+        let items = complete_at("[a](../a", 8, &CompletionConfig::default(), &doc, dir.path());
+        assert!(
+            labels(&items).contains(&"../a.md".to_string()),
+            "got {:?}",
+            labels(&items)
+        );
+    }
+
+    #[test]
+    fn explicit_absolute_lists_from_root() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        let doc = dir.path().join("test/k.md");
+
+        // Absolute mode from a nested doc still lists the whole root.
+        let items = complete_at("[a](/", 5, &CompletionConfig::default(), &doc, dir.path());
+        let ls = labels(&items);
+        assert!(ls.contains(&"/a.md".to_string()), "got {ls:?}");
+        assert!(ls.contains(&"/test/k.md".to_string()), "got {ls:?}");
+    }
+
+    #[test]
+    fn deep_completion_can_be_disabled() {
+        let dir = tempdir().unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        let doc = dir.path().join("a.md");
+
+        let cfg = CompletionConfig {
+            deep_paths: false,
+            ..CompletionConfig::default()
+        };
+        let items = complete_at("[k](./", 6, &cfg, &doc, dir.path());
+        // Only the immediate `./test/` directory, not the nested file.
+        assert_eq!(labels(&items), vec!["./test/"]);
+    }
+
+    #[test]
+    fn no_completion_for_urls() {
+        let rope = Rope::from_str("see [x](https://");
+        let items = complete(
+            &rope,
+            Position::new(0, 16),
+            PositionEncoding::Utf16,
+            &CompletionConfig::default(),
+            None,
+            None,
+        );
+        assert!(items.is_empty());
+    }
+
+    #[test]
+    fn no_completion_outside_link() {
+        let rope = Rope::from_str("just some text ");
+        let items = complete(
+            &rope,
+            Position::new(0, 15),
+            PositionEncoding::Utf16,
+            &CompletionConfig::default(),
+            None,
+            None,
+        );
+        assert!(items.is_empty());
+    }
+}

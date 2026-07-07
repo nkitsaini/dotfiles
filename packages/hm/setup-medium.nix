@@ -2,6 +2,7 @@
 # It is good to be used in nixos or standalone home-manager for desktop setups.
 {
   pkgs,
+  inputs,
   nixGLCommandPrefix ? "",
   ...
 }:
@@ -138,6 +139,9 @@
 
       # Required for something in neovim/neorg
       imagemagick
+
+      # Markdown language server (built from ./softwares/markdown_lsp).
+      inputs.markdown_lsp.packages.${pkgs.stdenv.hostPlatform.system}.default
     ]
     ++ (
       if nixGLCommandPrefix != "" then

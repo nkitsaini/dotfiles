@@ -217,6 +217,22 @@
       },
       "parent": []
     },
+    "markdown_lsp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "softwares/markdown_lsp",
+        "type": "path"
+      },
+      "original": {
+        "path": "softwares/markdown_lsp",
+        "type": "path"
+      },
+      "parent": []
+    },
     "naersk": {
       "inputs": {
         "nixpkgs": [
@@ -375,6 +391,7 @@
         "flake-utils": "flake-utils",
         "home-manager": "home-manager",
         "kit": "kit",
+        "markdown_lsp": "markdown_lsp",
         "nixgl": "nixgl",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_2",

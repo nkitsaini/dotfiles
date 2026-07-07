@@ -51,6 +51,11 @@ rec {
       inputs.utils.follows = "flake-utils";
     };
 
+    markdown_lsp = {
+      url = "path:softwares/markdown_lsp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
   };
 
   outputs =
