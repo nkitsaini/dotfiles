@@ -51,6 +51,11 @@ It focuses on the things that make editing Markdown pleasant:
   pipes, inserts a missing header separator (and one empty body row), aligns
   columns, turns a stray trailing `|` into a full empty row, and grows the
   separator/body when a new header cell is added.
+- **List formatting**: normalises list markers on format — unordered bullets
+  (`*` / `+`) become `-`, ordered lists are renumbered to increment from their
+  first item's number (`1. 1. 1.` → `1. 2. 3.`), and the gap after a marker
+  collapses to a single space (re-indenting continuation lines and nested items
+  to match).
 - **Reference-link formatting**: convert inline links to reference links and
   consolidate the definitions under a `# References` heading at the bottom of the
   file — and back again. Available as an on-demand code action / command, and
@@ -221,7 +226,10 @@ markdown-lsp config          # emit default settings as JSON
     "moveReferencesToBottom": true,
     "referencesHeading": "References",
     // When true, `textDocument/formatting` also normalises GFM tables.
-    "formatTables": true
+    "formatTables": true,
+    // When true, `textDocument/formatting` also normalises list markers
+    // (bullets -> `-`, incremental ordered numbering, single-space gap).
+    "formatLists": true
   },
   "snippets": {
     // Master switch for the `@`/`/` quick-command menu.
@@ -363,7 +371,7 @@ prunes `node_modules`, `target`, `.git`, …). Override with `--no-ignore` and
 `--hidden`.
 
 ```bash
-# Format: normalise tables (and optionally consolidate references).
+# Format: normalise tables and lists (and optionally consolidate references).
 markdown-lsp format README.md            # print the formatted result to stdout
 markdown-lsp format --write .            # rewrite every Markdown file under cwd
 markdown-lsp format --check docs/        # exit non-zero if anything is unformatted
@@ -384,7 +392,7 @@ markdown-lsp readme                               # print the README
 ```
 
 `format` flags: `-w/--write`, `--check`, `-r/--move-references`, `--no-tables`,
-`--references-heading <NAME>`, `--stdin`. `inline` flags:
+`--no-lists`, `--references-heading <NAME>`, `--stdin`. `inline` flags:
 `--references-heading <NAME>`, `--stdin`. `lint` flags: `--root <DIR>`,
 `--no-images`. `format` / `inline` / `lint` also take `--no-ignore` (don't
 respect `.gitignore`) and `--hidden` (include hidden files) for their directory

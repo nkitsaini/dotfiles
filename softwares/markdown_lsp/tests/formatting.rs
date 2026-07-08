@@ -5,8 +5,9 @@
 //! is preserved verbatim, so they intentionally omit remark-stringify artifacts
 //! (autolink `<...>` wrapping, task-marker escaping, blank-line reflowing).
 
+use markdown_lsp::config::FormattingConfig;
 use markdown_lsp::features::formatting::{
-    inline_links_in_range, to_inline_links, to_reference_links,
+    format_document, inline_links_in_range, to_inline_links, to_reference_links,
 };
 
 fn refs(input: &str) -> String {
@@ -130,6 +131,40 @@ fn reference_without_definition_is_left_intact() {
         refs(input),
         "Check [this][ref1] and [that][1].\n\nSome text mentioning [another][ref2] reference.\n\n# References\n\n[1]: https://new.com\n"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Full-document formatting: list normalisation (matches the reference's
+// remark-stringify list handling) alongside reference consolidation.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn format_document_normalises_list_markers() {
+    let cfg = FormattingConfig::default();
+    let out = format_document("- one\n- two\n\n1. a\n1. b\n", true, &cfg);
+    assert_eq!(out, "- one\n- two\n\n1. a\n2. b\n");
+}
+
+#[test]
+fn format_document_normalises_lists_then_moves_references() {
+    let cfg = FormattingConfig::default();
+    let input = "* item with a [link](https://a.com)\n*   spaced item\n";
+    let out = format_document(input, true, &cfg);
+    assert_eq!(
+        out,
+        "- item with a [link][1]\n- spaced item\n\n# References\n\n[1]: https://a.com\n"
+    );
+}
+
+#[test]
+fn format_document_can_disable_list_formatting() {
+    let cfg = FormattingConfig {
+        format_lists: false,
+        move_references_to_bottom: false,
+        ..FormattingConfig::default()
+    };
+    let input = "* one\n* two\n";
+    assert_eq!(format_document(input, true, &cfg), input);
 }
 
 // ---------------------------------------------------------------------------

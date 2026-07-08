@@ -22,7 +22,7 @@ use markdown::{to_mdast, ParseOptions};
 
 use crate::analysis::node_text;
 use crate::config::FormattingConfig;
-use crate::features::tables;
+use crate::features::{lists, tables};
 
 /// Run the full document formatter: table normalisation followed (optionally) by
 /// consolidating reference links at the bottom. This is what both
@@ -33,6 +33,9 @@ pub fn format_document(source: &str, gfm: bool, config: &FormattingConfig) -> St
     } else {
         source.to_string()
     };
+    if config.format_lists {
+        out = lists::format_lists(&out, gfm);
+    }
     if config.move_references_to_bottom {
         out = to_reference_links(&out, gfm, true, &config.references_heading);
     }

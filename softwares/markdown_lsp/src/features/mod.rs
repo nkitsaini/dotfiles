@@ -8,6 +8,7 @@ pub mod document_link;
 pub mod folding;
 pub mod formatting;
 pub mod hover;
+pub mod lists;
 pub mod navigation;
 pub mod snippets;
 pub mod symbols;

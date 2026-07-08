@@ -255,6 +255,10 @@ pub struct FormattingConfig {
     /// When `true`, `textDocument/formatting` normalises GFM tables (aligns
     /// columns, adds missing pipes / separator rows, etc.).
     pub format_tables: bool,
+    /// When `true`, `textDocument/formatting` normalises list markers: bullets
+    /// become `-`, ordered lists are renumbered incrementally, and the gap
+    /// after a marker collapses to a single space.
+    pub format_lists: bool,
 }
 
 impl Default for FormattingConfig {
@@ -263,6 +267,7 @@ impl Default for FormattingConfig {
             move_references_to_bottom: true,
             references_heading: "References".to_string(),
             format_tables: true,
+            format_lists: true,
         }
     }
 }

@@ -2,7 +2,7 @@
 //! an editor.
 //!
 //! ```text
-//! markdown-lsp format [--write|--check] [--move-references] [--no-tables] [PATHS...]
+//! markdown-lsp format [--write|--check] [--move-references] [--no-tables] [--no-lists] [PATHS...]
 //! markdown-lsp inline [--references-heading NAME] [--stdin] [PATHS...]
 //! markdown-lsp lint   [--root DIR] [--no-images] PATHS...
 //! ```
@@ -85,6 +85,7 @@ FORMAT OPTIONS:\n\
         --check             Exit non-zero if any file is not already formatted\n\
     -r, --move-references   Consolidate reference links under a heading at the bottom\n\
         --no-tables         Do not reformat GFM tables\n\
+        --no-lists          Do not normalise list markers\n\
         --references-heading <NAME>   Heading for the references section (default: References)\n\
         --stdin             Read from stdin, write to stdout\n\
 \n\
@@ -116,6 +117,7 @@ fn cmd_format(args: &[String]) -> i32 {
     let mut cfg = FormattingConfig {
         move_references_to_bottom: false,
         format_tables: true,
+        format_lists: true,
         ..FormattingConfig::default()
     };
     let mut files: Vec<String> = Vec::new();
@@ -130,6 +132,7 @@ fn cmd_format(args: &[String]) -> i32 {
             "--hidden" => walk.hidden = true,
             "-r" | "--move-references" => cfg.move_references_to_bottom = true,
             "--no-tables" => cfg.format_tables = false,
+            "--no-lists" => cfg.format_lists = false,
             "--references-heading" => match it.next() {
                 Some(v) => cfg.references_heading = v.clone(),
                 None => {
