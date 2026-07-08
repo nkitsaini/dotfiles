@@ -160,32 +160,174 @@ in
       }
     ];
   };
-  # services.swaync = {
-  #   enable =true;
-  # };
-  services.mako = {
+  # Notification daemon: swaync (SwayNotificationCenter). Chosen over mako
+  # because it renders inline action buttons (e.g. Yes/No prompts) and provides
+  # a notification-center / do-not-disturb panel. Only one daemon may own the
+  # org.freedesktop.Notifications D-Bus name, so mako is disabled below.
+  # Styling is intentionally left to swaync's shipped default stylesheet.
+  services.swaync = {
     enable = true;
     settings = {
-      layer = "overlay"; # Show even in full-screen mode
-      padding = "15,20";
-      # # backgroundColor = "#3b224cF0";
-      # backgroundColor = "#281733F0";
-      # textColor = "#ebeafa";
-      border-size = "2";
-      height = "300";
-      # borderColor = "#a4a0e8";
-      default-timeout = "10000";
-      markup = "true";
-      format = "<b>%s</b>\\n\\n%b";
-      # urgency
-      "urgency=high" = {
-        text-color = "#CFFFF6";
-        border-color = "#000000";
-        background-color = "#FF0F0F";
-        border-size = 4;
-      };
+      layer = "overlay"; # show even over fullscreen windows (mako did the same)
+      control-center-layer = "overlay";
+      # Timeouts are in seconds here (mako used 10000ms). Keep popups up long
+      # enough to actually read (~30s); critical stays until dismissed.
+      timeout = 30;
+      timeout-low = 30;
+      timeout-critical = 0;
+      notification-window-width = 420;
+      keyboard-shortcuts = true;
+      image-visibility = "when-available";
+      # Panel open/close slide animation (ms). Default is 200; 0 = instant.
+      transition-time = 0;
+      widgets = [
+        "title"
+        "dnd"
+        "notifications"
+      ];
     };
+    # Notification center themed in a muted Nord palette:
+    # a soft charcoal (#2e3440) panel with clearly-bordered cards (not pure
+    # black + hairlines), off-white text, a calm accent (not a loud blue), and
+    # a pill DND toggle.
+    #
+    # We @import swaync's shipped sheet (via the package path so it tracks
+    # updates) only for baseline layout, then override the surfaces heavily.
+    # This also fixes the white-background bug: swaync's default gives the
+    # focused *group* `--noti-bg-focus`, which rendered as a solid white block
+    # whenever >=2 app groups were present; giving cards a solid dark background
+    # and forcing group/row focus transparent removes it. All verified visually
+    # in the VM debug test (tests/vm-debug.nix).
+    style = ''
+      @import url("file://${config.services.swaync.package}/etc/xdg/swaync/style.css");
+
+      * {
+        font-family: "Noto Sans", "Noto Sans CJK KR", sans-serif;
+        /* Make everything feel instantaneous: disable CSS fade/slide
+           transitions (group expand/collapse, hover). GtkRevealer slide
+           animations are separately disabled via transition-time = 0. */
+        transition: none;
+      }
+
+      /* ---------- Panel: soft charcoal (Nord polar night), not pure black ---------- */
+      .control-center {
+        background: #2e3440;
+        border: 1px solid #3b4252;
+        border-radius: 14px;
+        padding: 8px;
+        color: #e5e9f0;
+      }
+      .control-center .control-center-list { background: transparent; }
+      .control-center .control-center-list-placeholder { color: #6b7488; }
+
+      /* ---------- Header (title + Clear All) ---------- */
+      .widget-title { margin: 6px 8px 8px 8px; }
+      .widget-title > label { font-size: 13px; font-weight: bold; color: #8b93a5; }
+      .widget-title button {
+        background: transparent; color: #8b93a5;
+        border: none; box-shadow: none; border-radius: 8px;
+        padding: 4px 10px; font-size: 12px;
+      }
+      .widget-title button:hover { background: #3b4252; color: #eceff4; }
+
+      /* ---------- Do Not Disturb (muted accent, not loud blue) ---------- */
+      .widget-dnd { margin: 2px 8px 10px 8px; color: #cdd3df; font-size: 13px; }
+      .widget-dnd > switch {
+        background: #434c5e; border: none; box-shadow: none;
+        border-radius: 999px; min-width: 42px; min-height: 22px;
+      }
+      .widget-dnd > switch:checked { background: #81a1c1; }
+      .widget-dnd > switch slider {
+        background: #d8dee9; border-radius: 999px;
+        min-width: 18px; min-height: 18px; margin: 2px;
+      }
+      .widget-dnd > switch:checked slider { background: #eceff4; }
+
+      /* ---------- Cards with clear borders + spacing (clear separation) ---------- */
+      .notification-row { background: transparent; outline: none; }
+      .notification-row:focus,
+      .notification-row:hover,
+      .notification-row:selected { background: transparent; }
+
+      .notification-row .notification-background { padding: 4px 4px; }
+
+      .notification-row .notification-background .notification,
+      .notification-group.collapsed .notification-row .notification {
+        background: #3b4252;
+        background-color: #3b4252;
+        border: 1px solid #4b5468;
+        border-radius: 10px;
+        box-shadow: none;
+      }
+
+      .notification-row .notification-background .notification .notification-default-action,
+      .notification-row .notification-background .notification .notification-default-action:active,
+      .notification-row .notification-background .notification .notification-default-action:focus,
+      .notification-row:selected .notification-background .notification .notification-default-action,
+      .notification-row:focus .notification-background .notification .notification-default-action {
+        background: transparent;
+        border-radius: 10px;
+        padding: 12px 12px;
+      }
+      .notification-row .notification-background .notification .notification-default-action:hover {
+        background: #434c5e;
+      }
+
+      /* ---------- Content typography (off-white, not pure white) ---------- */
+      .notification-content { background: transparent; }
+      .notification-content .app-icon { margin: 0 12px 0 2px; }
+      .notification-content .text-box .summary { font-size: 14px; font-weight: bold; color: #eceff4; }
+      .notification-content .text-box .time { color: #7b8494; font-size: 12px; }
+      .notification-content .text-box .body { color: #aeb6c6; font-size: 13px; }
+
+      /* ---------- Action buttons: soft filled ---------- */
+      .notification-action > button {
+        background: #434c5e;
+        color: #e5e9f0;
+        border: 1px solid #4c566a;
+        border-radius: 8px;
+        box-shadow: none;
+        padding: 5px 14px;
+        margin: 6px 6px 4px 6px;
+      }
+      .notification-action > button:hover {
+        background: #4c566a; color: #eceff4; border-color: #5e81ac;
+      }
+
+      /* ---------- Close buttons ---------- */
+      .close-button {
+        background: transparent; color: #8b93a5;
+        border: none; box-shadow: none; border-radius: 999px; margin: 4px;
+      }
+      .close-button:hover { background: #bf616a; color: #eceff4; }
+
+      /* ---------- Subtle critical indicator: muted red left accent stripe ----------
+         swaync only tags notifications with .low/.normal/.critical here in the
+         panel (this urgency is NOT exposed to the waybar module), so a thin
+         Nord-aurora-red left border is enough to flag critical without shouting. */
+      .notification-row .notification-background .notification.critical {
+        border-left: 3px solid #bf616a;
+      }
+
+      /* ---------- Groups: blend into the flat list ---------- */
+      .notification-group { background: transparent; border-radius: 0; }
+      .notification-group:focus { background: transparent; }
+      .notification-group .notification-group-headers .notification-group-header {
+        color: #8b93a5; font-size: 12px; font-weight: bold;
+      }
+      .notification-group .notification-group-headers .notification-group-icon {
+        -gtk-icon-size: 16px; color: #8b93a5;
+      }
+      .notification-group .notification-group-buttons button,
+      .notification-group .notification-group-close-button .close-button {
+        background: transparent; color: #8b93a5;
+        border: none; box-shadow: none; border-radius: 8px;
+      }
+    '';
   };
+
+  # Replaced by swaync above; kept disabled (not deleted) for easy revert.
+  services.mako.enable = false;
 
   wayland.windowManager.sway.enable = true;
   # wayland.windowManager.sway.checkConfig = false; # https://discourse.nixos.org/t/services-xserver-xkb-extralayouts-doesnt-seem-to-be-compatible-with-sway/46128

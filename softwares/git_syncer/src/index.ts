@@ -48,68 +48,87 @@ async function isBinaryFile(filePath: string): Promise<boolean> {
 
 // --- Core Logic ---
 
-/** Main Sync Function */
-async function syncChanges(log: Logger, repository: string, commitOnly = false) {
+/**
+ * Main Sync Function.
+ *
+ * Note: this intentionally does NOT swallow errors. add/commit/push failures
+ * propagate to the caller (reportOnFailures) which rate-limits notifications so
+ * a flaky network / post-suspend blip doesn't bombard the user. `skippedBinaries`
+ * tracks which binaries we've already reported so a lingering uncommitted binary
+ * doesn't fire an error notification on every sync cycle.
+ */
+async function syncChanges(
+  log: Logger,
+  repository: string,
+  commitOnly = false,
+  skippedBinaries: Set<string> = new Set(),
+) {
   log.info("[Sync] Processing changes...");
-  try {
-    if (!commitOnly) {
-      await pullUpdates(log, repository);
-    }
 
-    // 1. Get Status
-    const statusOutput = await runCommand(
-      ["git", "status", "--porcelain"],
+  if (!commitOnly) {
+    // Best-effort pull: a failed pull (offline / just resumed from suspend)
+    // must not block committing local work. errorOk=true logs at warn (below
+    // the notification threshold) and continues; a persistent connectivity
+    // problem is still surfaced by the push below via reportOnFailures.
+    await pullUpdates(log, repository, true);
+  }
+
+  // 1. Get Status
+  const statusOutput = await runCommand(
+    ["git", "status", "--porcelain"],
+    repository,
+  );
+  if (!statusOutput.trim()) {
+    log.info("[Sync] No changes to commit.");
+    skippedBinaries.clear();
+    return;
+  }
+
+  const lines = statusOutput.split("\n").filter((l) => l);
+  const filesToAdd: string[] = [];
+  const binaryFiles: string[] = [];
+
+  // 2. Filter Files
+  for (const line of lines) {
+    // Porcelain format: "XY path/to/file" -> We want the path (slice(3))
+    const rawPath = line.substring(3);
+    // Handle quoted paths if filename has spaces
+    const filePath = rawPath.startsWith('"') ? rawPath.slice(1, -1) : rawPath;
+
+    if (await isBinaryFile(join(repository, filePath))) {
+      binaryFiles.push(filePath);
+    } else {
+      filesToAdd.push(filePath);
+    }
+  }
+
+  // 3. Handle Binaries — notify only about *newly* skipped ones, then remember
+  // the current set so we don't re-notify about the same file every cycle.
+  const newBinaries = binaryFiles.filter((f) => !skippedBinaries.has(f));
+  if (newBinaries.length > 0) {
+    const msg = `Skipped ${newBinaries.length} binary file(s) (not synced):\n${newBinaries.slice(0, 3).join("\n")}${newBinaries.length > 3 ? "\n..." : ""}`;
+    log.error(msg);
+  }
+  skippedBinaries.clear();
+  for (const f of binaryFiles) skippedBinaries.add(f);
+
+  // 4. Commit & Push
+  if (filesToAdd.length > 0) {
+    await runCommand(["git", "add", ...filesToAdd], repository);
+    await runCommand(
+      ["git", "commit", "-m", `Auto-sync: ${new Date().toISOString()}`],
       repository,
     );
-    if (!statusOutput.trim()) {
-      log.info("[Sync] No changes to commit.");
-      return;
-    }
+    log.info(`[Sync] Committed ${filesToAdd.length} files.`);
 
-    const lines = statusOutput.split("\n").filter((l) => l);
-    const filesToAdd: string[] = [];
-    const binaryFiles: string[] = [];
-
-    // 2. Filter Files
-    for (const line of lines) {
-      // Porcelain format: "XY path/to/file" -> We want the path (slice(3))
-      const rawPath = line.substring(3);
-      // Handle quoted paths if filename has spaces
-      const filePath = rawPath.startsWith('"') ? rawPath.slice(1, -1) : rawPath;
-
-      if (await isBinaryFile(join(repository, filePath))) {
-        binaryFiles.push(filePath);
-      } else {
-        filesToAdd.push(filePath);
-      }
-    }
-
-    // 3. Handle Binaries
-    if (binaryFiles.length > 0) {
-      const msg = `Skipped ${binaryFiles.length} binary file(s):\n${binaryFiles.slice(0, 3).join("\n")}${binaryFiles.length > 3 ? "..." : ""}`;
-      log.error(msg);
-    }
-
-    // 4. Commit & Push
-    if (filesToAdd.length > 0) {
-      await runCommand(["git", "add", ...filesToAdd], repository);
-      await runCommand(
-        ["git", "commit", "-m", `Auto-sync: ${new Date().toISOString()}`],
-        repository,
-      );
-      log.info(`[Sync] Committed ${filesToAdd.length} files.`);
-
-      if (!commitOnly) {
-        await runCommand(["git", "push"], repository);
-        log.info("[Sync] Pushed to remote.");
-      } else {
-        log.info(`[Sync] Committed ${filesToAdd.length} files (commit-only mode).`);
-      }
+    if (!commitOnly) {
+      await runCommand(["git", "push"], repository);
+      log.info("[Sync] Pushed to remote.");
     } else {
-      log.info("[Sync] No files to add.");
+      log.info(`[Sync] Committed ${filesToAdd.length} files (commit-only mode).`);
     }
-  } catch (error) {
-    log.error("[Sync] Error during sync:", {error});
+  } else {
+    log.info("[Sync] No files to add.");
   }
 }
 
@@ -144,18 +163,28 @@ async function verifyGitRepository(repo: string) {
   }
 }
 
+// Wrap a sync/pull task so transient failures don't spam notifications.
+// Rationale: connectivity blips (offline, just-resumed-from-suspend, flaky
+// wifi) make git pull/push fail in bursts. We want to stay quiet through those
+// (console-only `warn`, which is below the notification threshold) yet still
+// surface a *persistent* problem. So we only escalate to a notifying `error`
+// once every Nth consecutive failure, and reset the counter on any success.
+const NOTIFY_EVERY_N_CONSECUTIVE_FAILURES = 5;
 function reportOnFailures(fn: () => Promise<void>): () => Promise<void> {
-  const syncErrors: unknown[] = [];
+  let consecutiveFailures = 0;
   return async () => {
     try {
       await fn();
+      consecutiveFailures = 0;
     } catch (e) {
-      syncErrors.push(e);
-      if (syncErrors.length >= 5) {
-        logger.error(`Too many errors occurred during syncs.`, {e});
-        syncErrors.length = 0;
+      consecutiveFailures++;
+      if (consecutiveFailures % NOTIFY_EVERY_N_CONSECUTIVE_FAILURES === 0) {
+        logger.error(
+          `Sync still failing after ${consecutiveFailures} consecutive attempts.`,
+          { e },
+        );
       } else {
-        logger.warn(`Error occurred during sync:`, {e});
+        logger.warn(`Error occurred during sync (attempt ${consecutiveFailures}):`, { e });
       }
     }
   };
@@ -178,9 +207,12 @@ async function runContinousSync(repository: string): Promise<() => void> {
     ignoreInitial: true,
   });
 
+  // Persist across sync cycles so we only notify once per newly-skipped binary.
+  const skippedBinaries = new Set<string>();
+
   const sync = R.funnel(
     reportOnFailures(async () => {
-      return await syncChanges(log, repository, config.commit_only);
+      return await syncChanges(log, repository, config.commit_only, skippedBinaries);
     }),
     {
       minQuietPeriodMs: config.push_debounce_period_ms,

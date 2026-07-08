@@ -139,6 +139,12 @@
 
       pocker = "docker --context prod";
     };
+    interactiveShellInit = ''
+      # Keep `nix-shell -p ...` and `nix shell ...` in fish instead of dropping
+      # into bash. any-nix-shell wraps both the legacy (nix-shell) and new
+      # (nix shell) commands so the interactive shell inside them is fish.
+      ${pkgs.any-nix-shell}/bin/any-nix-shell fish --info-right | source
+    '';
     shellInit = ''
       # Emulates vim's cursor shape behavior
       # Set the normal and visual mode cursors to a block
@@ -172,6 +178,41 @@
         done;
       done
     '')
+
+    # Detach a nix-generated file (a read-only /nix/store symlink or file) into
+    # a plain, writable local copy so it can be edited in place for quick
+    # iteration, keeping a <file>.bak backup. Mirrors the manual dance:
+    #   mv f f.bak; cp f.bak f; chmod +rw f
+    (pkgs.writeShellApplication {
+      name = "unfreeze";
+      runtimeInputs = [ pkgs.coreutils ];
+      text = ''
+        if [ "$#" -eq 0 ]; then
+          echo "usage: unfreeze <file>...  # make nix-managed files writable for local iteration" >&2
+          exit 2
+        fi
+        for f in "$@"; do
+          if [ ! -e "$f" ] && [ ! -L "$f" ]; then
+            echo "unfreeze: no such file: $f" >&2
+            exit 1
+          fi
+          # Pick a backup name that doesn't clobber an existing one: <file>.bak,
+          # then <file>.bak.1, <file>.bak.2, ... on repeated unfreezes.
+          bak="$f.bak"
+          n=1
+          while [ -e "$bak" ] || [ -L "$bak" ]; do
+            bak="$f.bak.$n"
+            n=$((n + 1))
+          done
+          # Move the original (symlink or file) aside, then copy its *contents*
+          # back (cp -L dereferences a store symlink) as a real writable file.
+          mv -- "$f" "$bak"
+          cp -L -- "$bak" "$f"
+          chmod u+rw -- "$f"
+          echo "unfreeze: '$f' is now a writable copy (backup at '$bak')"
+        done
+      '';
+    })
   ];
   programs.tmux = {
     enable = true;

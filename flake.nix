@@ -143,6 +143,22 @@ rec {
           git-crypt
         ];
       };
+
+      # Interactive/automated debugging VM (boots a real device config). Run:
+      #   nix build .#checks.x86_64-linux.vm-debug              (automated)
+      #   nix run   .#checks.x86_64-linux.vm-debug.driverInteractive  (manual)
+      # See .agents/skills/nixos-vm-testing/SKILL.md for the iteration workflow.
+      checks.${system}.vm-debug = import ./tests/vm-debug.nix {
+        inherit
+          pkgs
+          inputs
+          system
+          home-manager
+          nur
+          disko
+          ;
+        lib = pkgs.lib;
+      };
       # ===== Home-manager only configs
       homeConfigurations."shifu" = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;

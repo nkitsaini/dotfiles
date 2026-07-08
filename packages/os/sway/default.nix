@@ -26,6 +26,11 @@ in {
     };
   };
 
+  # Unlock the gnome-keyring at login using the password entered in greetd, so
+  # secrets are available for the whole session (screen unlock re-unlocks via
+  # the gtklock PAM stack in sway-knobs.nix).
+  security.pam.services.greetd.enableGnomeKeyring = true;
+
   # # Previous LightDM config (X11-based, caused DRM contention with Sway)
   # services.xserver.enable = true;
   # services.xserver.displayManager.lightdm = {

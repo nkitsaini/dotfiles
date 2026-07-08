@@ -46,7 +46,10 @@ in
   # Ideally, I should mix this with home-manager config.
   # But don't want to figure out user stuff
   security.polkit.enable = true;
-  security.pam.services.gtklock = { };
+  # enableGnomeKeyring adds pam_gnome_keyring to gtklock's auth/session stack so
+  # unlocking the screen with the login password also unlocks the gnome-keyring
+  # (i.e. keyring unlocks when the device unlocks), not just at initial login.
+  security.pam.services.gtklock.enableGnomeKeyring = true;
   programs.dconf.enable = true;
 
   hardware.graphics = {

@@ -44,6 +44,7 @@ in
         "battery"
         "clock"
         "tray"
+        "custom/swaync"
       ];
       "keyboard-state" = {
         "numlock" = true;
@@ -205,6 +206,35 @@ in
         # The signal number must match the script (RTMIN+8)
         "signal" = 8;
         "interval" = "once";
+        "tooltip" = true;
+      };
+      # SwayNotificationCenter indicator + toggle. `{}` shows the live
+      # notification count (from `swaync-client -swb`); left-click toggles the
+      # panel, right-click toggles do-not-disturb. Absolute path so waybar's
+      # systemd service (minimal PATH) can find the client.
+      "custom/swaync" = {
+        # Newer waybar rejects positional "{}" mixed with named "{icon}";
+        # use the named "{text}" (the notification count from swaync-client).
+        "format" = "{icon} {text}";
+        # Nerd Font / FontAwesome bell glyphs. These MUST be real codepoints
+        # (U+F0F3 filled bell, U+F0A2 outline bell, U+F1F6 bell-slash) - the
+        # previous values were accidentally empty strings, so `{icon}` rendered
+        # nothing and only the bare count showed.
+        "format-icons" = {
+          "notification" = "";
+          "none" = "";
+          "dnd-notification" = "";
+          "dnd-none" = "";
+          "inhibited-notification" = "";
+          "inhibited-none" = "";
+          "dnd-inhibited-notification" = "";
+          "dnd-inhibited-none" = "";
+        };
+        "return-type" = "json";
+        "exec" = "${pkgs.swaynotificationcenter}/bin/swaync-client -swb";
+        "on-click" = "${pkgs.swaynotificationcenter}/bin/swaync-client -t -sw";
+        "on-click-right" = "${pkgs.swaynotificationcenter}/bin/swaync-client -d -sw";
+        "escape" = true;
         "tooltip" = true;
       };
     };

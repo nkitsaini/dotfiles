@@ -74,6 +74,7 @@ button:hover {
 #wireplumber,
 #custom-media,
 #custom-theme,
+#custom-swaync,
 #mode,
 #tray,
 #idle_inhibitor,
@@ -90,6 +91,23 @@ button:hover {
 #tray {
   background-color: #eee8d5;
   /* Solarized base2 (solid) */
+}
+
+#custom-swaync {
+  /* Slightly larger bell so it's easy to spot on the light bar. The count
+     (from `swaync-client -swb`) is shown next to it via the module format. */
+  font-size: 16px;
+  min-width: 16px;
+}
+
+#custom-swaync.notification,
+#custom-swaync.dnd-notification,
+#custom-swaync.inhibited-notification,
+#custom-swaync.dnd-inhibited-notification {
+  /* Muted rose (not loud red) when there are unread notifications: noticeable
+     on the light bar without shouting. */
+  color: #b05c54;
+  font-weight: normal;
 }
 
 #clock {

@@ -165,7 +165,10 @@
     disableSwayLock = false;
   };
 
-  nixpkgs.config.allowUnfree = true;
+  # mkDefault so a nixosTest node (which supplies its own read-only pkgs) can
+  # override this without an "option defined multiple times" conflict; real
+  # hosts have nothing else setting it, so it stays true.
+  nixpkgs.config.allowUnfree = lib.mkDefault true;
 
   security.protectKernelImage = true;
   services.earlyoom.enable = true;

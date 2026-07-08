@@ -43,3 +43,15 @@ systemctl --user --now enable wireplumber.service
 systemctl --user restart pipewire pipewire-pulse wireplumber 
 ```
 
+- Silence the recurring "Some required themes are missing" notification. It
+  comes from the `snapd-desktop-integration` snap trying to mirror our nix-set
+  GTK theme (Breeze) into snap confinement; Breeze has no matching theme snap
+  so its "install" action just fails. We don't use snaps for theming. Stop the
+  running instance and mask the snapd-generated user service so it never starts
+  again (a mask outranks snapd re-enabling it on refresh):
+```sh
+systemctl --user stop snap.snapd-desktop-integration.snapd-desktop-integration.service
+systemctl --user mask snap.snapd-desktop-integration.snapd-desktop-integration.service
+# (mask --now combines both: systemctl --user mask --now snap.snapd-desktop-integration.snapd-desktop-integration.service)
+```
+
