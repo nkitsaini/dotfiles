@@ -19,6 +19,8 @@ in
     home.packages = with pkgs; [
       antigravity-cli
       code-cursor
+      codex
+      bubblewrap # sandboxing for codex
     ];
   };
 }

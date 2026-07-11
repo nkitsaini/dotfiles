@@ -5,7 +5,8 @@ let
     #!${pkgs.dash}/bin/dash
     exec sway
   '';
-in {
+in
+{
   # Random configuration required to make sway work
   imports = [ ./sway-knobs.nix ];
 
@@ -20,7 +21,7 @@ in {
     enable = true;
     settings = {
       default_session = {
-        command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --remember --remember-session --sessions ${pkgs.sway}/share/wayland-sessions";
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-session --sessions ${pkgs.sway}/share/wayland-sessions";
         user = "greeter";
       };
     };

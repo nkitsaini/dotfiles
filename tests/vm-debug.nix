@@ -45,7 +45,12 @@ pkgs.testers.runNixOSTest {
   };
 
   nodes.machine =
-    { config, lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       imports = [
         home-manager.nixosModules.home-manager
@@ -77,7 +82,7 @@ pkgs.testers.runNixOSTest {
       boot.loader.systemd-boot.enable = lib.mkForce false;
       boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
 
-      # Bypass greetd/tuigreet: autologin kit on tty1 and exec its home-manager
+      # Bypass tuigreet: autologin kit on tty1 and exec its home-manager
       # sway (installed via home-manager.useUserPackages into the per-user
       # profile). Keeps the real theme + bar/notification config so bugs
       # reproduce. Force a bash login shell so loginShellInit runs.
