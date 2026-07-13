@@ -50,7 +50,7 @@
     #
     cursorTheme = {
       name = "breeze_cursors";
-      package = pkgs.kdePackages.breeze-icons;
+      package = pkgs.kdePackages.breeze;
       # size = 20;
     };
   };
@@ -58,7 +58,7 @@
   home.pointerCursor = {
     gtk.enable = true;
     name = "breeze_cursors";
-    package = pkgs.kdePackages.breeze-icons;
+    package = pkgs.kdePackages.breeze;
     # size = 20;
   };
 
