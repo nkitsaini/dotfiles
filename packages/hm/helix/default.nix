@@ -60,7 +60,8 @@
 
       settings = {
         # theme = "amberwood";
-        theme = "gruvbox_light_soft";
+        # theme = "gruvbox_light_soft";
+        theme = "gruvbox_dark_soft"; # helix can't do light/dark theme together.
         editor = {
           bufferline = "multiple";
           idle-timeout = 5;

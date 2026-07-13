@@ -56,6 +56,11 @@ rec {
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    radioctl = {
+      url = "path:softwares/radioctl";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
   };
 
   outputs =

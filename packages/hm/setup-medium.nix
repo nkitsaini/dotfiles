@@ -143,6 +143,9 @@
 
       # Markdown language server (built from ./softwares/markdown_lsp).
       inputs.markdown_lsp.packages.${pkgs.stdenv.hostPlatform.system}.default
+
+      # radioctl TUI (built from ./softwares/radioctl).
+      inputs.radioctl.packages.${pkgs.stdenv.hostPlatform.system}.default
     ]
     ++ (
       if nixGLCommandPrefix != "" then

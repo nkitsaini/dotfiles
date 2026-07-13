@@ -384,6 +384,22 @@
         "type": "github"
       }
     },
+    "radioctl": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "softwares/radioctl",
+        "type": "path"
+      },
+      "original": {
+        "path": "softwares/radioctl",
+        "type": "path"
+      },
+      "parent": []
+    },
     "root": {
       "inputs": {
         "disko": "disko",
@@ -397,6 +413,7 @@
         "nixpkgs": "nixpkgs_2",
         "nixvim": "nixvim",
         "nur": "nur",
+        "radioctl": "radioctl",
         "volume_control_rs": "volume_control_rs"
       }
     },
