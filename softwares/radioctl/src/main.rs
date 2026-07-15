@@ -23,6 +23,8 @@ use nm::{NmClient, WifiApInfo};
 use bt::{BtClient, BtDeviceInfo};
 use bluer::Address;
 
+const BLUETOOTH_SCAN_DURATION: Duration = Duration::from_secs(15);
+
 // Background Commands
 #[derive(Debug)]
 pub enum AppCmd {
@@ -268,6 +270,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Some(event) = event_rx.recv() => {
                 match event {
                     AppEvent::WifiState { scanning, interface, active_ssid, access_points } => {
+                        let selected_ssid = app.wifi_table_state
+                            .selected()
+                            .and_then(|index| app.wifi_aps.get(index))
+                            .map(|ap| ap.ssid.clone());
+
                         app.wifi_scanning = scanning;
                         app.wifi_interface = interface;
                         app.wifi_active_ssid = active_ssid;
@@ -289,14 +296,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         // Move active wifi to the top of the list stably
                         app.wifi_aps.sort_by_key(|ap| !ap.is_active);
 
-                        // Ensure selection is valid
-                        if let Some(sel) = app.wifi_table_state.selected() {
-                            if sel >= app.wifi_aps.len() && !app.wifi_aps.is_empty() {
-                                app.wifi_table_state.select(Some(app.wifi_aps.len() - 1));
-                            }
+                        // Keep focus on the same access point if list ordering changed.
+                        if let Some(ssid) = selected_ssid {
+                            app.wifi_table_state.select(app.wifi_aps.iter().position(|ap| ap.ssid == ssid));
+                        } else if app.wifi_table_state.selected().is_some() && !app.wifi_aps.is_empty() {
+                            app.wifi_table_state.select(Some(0));
                         }
                     }
                     AppEvent::BtState { scanning, devices } => {
+                        let selected_address = app.bt_table_state
+                            .selected()
+                            .and_then(|index| app.bt_devices.get(index))
+                            .map(|device| device.address);
+
                         app.bt_scanning = scanning;
                         
                         // Stable Bluetooth devices update: preserve order, append new ones at the end
@@ -324,11 +336,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             }
                         });
 
-                        // Ensure selection is valid
-                        if let Some(sel) = app.bt_table_state.selected() {
-                            if sel >= app.bt_devices.len() && !app.bt_devices.is_empty() {
-                                app.bt_table_state.select(Some(app.bt_devices.len() - 1));
-                            }
+                        // Keep focus on the same device if list ordering changed.
+                        if let Some(address) = selected_address {
+                            app.bt_table_state.select(app.bt_devices.iter().position(|device| device.address == address));
+                        } else if app.bt_table_state.selected().is_some() && !app.bt_devices.is_empty() {
+                            app.bt_table_state.select(Some(0));
                         }
                     }
                     AppEvent::Status(msg) => {
@@ -397,12 +409,20 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
     
     // Local copy of states to poll
     let mut bt_scanning = false;
+    let mut bt_scan_deadline: Option<tokio::time::Instant> = None;
     let mut wifi_scan_deadline: Option<tokio::time::Instant> = None;
     let mut bt_discovery_stream: Option<std::pin::Pin<Box<dyn futures_util::Stream<Item = bluer::AdapterEvent> + Send>>> = None;
 
     loop {
         tokio::select! {
             _ = update_tick.tick() => {
+                if bt_scan_deadline.is_some_and(|deadline| tokio::time::Instant::now() >= deadline) {
+                    bt_discovery_stream = None;
+                    bt_scan_deadline = None;
+                    bt_scanning = false;
+                    let _ = event_tx.send(AppEvent::Status("Bluetooth discovery stopped after 15 seconds.".to_string())).await;
+                }
+
                 // Poll Wi-Fi State
                 if let (Some(ref nm_client), Some(ref dev_path)) = (&nm, &wifi_dev_path) {
                     let active_ssid = nm_client.get_active_ssid(dev_path).await.ok().flatten();
@@ -526,6 +546,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             if bt_discovery_stream.is_some() {
                                 let _ = event_tx.send(AppEvent::Status("Stopping Bluetooth discovery...".to_string())).await;
                                 bt_discovery_stream = None;
+                                bt_scan_deadline = None;
                                 bt_scanning = false;
                                 let _ = event_tx.send(AppEvent::Status("Bluetooth discovery stopped.".to_string())).await;
                             } else {
@@ -533,8 +554,9 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                                 match bt_client.start_scan().await {
                                     Ok(stream) => {
                                         bt_discovery_stream = Some(stream);
+                                        bt_scan_deadline = Some(tokio::time::Instant::now() + BLUETOOTH_SCAN_DURATION);
                                         bt_scanning = true;
-                                        let _ = event_tx.send(AppEvent::Status("Bluetooth discovery started.".to_string())).await;
+                                        let _ = event_tx.send(AppEvent::Status("Bluetooth discovery started (stops after 15 seconds).".to_string())).await;
                                     }
                                     Err(e) => {
                                         let _ = event_tx.send(AppEvent::Error(format!("Failed to start discovery: {}", e))).await;
@@ -555,6 +577,12 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                     
                     AppCmd::BtConnect { address, name } => {
                         if let Some(ref bt_client) = bt {
+                            if bt_discovery_stream.is_some() {
+                                bt_discovery_stream = None;
+                                bt_scan_deadline = None;
+                                bt_scanning = false;
+                                let _ = event_tx.send(AppEvent::Status("Bluetooth discovery stopped before connecting.".to_string())).await;
+                            }
                             let _ = event_tx.send(AppEvent::Status(format!("Connecting to Bluetooth device \"{}\" ({})...", name, address))).await;
                             let bt_c = bt_client.clone();
                             let ev_tx = event_tx.clone();
