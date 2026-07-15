@@ -7,6 +7,43 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Parse a JSON-with-comments configuration value. JSONC comments and trailing
+/// commas are accepted for both `.json` and `.jsonc` project config files.
+pub fn parse_jsonc_value(text: &str) -> Result<serde_json::Value, String> {
+    jsonc_parser::parse_to_serde_value(text, &Default::default()).map_err(|e| e.to_string())
+}
+
+/// Serialize all defaults as JSONC with a few comments explaining the major
+/// sections. The JSON body is generated from [`Config::default`] so new options
+/// cannot silently disappear from `markdown-lsp config`.
+pub fn example_jsonc() -> Result<String, serde_json::Error> {
+    let json = serde_json::to_string_pretty(&Config::default())?;
+    let mut out = String::with_capacity(json.len() + 512);
+
+    for line in json.lines() {
+        let comment = match line {
+            "  \"folding\": {" => Some("  // Structural ranges exposed to editor folding."),
+            "  \"completion\": {" => Some("  // Link/image path completion and workspace search."),
+            "    \"pathStyle\": \"auto\"," => Some(
+                "    // auto: hybrid in Git work trees, relative elsewhere.\n    // Also accepts relative, absolute, or hybrid.",
+            ),
+            "  \"diagnostics\": {" => Some("  // Validation of local link and image targets."),
+            "  \"formatting\": {" => Some("  // Changes made by document formatting."),
+            "  \"snippets\": {" => Some("  // Quick insert menu opened by / or @."),
+            "  \"journal\": {" => Some("  // Daily-note location and naming."),
+            _ => None,
+        };
+        if let Some(comment) = comment {
+            out.push_str(comment);
+            out.push('\n');
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out.pop();
+    Ok(out)
+}
+
 /// Root configuration object.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -72,8 +109,8 @@ impl Config {
     ///
     /// 1. `client` — the editor's `initializationOptions` /
     ///    `didChangeConfiguration` (per-user, per-editor).
-    /// 2. `project` — a `.markdown-lsp.json` at the workspace root (per-project,
-    ///    editor-agnostic).
+    /// 2. `project` — a `.markdown-lsp.json` / `.markdown-lsp.jsonc` at the
+    ///    workspace root (per-project, editor-agnostic).
     ///
     /// Objects are deep-merged key by key so a project can override just the
     /// keys it cares about (e.g. `journal.template`) and inherit the rest.
@@ -173,6 +210,10 @@ impl Default for FoldingConfig {
 pub struct CompletionConfig {
     /// Master switch for link/image path completion.
     pub paths: bool,
+    /// How bare completion results are presented. [`PathStyle::Auto`] uses
+    /// [`PathStyle::Hybrid`] in a Git work tree and [`PathStyle::Relative`]
+    /// elsewhere.
+    pub path_style: PathStyle,
     /// Extensions that are sorted to the top of the list (highest priority
     /// first).
     pub prioritize_extensions: Vec<String>,
@@ -196,6 +237,7 @@ impl Default for CompletionConfig {
     fn default() -> Self {
         Self {
             paths: true,
+            path_style: PathStyle::Auto,
             prioritize_extensions: vec![".md".to_string(), ".markdown".to_string()],
             show_hidden_files: false,
             gitignore: true,
@@ -204,6 +246,21 @@ impl Default for CompletionConfig {
             max_items: 256,
         }
     }
+}
+
+/// Presentation style for bare path completions.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PathStyle {
+    /// Relative outside Git work trees; [`Self::Hybrid`] inside them.
+    Auto,
+    /// Always present paths relative to the current document.
+    Relative,
+    /// Always present paths from the workspace root.
+    Absolute,
+    /// Present sibling/child paths as relative and paths above the document as
+    /// workspace-root absolute.
+    Hybrid,
 }
 
 /// Broken-link diagnostics.
@@ -363,5 +420,45 @@ mod tests {
         let wrapped = json!({ "markdown-lsp": { "gfm": false } });
         let cfg = Config::resolve(Some(&wrapped), None);
         assert!(!cfg.gfm);
+    }
+
+    #[test]
+    fn path_style_defaults_to_auto_and_accepts_explicit_styles() {
+        assert_eq!(CompletionConfig::default().path_style, PathStyle::Auto);
+        for (value, expected) in [
+            ("relative", PathStyle::Relative),
+            ("absolute", PathStyle::Absolute),
+            ("hybrid", PathStyle::Hybrid),
+            ("auto", PathStyle::Auto),
+        ] {
+            let cfg = Config::resolve(
+                Some(&json!({ "completion": { "pathStyle": value } })),
+                None,
+            );
+            assert_eq!(cfg.completion.path_style, expected);
+        }
+    }
+
+    #[test]
+    fn jsonc_parser_accepts_comments_and_trailing_commas() {
+        let value = parse_jsonc_value(
+            r#"{
+                // Prefer portable links in this workspace.
+                "completion": {
+                    "pathStyle": "relative",
+                },
+            }"#,
+        )
+        .unwrap();
+        let cfg = Config::from_json(value);
+        assert_eq!(cfg.completion.path_style, PathStyle::Relative);
+    }
+
+    #[test]
+    fn documented_example_contains_every_default() {
+        let example = example_jsonc().unwrap();
+        assert!(example.contains("// auto:"));
+        let parsed = parse_jsonc_value(&example).unwrap();
+        assert_eq!(parsed, serde_json::to_value(Config::default()).unwrap());
     }
 }

@@ -13,9 +13,10 @@
 //! so a nearby file can be completed without first typing `../`. How each hit is
 //! *presented* depends on the prefix the user has typed:
 //!
-//! * bare (no prefix) — files at or below the current document's directory are
-//!   offered as **relative** links (`./b.md`, `./test/c.md`); files that require
-//!   walking up are offered as **absolute** links (`/shared/x.md`);
+//! * bare (no prefix) — presentation follows `completion.pathStyle`; its
+//!   `auto` default uses `hybrid` in a Git work tree (relative for siblings and
+//!   children, workspace-root absolute for other files) and `relative`
+//!   elsewhere;
 //! * explicit `./` or `../` — **everything** is offered relative (walking up
 //!   with `../` as needed);
 //! * explicit `/` — **everything** is offered absolute (workspace-root relative).
@@ -31,7 +32,7 @@ use tower_lsp_server::ls_types::{
     Command, CompletionItem, CompletionItemKind, CompletionTextEdit, Position, Range, TextEdit,
 };
 
-use crate::config::CompletionConfig;
+use crate::config::{CompletionConfig, PathStyle};
 use crate::encoding::{char_to_position, position_to_char, PositionEncoding};
 use crate::fuzzy::PathMatcher;
 use crate::links::has_scheme;
@@ -89,7 +90,7 @@ pub fn complete(
     let line_start_char = rope.line_to_char(line_idx);
     let before: String = rope.slice(line_start_char..cursor_char).chars().collect();
 
-    let ctx = match detect_context(&before) {
+    let mut ctx = match detect_context(&before) {
         Some(ctx) => ctx,
         None => return Vec::new(),
     };
@@ -101,6 +102,9 @@ pub fn complete(
         Some(r) => r,
         None => return Vec::new(),
     };
+    if ctx.mode == Mode::Bare {
+        ctx.mode = configured_mode(config.path_style, root);
+    }
 
     // When deep search is off, restrict to the document's own directory (for
     // absolute mode, the root) and don't recurse.
@@ -140,11 +144,9 @@ pub(crate) struct FileHit {
     pub name: String,
 }
 
-/// Walk the workspace (bare mode, deep + fuzzy per `config`) and return the
+/// Walk the workspace (configured bare mode, deep + fuzzy per `config`) and return the
 /// matching **files** (never directories), best-first. Shared with the snippet
-/// menu, which turns each hit into a `[stem](display)` inline link. The path
-/// style matches bare path completion: files at/below the document are
-/// relative, files above it are absolute.
+/// menu, which turns each hit into a `[stem](display)` inline link.
 pub(crate) fn workspace_files(
     query: &str,
     config: &CompletionConfig,
@@ -157,7 +159,7 @@ pub(crate) fn workspace_files(
         None => return Vec::new(),
     };
     let ctx = PathContext {
-        mode: Mode::Bare,
+        mode: configured_mode(config.path_style, root),
         query: query.to_string(),
     };
     let (scope, max_depth): (&Path, usize) = if config.deep_paths {
@@ -281,6 +283,23 @@ fn present(
         }
     };
     Some((display, is_down))
+}
+
+/// Resolve the configured style for a bare completion query.
+fn configured_mode(style: PathStyle, root: &Path) -> Mode {
+    match style {
+        PathStyle::Auto if is_git_work_tree(root) => Mode::Bare,
+        PathStyle::Auto | PathStyle::Relative => Mode::Relative,
+        PathStyle::Absolute => Mode::Absolute,
+        PathStyle::Hybrid => Mode::Bare,
+    }
+}
+
+/// Detect a Git work tree without spawning `git`. Checking ancestors handles
+/// both a repository root (`.git` directory), linked worktrees (`.git` file),
+/// and an editor workspace opened at a subdirectory of either.
+fn is_git_work_tree(path: &Path) -> bool {
+    path.ancestors().any(|dir| dir.join(".git").exists())
 }
 
 fn relative_display(rel: &str, is_dir: bool) -> Option<String> {
@@ -548,10 +567,11 @@ mod tests {
     }
 
     #[test]
-    fn bare_query_reaches_parent_as_absolute() {
+    fn auto_style_reaches_parent_as_absolute_in_git_work_tree() {
         // From test/k.md, a bare `a` should offer the root's a.md as ABSOLUTE
-        // (it requires walking up), while a sibling is relative.
+        // in a Git work tree (it requires walking up).
         let dir = tempdir().unwrap();
+        fs::create_dir(dir.path().join(".git")).unwrap();
         fs::write(dir.path().join("a.md"), "").unwrap();
         fs::create_dir(dir.path().join("test")).unwrap();
         fs::write(dir.path().join("test/k.md"), "").unwrap();
@@ -561,6 +581,87 @@ mod tests {
         let items = complete_at("[a](a", 5, &CompletionConfig::default(), &doc, dir.path());
         let ls = labels(&items);
         assert!(ls.contains(&"/a.md".to_string()), "up file absolute; got {ls:?}");
+    }
+
+    #[test]
+    fn auto_style_is_relative_outside_git_work_tree() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        let doc = dir.path().join("test/k.md");
+
+        let items = complete_at("[a](a", 5, &CompletionConfig::default(), &doc, dir.path());
+        let ls = labels(&items);
+        assert!(ls.contains(&"../a.md".to_string()), "up file relative; got {ls:?}");
+        assert!(!ls.contains(&"/a.md".to_string()), "got {ls:?}");
+    }
+
+    #[test]
+    fn configured_absolute_style_applies_to_bare_queries() {
+        let dir = tempdir().unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        fs::write(dir.path().join("test/sibling.md"), "").unwrap();
+        let doc = dir.path().join("test/k.md");
+        let cfg = CompletionConfig {
+            path_style: PathStyle::Absolute,
+            ..CompletionConfig::default()
+        };
+
+        let items = complete_at("[s](sib", 7, &cfg, &doc, dir.path());
+        assert!(
+            labels(&items).contains(&"/test/sibling.md".to_string()),
+            "got {:?}",
+            labels(&items)
+        );
+    }
+
+    #[test]
+    fn configured_relative_style_overrides_git_default() {
+        let dir = tempdir().unwrap();
+        fs::create_dir(dir.path().join(".git")).unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        let doc = dir.path().join("test/k.md");
+        let cfg = CompletionConfig {
+            path_style: PathStyle::Relative,
+            ..CompletionConfig::default()
+        };
+
+        let items = complete_at("[a](a", 5, &cfg, &doc, dir.path());
+        assert!(labels(&items).contains(&"../a.md".to_string()));
+    }
+
+    #[test]
+    fn configured_hybrid_style_does_not_require_git() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        let doc = dir.path().join("test/k.md");
+        let cfg = CompletionConfig {
+            path_style: PathStyle::Hybrid,
+            ..CompletionConfig::default()
+        };
+
+        let items = complete_at("[a](a", 5, &cfg, &doc, dir.path());
+        assert!(labels(&items).contains(&"/a.md".to_string()));
+    }
+
+    #[test]
+    fn git_detection_handles_workspace_subdirectories() {
+        let dir = tempdir().unwrap();
+        fs::create_dir(dir.path().join(".git")).unwrap();
+        fs::create_dir_all(dir.path().join("notes/nested")).unwrap();
+        fs::write(dir.path().join("notes/a.md"), "").unwrap();
+        fs::write(dir.path().join("notes/nested/k.md"), "").unwrap();
+        let root = dir.path().join("notes");
+        let doc = root.join("nested/k.md");
+
+        let items = complete_at("[a](a", 5, &CompletionConfig::default(), &doc, &root);
+        assert!(labels(&items).contains(&"/a.md".to_string()));
     }
 
     #[test]
@@ -594,6 +695,22 @@ mod tests {
     }
 
     #[test]
+    fn explicit_relative_prefix_overrides_absolute_style() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        let doc = dir.path().join("test/k.md");
+        let cfg = CompletionConfig {
+            path_style: PathStyle::Absolute,
+            ..CompletionConfig::default()
+        };
+
+        let items = complete_at("[a](../a", 8, &cfg, &doc, dir.path());
+        assert!(labels(&items).contains(&"../a.md".to_string()));
+    }
+
+    #[test]
     fn explicit_absolute_lists_from_root() {
         let dir = tempdir().unwrap();
         fs::write(dir.path().join("a.md"), "").unwrap();
@@ -606,6 +723,22 @@ mod tests {
         let ls = labels(&items);
         assert!(ls.contains(&"/a.md".to_string()), "got {ls:?}");
         assert!(ls.contains(&"/test/k.md".to_string()), "got {ls:?}");
+    }
+
+    #[test]
+    fn explicit_absolute_prefix_overrides_relative_style() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::create_dir(dir.path().join("test")).unwrap();
+        fs::write(dir.path().join("test/k.md"), "").unwrap();
+        let doc = dir.path().join("test/k.md");
+        let cfg = CompletionConfig {
+            path_style: PathStyle::Relative,
+            ..CompletionConfig::default()
+        };
+
+        let items = complete_at("[a](/a", 6, &cfg, &doc, dir.path());
+        assert!(labels(&items).contains(&"/a.md".to_string()));
     }
 
     #[test]

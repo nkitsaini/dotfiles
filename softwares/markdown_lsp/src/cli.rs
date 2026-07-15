@@ -38,12 +38,12 @@ pub fn run(args: &[String]) -> i32 {
     }
 }
 
-/// Print an example configuration (every option at its default value) as JSON.
+/// Print an example configuration (every option at its default value) as JSONC.
 /// Handy for seeding an editor's settings — see the README for where it goes.
 fn cmd_config() -> i32 {
-    match serde_json::to_string_pretty(&crate::config::Config::default()) {
-        Ok(json) => {
-            println!("{json}");
+    match crate::config::example_jsonc() {
+        Ok(jsonc) => {
+            println!("{jsonc}");
             0
         }
         Err(e) => {
@@ -69,7 +69,7 @@ USAGE:\n\
     markdown-lsp format [OPTIONS] [PATHS...]\n\
     markdown-lsp inline [OPTIONS] [PATHS...]\n\
     markdown-lsp lint   [OPTIONS] PATHS...\n\
-    markdown-lsp config                Print an example config (all defaults) as JSON\n\
+    markdown-lsp config                Print a commented example config (all defaults) as JSONC\n\
     markdown-lsp readme                Print the README to stdout\n\
 \n\
 PATHS may be files or directories; directories are searched recursively for\n\

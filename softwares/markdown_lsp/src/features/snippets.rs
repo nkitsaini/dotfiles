@@ -401,6 +401,33 @@ mod tests {
     }
 
     #[test]
+    fn file_links_follow_completion_path_style() {
+        use crate::config::{CompletionConfig, PathStyle};
+
+        let dir = tempdir().unwrap();
+        fs::create_dir(dir.path().join("docs")).unwrap();
+        fs::write(dir.path().join("docs/guide.md"), "").unwrap();
+        let doc = dir.path().join("index.md");
+        let config = Config {
+            completion: CompletionConfig {
+                path_style: PathStyle::Absolute,
+                ..CompletionConfig::default()
+            },
+            ..Config::default()
+        };
+
+        let items = items_with(
+            "/guide",
+            6,
+            dt(2026, 7, 7, 14, 30),
+            Some(&doc),
+            Some(dir.path()),
+            config,
+        );
+        assert_eq!(inserted(&items, "/docs/guide.md"), "[guide](/docs/guide.md)");
+    }
+
+    #[test]
     fn disabled_snippets_return_nothing() {
         let config = Config {
             snippets: SnippetsConfig {

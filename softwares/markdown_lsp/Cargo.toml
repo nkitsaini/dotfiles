@@ -29,6 +29,7 @@ nucleo-matcher = "0.3.1"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 # ripgrep's directory walker: respects .gitignore / .ignore / hidden files.
 ignore = "0.4"
+jsonc-parser = { version = "0.33.0", features = ["serde"] }
 
 [dev-dependencies]
 tempfile = "3"

@@ -30,8 +30,9 @@ const CMD_CONVERT_INLINE: &str = "markdown-lsp.convertToInline";
 const CMD_DAILY_NOTE: &str = "markdown-lsp.openDailyNote";
 const DIAGNOSTIC_DEBOUNCE: Duration = Duration::from_millis(200);
 
-/// Project-level config file, discovered at the workspace root.
-const PROJECT_CONFIG_FILE: &str = ".markdown-lsp.json";
+/// Project-level config files, discovered at the workspace root. The original
+/// `.json` name wins when both exist.
+const PROJECT_CONFIG_FILES: [&str; 2] = [".markdown-lsp.json", ".markdown-lsp.jsonc"];
 
 /// Shared, cloneable server state so background tasks (debounced diagnostics)
 /// can outlive a single request.
@@ -166,19 +167,23 @@ impl Backend {
     }
 
     /// Read + parse the project config file at the workspace root, if present.
-    /// Invalid JSON is reported and ignored (falling back to client settings).
+    /// Invalid JSONC is reported and ignored (falling back to client settings).
     async fn read_project_config(&self) -> Option<serde_json::Value> {
         let root = self.state.workspace_root.read().await.clone()?;
-        let path = root.join(PROJECT_CONFIG_FILE);
+        let path = PROJECT_CONFIG_FILES
+            .iter()
+            .map(|name| root.join(name))
+            .find(|path| path.is_file())?;
+        let name = path.file_name()?.to_string_lossy();
         let text = std::fs::read_to_string(&path).ok()?;
-        match serde_json::from_str::<serde_json::Value>(&text) {
+        match crate::config::parse_jsonc_value(&text) {
             Ok(value) => Some(value),
             Err(e) => {
                 self.state
                     .client
                     .show_message(
                         MessageType::WARNING,
-                        format!("{PROJECT_CONFIG_FILE}: invalid JSON ({e}); ignoring"),
+                        format!("{name}: invalid JSONC ({e}); ignoring"),
                     )
                     .await;
                 None
@@ -360,7 +365,9 @@ impl LanguageServer for Backend {
         // revalidates). Otherwise a target file may have appeared/disappeared,
         // so just re-check open docs.
         let config_changed = params.changes.iter().any(|c| {
-            uri::to_path(&c.uri).is_some_and(|p| p.ends_with(PROJECT_CONFIG_FILE))
+            uri::to_path(&c.uri).is_some_and(|p| {
+                PROJECT_CONFIG_FILES.iter().any(|name| p.ends_with(name))
+            })
         });
         if config_changed {
             self.reload_config().await;

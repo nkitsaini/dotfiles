@@ -384,3 +384,61 @@ async fn did_change_configuration_does_not_clobber_formatting() {
         "references should still move to the bottom, got:\n{new_text}"
     );
 }
+
+#[tokio::test]
+async fn jsonc_project_config_is_loaded() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("test")).unwrap();
+    let doc = dir.path().join("test/index.md");
+    std::fs::write(&doc, "").unwrap();
+    std::fs::write(dir.path().join("test/sibling.md"), "").unwrap();
+    std::fs::write(
+        dir.path().join(".markdown-lsp.jsonc"),
+        r#"{
+            // Force workspace-root paths even outside Git.
+            "completion": {
+                "pathStyle": "absolute",
+            },
+        }"#,
+    )
+    .unwrap();
+
+    let root_uri = format!("file://{}", dir.path().display());
+    let doc_uri = format!("file://{}", doc.display());
+    let mut service = service();
+    let _ = call(
+        &mut service,
+        Request::build("initialize")
+            .id(1)
+            .params(json!({
+                "capabilities": {},
+                "workspaceFolders": [{ "uri": root_uri, "name": "test" }]
+            }))
+            .finish(),
+    )
+    .await;
+    let _ = call(
+        &mut service,
+        Request::build("initialized").params(json!({})).finish(),
+    )
+    .await;
+    did_open(&mut service, &doc_uri, "[s](sib").await;
+
+    let response = call(
+        &mut service,
+        Request::build("textDocument/completion")
+            .id(2)
+            .params(json!({
+                "textDocument": { "uri": doc_uri },
+                "position": { "line": 0, "character": 7 }
+            }))
+            .finish(),
+    )
+    .await;
+    let result = ok_result(response);
+    let items = result["items"].as_array().expect("completion items");
+    assert!(
+        items.iter().any(|item| item["label"] == "/test/sibling.md"),
+        "JSONC pathStyle should apply, got: {items:?}"
+    );
+}

@@ -7,10 +7,11 @@ It focuses on the things that make editing Markdown pleasant:
 - **Path completion** inside link and image destinations, **deep and fuzzy**
   (fzf-style, powered by [`nucleo-matcher`]). It searches the whole workspace by
   default, so a nearby file completes without first typing `../`, and chooses the
-  link style from the prefix you've typed:
-  - **bare** (no prefix) — files at/below the document's directory are offered
-    as **relative** links (`./b.md`, `./test/c.md`); files that require walking
-    up are offered as **absolute** links (`/shared/x.md`);
+  link style from the prefix you've typed and `completion.pathStyle`:
+  - **bare** (no prefix) — configurable as **relative**, **absolute**, or
+    **hybrid** (relative for siblings/children and workspace-root absolute for
+    other files). The default, **auto**, selects hybrid in a Git work tree and
+    relative elsewhere;
   - **`./` / `../`** — everything is offered **relative** (walking up as needed);
   - **`/`** — everything is offered **absolute** (workspace-root relative).
 
@@ -70,9 +71,11 @@ It focuses on the things that make editing Markdown pleasant:
   that does not exist.
 - **Document outline** (headings) and **hover** (a link's resolved target and
   whether it exists).
-- **Project config file**: an optional `.markdown-lsp.json` at the workspace
-  root, deep-merged over the editor's settings, so project conventions (journal
-  template, formatting, …) are portable across Zed / Neovim / VS Code / the CLI.
+- **Project config file**: an optional `.markdown-lsp.json` or
+  `.markdown-lsp.jsonc` at the workspace root, deep-merged over the editor's
+  settings, so project conventions (journal template, formatting, …) are
+  portable across Zed / Neovim / VS Code / the CLI. Both names accept JSONC
+  comments and trailing commas.
 - A **command-line mode** (`markdown-lsp format` / `inline` / `lint`, accepting
   files *or* directories) so the same formatter and broken-link checker can run
   in scripts and CI.
@@ -178,11 +181,12 @@ client's `initializationOptions` (or later via
 `workspace/didChangeConfiguration`). A top-level `markdown-lsp` / `markdownLsp`
 / `markdown` wrapper key is accepted but not required.
 
-Run `markdown-lsp config` to print a ready-to-edit example with **every option
-at its current default** (always in sync with the binary you have):
+Run `markdown-lsp config` to print a lightly commented, ready-to-edit JSONC
+example with **every option at its current default** (always in sync with the
+binary you have):
 
 ```bash
-markdown-lsp config          # emit default settings as JSON
+markdown-lsp config          # emit documented default settings as JSONC
 ```
 
 ```jsonc
@@ -197,6 +201,9 @@ markdown-lsp config          # emit default settings as JSON
   },
   "completion": {
     "paths": true,
+    // "relative" | "absolute" | "hybrid" | "auto".
+    // Auto uses hybrid in a Git work tree and relative elsewhere.
+    "pathStyle": "auto",
     // Extensions floated to the top of the completion list, highest first.
     "prioritizeExtensions": [".md", ".markdown"],
     // Offer hidden (dot) files/directories.
@@ -261,14 +268,17 @@ markdown-lsp config          # emit default settings as JSON
 ### Project config file
 
 Besides the client's `initializationOptions`, the server reads an optional
-**`.markdown-lsp.json`** at the workspace root. It uses the exact same schema as
-above (no wrapper key needed), and is **deep-merged over** the editor settings
-key by key — so a project can pin, say, its journal template while each
-developer keeps their personal preferences for everything else:
+**`.markdown-lsp.json`** or **`.markdown-lsp.jsonc`** at the workspace root.
+Both support JSONC comments and trailing commas. They use the exact same schema
+as above (no wrapper key needed), and are **deep-merged over** the editor
+settings key by key — so a project can pin, say, its journal template while each
+developer keeps their personal preferences for everything else. If both files
+exist, `.markdown-lsp.json` takes precedence.
 
 ```jsonc
-// .markdown-lsp.json  (committed to the repo)
+// .markdown-lsp.jsonc  (committed to the repo)
 {
+  // Keep journals in one project-local directory.
   "journal": { "directory": "journal", "template": "journal/template.md" }
 }
 ```

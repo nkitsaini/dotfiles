@@ -49,13 +49,16 @@ fn format_stdin_moves_references() {
 }
 
 #[test]
-fn config_prints_valid_default_json() {
+fn config_prints_documented_default_jsonc() {
     let (code, stdout) = run(&["config"], "");
     assert_eq!(code, 0);
-    let value: serde_json::Value = serde_json::from_str(&stdout).expect("config must be valid JSON");
+    assert!(stdout.contains("// auto:"), "expected explanatory comments: {stdout}");
+    let value = markdown_lsp::config::parse_jsonc_value(&stdout)
+        .expect("config output must be valid JSONC");
     // A few representative keys across the config tree, in camelCase.
     assert!(value.get("folding").is_some(), "got: {stdout}");
     assert!(value.get("snippets").is_some(), "got: {stdout}");
+    assert_eq!(value["completion"]["pathStyle"], "auto");
     assert_eq!(value["snippets"]["timeFormat"], "%H:%M");
     assert_eq!(value["formatting"]["referencesHeading"], "References");
 }
