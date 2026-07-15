@@ -752,7 +752,10 @@ async fn handle_key(
                 Tab::Wifi => {
                     if let Some(idx) = app.wifi_table_state.selected() {
                         if let Some(ap) = app.wifi_aps.get(idx) {
-                            if ap.is_secure && app.wifi_active_ssid.as_ref() != Some(&ap.ssid) {
+                            if ap.is_secure
+                                && !ap.is_saved
+                                && app.wifi_active_ssid.as_ref() != Some(&ap.ssid)
+                            {
                                 // Prompt password
                                 app.password_prompt = Some(PasswordPrompt {
                                     ssid: ap.ssid.clone(),

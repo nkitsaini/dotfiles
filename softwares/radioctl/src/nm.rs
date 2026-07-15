@@ -108,6 +108,7 @@ pub struct WifiApInfo {
     pub bssid: String,
     pub signal: u8,
     pub is_secure: bool,
+    pub is_saved: bool,
     pub is_active: bool,
     pub path: String,
 }
@@ -189,6 +190,7 @@ impl NmClient {
             .await?;
         
         let ap_paths = wireless_proxy.get_access_points().await?;
+        let saved_connections = self.get_saved_wifi_connections().await?;
         let mut aps = Vec::new();
         
         for ap_path in ap_paths {
@@ -215,6 +217,7 @@ impl NmClient {
             let is_active = ap_path.as_str() == active_ap_path.as_str();
             
             aps.push(WifiApInfo {
+                is_saved: saved_connections.contains_key(&ssid),
                 ssid,
                 bssid,
                 signal,
@@ -241,9 +244,11 @@ impl NmClient {
         Ok(res)
     }
 
-    pub async fn get_saved_connection_path(&self, ssid: &str) -> zbus::Result<Option<String>> {
+    async fn get_saved_wifi_connections(&self) -> zbus::Result<HashMap<String, String>> {
         let settings_proxy = SettingsProxy::new(&self.conn).await?;
         let conns = settings_proxy.list_connections().await?;
+        let mut saved_connections = HashMap::new();
+
         for conn_path in conns {
             let conn_proxy = SettingsConnectionProxy::builder(&self.conn)
                 .path(&conn_path)?
@@ -253,20 +258,23 @@ impl NmClient {
                 if let Some(wifi_settings) = settings.get("802-11-wireless") {
                     if let Some(ssid_val) = wifi_settings.get("ssid") {
                         if let Ok(Value::Array(arr)) = Value::try_from(ssid_val) {
-                            let bytes: Vec<u8> = arr.iter().filter_map(|v| match v {
-                                Value::U8(b) => Some(*b),
+                            let bytes: Vec<u8> = arr.iter().filter_map(|value| match value {
+                                Value::U8(byte) => Some(*byte),
                                 _ => None,
                             }).collect();
-                            let conn_ssid = String::from_utf8_lossy(&bytes);
-                            if conn_ssid == ssid {
-                                return Ok(Some(conn_path.to_string()));
-                            }
+                            let ssid = String::from_utf8_lossy(&bytes).into_owned();
+                            saved_connections.entry(ssid).or_insert_with(|| conn_path.to_string());
                         }
                     }
                 }
             }
         }
-        Ok(None)
+
+        Ok(saved_connections)
+    }
+
+    pub async fn get_saved_connection_path(&self, ssid: &str) -> zbus::Result<Option<String>> {
+        Ok(self.get_saved_wifi_connections().await?.remove(ssid))
     }
 
     pub async fn connect_wifi(&self, dev_path: &str, ap_path: &str, ssid: &str, password: Option<&str>) -> zbus::Result<()> {
