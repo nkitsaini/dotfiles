@@ -18,19 +18,6 @@ rec {
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nixvim = {
-      url = "github:nix-community/nixvim"; # This is one that works with current nixpkgs lock. Will need to update this when nixpkgs is updated.
-      # I just searched git log of nixvim for commit hash of current nixpkgs
-      # If using a stable channel you can use `url = "github:nix-community/nixvim/nixos-<version>"`
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # doom-emacs is a configuration framework for GNU Emacs.
-    doomemacs = {
-      url = "github:doomemacs/doomemacs";
-      flake = false;
-    };
-
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -69,8 +56,6 @@ rec {
       nixpkgs,
       nixos-hardware,
       home-manager,
-      nixvim,
-
       nur,
       disko,
       ...

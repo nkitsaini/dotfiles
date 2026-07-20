@@ -137,14 +137,6 @@ compile_commands.json
 .config/Code/logs
 .vscode/extensions
 
-# --- Emacs ---
-# eln-cache is for native compilation artifacts (rebuildable)
-.emacs.d/eln-cache
-.emacs.d/auto-save-list
-.emacs.d/elpa
-# If using Doom Emacs
-.emacs.d/.local
-
 # --- Zed ---
 .local/share/zed
 *.miniprof

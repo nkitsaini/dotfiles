@@ -20,7 +20,6 @@
     ./syncthing.nix
     ./cmus
     ./aria2
-    ./neovim
     ./taskwarrior
     # ../../modules/hm
   ];
@@ -29,7 +28,6 @@
     dev-cli.enable = true;
   };
 
-  # kit.neovim.enable = true;
   # username and home directory are provided by the parent home.nix
 
   # This value determines the Home Manager release that your configuration is

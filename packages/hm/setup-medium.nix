@@ -17,12 +17,8 @@
     ./sioyek
     ./activity_watch
     ./meditation-bell
-    ./emacs
     ./camera-ctl
   ];
-  modules.editors.emacs = {
-    enable = false; # This is broken, need to delete emacs config altogether
-  };
 
   kit.programs.ghostty.enable = true;
   kit.blocks = {
@@ -137,9 +133,6 @@
       kdePackages.dolphin
       kdePackages.konsole
       gparted
-
-      # Required for something in neovim/neorg
-      imagemagick
 
       # Markdown language server (built from ./softwares/markdown_lsp).
       inputs.markdown_lsp.packages.${pkgs.stdenv.hostPlatform.system}.default

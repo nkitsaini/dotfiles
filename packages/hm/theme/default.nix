@@ -57,9 +57,10 @@
 
   home.pointerCursor = {
     gtk.enable = true;
+    sway.enable = true;
     name = "breeze_cursors";
     package = pkgs.kdePackages.breeze;
-    # size = 20;
+    size = 24;
   };
 
   dconf.settings = {
