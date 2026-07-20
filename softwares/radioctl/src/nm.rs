@@ -3,6 +3,10 @@ use zbus::{proxy, Connection};
 use zvariant::{OwnedObjectPath, Value};
 use uuid::Uuid;
 
+const NM_ACTIVE_CONNECTION_STATE_ACTIVATED: u32 = 2;
+const NM_ACTIVE_CONNECTION_STATE_DEACTIVATED: u32 = 4;
+const CONNECTION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
 #[proxy(
     interface = "org.freedesktop.NetworkManager",
     default_service = "org.freedesktop.NetworkManager",
@@ -176,8 +180,10 @@ impl NmClient {
             if active_path.as_str() != "/" {
                 if let Ok(active_conn_builder) = ActiveConnectionProxy::builder(&self.conn).path(&active_path) {
                     if let Ok(active_conn_p) = active_conn_builder.build().await {
-                        if let Ok(ap_path_obj) = active_conn_p.specific_object().await {
-                            active_ap_path = ap_path_obj.to_string();
+                        if active_conn_p.state().await.ok() == Some(NM_ACTIVE_CONNECTION_STATE_ACTIVATED) {
+                            if let Ok(ap_path_obj) = active_conn_p.specific_object().await {
+                                active_ap_path = ap_path_obj.to_string();
+                            }
                         }
                     }
                 }
@@ -282,9 +288,9 @@ impl NmClient {
         let dev_path_obj = zvariant::ObjectPath::try_from(dev_path)?;
         let ap_path_obj = zvariant::ObjectPath::try_from(ap_path)?;
 
-        if let Some(saved_path) = self.get_saved_connection_path(ssid).await? {
+        let active_path = if let Some(saved_path) = self.get_saved_connection_path(ssid).await? {
             let saved_path_obj = zvariant::ObjectPath::try_from(saved_path.as_str())?;
-            nm_proxy.activate_connection(&saved_path_obj, &dev_path_obj, &ap_path_obj).await?;
+            nm_proxy.activate_connection(&saved_path_obj, &dev_path_obj, &ap_path_obj).await?
         } else {
             // Build setting maps
             let mut settings = HashMap::new();
@@ -322,10 +328,32 @@ impl NmClient {
             ipv6_setting.insert("method".to_string(), Value::new("auto"));
             settings.insert("ipv6".to_string(), ipv6_setting);
 
-            nm_proxy.add_and_activate_connection(&settings, &dev_path_obj, &ap_path_obj).await?;
-        }
+            let (_, active_path) = nm_proxy.add_and_activate_connection(&settings, &dev_path_obj, &ap_path_obj).await?;
+            active_path
+        };
 
-        Ok(())
+        self.wait_for_connection(&active_path).await
+    }
+
+    async fn wait_for_connection(&self, active_path: &OwnedObjectPath) -> zbus::Result<()> {
+        let active_connection = ActiveConnectionProxy::builder(&self.conn)
+            .path(active_path)?
+            .build()
+            .await?;
+        let deadline = tokio::time::Instant::now() + CONNECTION_TIMEOUT;
+
+        loop {
+            match active_connection.state().await? {
+                NM_ACTIVE_CONNECTION_STATE_ACTIVATED => return Ok(()),
+                NM_ACTIVE_CONNECTION_STATE_DEACTIVATED => {
+                    return Err(zbus::Error::Failure("NetworkManager deactivated the connection before it was established".to_string()));
+                }
+                _ if tokio::time::Instant::now() >= deadline => {
+                    return Err(zbus::Error::Failure("Timed out waiting for Wi-Fi to connect".to_string()));
+                }
+                _ => tokio::time::sleep(std::time::Duration::from_millis(200)).await,
+            }
+        }
     }
 
     pub async fn disconnect_wifi(&self, dev_path: &str) -> zbus::Result<()> {
@@ -357,6 +385,10 @@ impl NmClient {
             .path(&active_conn_path)?
             .build()
             .await?;
+
+        if active_conn_proxy.state().await? != NM_ACTIVE_CONNECTION_STATE_ACTIVATED {
+            return Ok(None);
+        }
 
         // 1. Get Settings Connection path
         let settings_conn_path = active_conn_proxy.connection().await?;

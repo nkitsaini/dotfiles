@@ -2,6 +2,7 @@ mod nm;
 mod bt;
 
 use std::error::Error;
+use std::collections::HashSet;
 use std::io;
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -57,6 +58,8 @@ pub enum AppEvent {
         scanning: bool,
         devices: Vec<BtDeviceInfo>,
     },
+    WifiConnectFinished { ssid: String, error: Option<String> },
+    BtConnectFinished { address: Address, name: String, error: Option<String> },
     Status(String),
     Error(String),
 }
@@ -86,11 +89,13 @@ struct App {
     wifi_aps: Vec<WifiApInfo>,
     wifi_table_state: TableState,
     password_prompt: Option<PasswordPrompt>,
+    wifi_connecting_ssid: Option<String>,
     
     // Bluetooth State
     bt_scanning: bool,
     bt_devices: Vec<BtDeviceInfo>,
     bt_table_state: TableState,
+    bt_connecting_addresses: HashSet<Address>,
     
     // Messages
     status_message: Option<(String, bool)>, // (message, is_error)
@@ -115,9 +120,11 @@ impl App {
             wifi_aps: Vec::new(),
             wifi_table_state: wifi_state,
             password_prompt: None,
+            wifi_connecting_ssid: None,
             bt_scanning: false,
             bt_devices: Vec::new(),
             bt_table_state: bt_state,
+            bt_connecting_addresses: HashSet::new(),
             status_message: None,
             status_timer: 0,
             tick_count: 0,
@@ -343,6 +350,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             app.bt_table_state.select(Some(0));
                         }
                     }
+                    AppEvent::WifiConnectFinished { ssid, error } => {
+                        if app.wifi_connecting_ssid.as_deref() == Some(&ssid) {
+                            app.wifi_connecting_ssid = None;
+                        }
+                        match error {
+                            Some(error) => app.show_status(format!("Connection to {} failed: {}", ssid, error), true),
+                            None => {
+                                app.wifi_active_ssid = Some(ssid.clone());
+                                for ap in &mut app.wifi_aps {
+                                    ap.is_active = ap.ssid == ssid;
+                                }
+                                app.show_status(format!("Successfully connected to {}", ssid), false);
+                            }
+                        }
+                    }
+                    AppEvent::BtConnectFinished { address, name, error } => {
+                        app.bt_connecting_addresses.remove(&address);
+                        match error {
+                            Some(error) => app.show_status(format!("Connection to \"{}\" ({}) failed: {}", name, address, error), true),
+                            None => {
+                                if let Some(device) = app.bt_devices.iter_mut().find(|device| device.address == address) {
+                                    device.is_connected = true;
+                                }
+                                app.show_status(format!("Connected to \"{}\"", name), false);
+                            }
+                        }
+                    }
                     AppEvent::Status(msg) => {
                         app.show_status(msg, false);
                     }
@@ -508,7 +542,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                                 let pw = password.as_deref();
                                 match nm_c.connect_wifi(&dev_p, &ap_path, &ssid, pw).await {
                                     Ok(_) => {
-                                        let _ = ev_tx.send(AppEvent::Status(format!("Successfully connected to {}", ssid))).await;
+                                        let _ = ev_tx.send(AppEvent::WifiConnectFinished { ssid: ssid.clone(), error: None }).await;
                                         // Update state
                                         let active_ssid = nm_c.get_active_ssid(&dev_p).await.ok().flatten();
                                         let aps = nm_c.list_wifi_aps(&dev_p).await.unwrap_or_default();
@@ -520,7 +554,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                                         }).await;
                                     }
                                     Err(e) => {
-                                        let _ = ev_tx.send(AppEvent::Error(format!("Connection to {} failed: {}", ssid, e))).await;
+                                        let _ = ev_tx.send(AppEvent::WifiConnectFinished { ssid, error: Some(e.to_string()) }).await;
                                     }
                                 }
                             });
@@ -589,10 +623,10 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             tokio::spawn(async move {
                                 match bt_c.connect_device(address).await {
                                     Ok(_) => {
-                                        let _ = ev_tx.send(AppEvent::Status(format!("Connected to \"{}\"", name))).await;
+                                        let _ = ev_tx.send(AppEvent::BtConnectFinished { address, name, error: None }).await;
                                     }
                                     Err(e) => {
-                                        let _ = ev_tx.send(AppEvent::Error(format!("Connection to \"{}\" ({}) failed: {}", name, address, e))).await;
+                                        let _ = ev_tx.send(AppEvent::BtConnectFinished { address, name, error: Some(e.to_string()) }).await;
                                     }
                                 }
                             });
@@ -712,6 +746,7 @@ async fn handle_key(
                     ssid: prompt.ssid.clone(),
                     password,
                 }).await;
+                app.wifi_connecting_ssid = Some(prompt.ssid.clone());
                 app.password_prompt = None;
             }
             KeyCode::Esc => {
@@ -780,7 +815,9 @@ async fn handle_key(
                 Tab::Wifi => {
                     if let Some(idx) = app.wifi_table_state.selected() {
                         if let Some(ap) = app.wifi_aps.get(idx) {
-                            if ap.is_secure
+                            if app.wifi_connecting_ssid.as_ref() == Some(&ap.ssid) {
+                                // Ignore repeated connect requests while this AP is still connecting.
+                            } else if ap.is_secure
                                 && !ap.is_saved
                                 && app.wifi_active_ssid.as_ref() != Some(&ap.ssid)
                             {
@@ -797,6 +834,7 @@ async fn handle_key(
                                     ssid: ap.ssid.clone(),
                                     password: None,
                                 }).await;
+                                app.wifi_connecting_ssid = Some(ap.ssid.clone());
                             }
                         }
                     }
@@ -804,10 +842,13 @@ async fn handle_key(
                 Tab::Bluetooth => {
                     if let Some(idx) = app.bt_table_state.selected() {
                         if let Some(dev) = app.bt_devices.get(idx) {
-                            if dev.is_connected {
+                            if app.bt_connecting_addresses.contains(&dev.address) {
+                                // Ignore repeated connect requests while this device is still connecting.
+                            } else if dev.is_connected {
                                 let _ = cmd_tx.send(AppCmd::BtDisconnect { address: dev.address, name: dev.name.clone() }).await;
                             } else {
                                 let _ = cmd_tx.send(AppCmd::BtConnect { address: dev.address, name: dev.name.clone() }).await;
+                                app.bt_connecting_addresses.insert(dev.address);
                             }
                         }
                     }
@@ -819,10 +860,13 @@ async fn handle_key(
             if app.active_tab == Tab::Bluetooth {
                 if let Some(idx) = app.bt_table_state.selected() {
                     if let Some(dev) = app.bt_devices.get(idx) {
-                        if dev.is_connected {
+                        if app.bt_connecting_addresses.contains(&dev.address) {
+                            // Ignore repeated connect requests while this device is still connecting.
+                        } else if dev.is_connected {
                             let _ = cmd_tx.send(AppCmd::BtDisconnect { address: dev.address, name: dev.name.clone() }).await;
                         } else {
                             let _ = cmd_tx.send(AppCmd::BtConnect { address: dev.address, name: dev.name.clone() }).await;
+                            app.bt_connecting_addresses.insert(dev.address);
                         }
                     }
                 }
@@ -950,7 +994,10 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
             let active_ssid = app.wifi_active_ssid.as_deref().unwrap_or("");
             let rows = app.wifi_aps.iter().map(|ap| {
                 let is_current = ap.is_active || ap.ssid == active_ssid;
-                let status_span = if is_current {
+                let status_span = if app.wifi_connecting_ssid.as_deref() == Some(&ap.ssid) {
+                    let frame_idx = (app.tick_count as usize / 2) % 10;
+                    Span::styled(format!(" {} connecting ", ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"][frame_idx]), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                } else if is_current {
                     Span::styled("  connected ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
                 } else {
                     Span::styled("   ", Style::default().fg(Color::Gray))
@@ -1035,7 +1082,10 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
             .bottom_margin(1);
 
             let rows = app.bt_devices.iter().map(|dev| {
-                let conn_span = if dev.is_connected {
+                let conn_span = if app.bt_connecting_addresses.contains(&dev.address) {
+                    let frame_idx = (app.tick_count as usize / 2) % 10;
+                    Span::styled(format!("{} connecting", ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"][frame_idx]), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                } else if dev.is_connected {
                     Span::styled(" connected", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
                 } else {
                     Span::styled("  disconnected", Style::default().fg(Color::DarkGray))
