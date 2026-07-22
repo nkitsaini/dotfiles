@@ -1,0 +1,9 @@
+[package]
+name = "karo"
+version = "0.1.0"
+edition = "2021"
+description = "One front-end for every task runner: just, bun/npm/pnpm/yarn, deno, go-task, make, uv"
+
+[dependencies]
+serde_json = "1"
+toml = "0.8"

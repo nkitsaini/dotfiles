@@ -48,6 +48,11 @@ rec {
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    karo = {
+      url = "path:softwares/karo";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
   };
 
   outputs =

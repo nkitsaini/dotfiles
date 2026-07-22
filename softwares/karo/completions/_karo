@@ -1,0 +1,34 @@
+#compdef karo
+# Dynamic completions for karo: task names come from `karo --complete-tasks`.
+
+_karo() {
+    (( CURRENT == 2 )) || return 0
+
+    local -a tasks
+    local line name desc
+    while IFS=$'\t' read -r name desc; do
+        [[ -n $name ]] || continue
+        # _describe uses ':' to separate name from description.
+        name=${name//:/\\:}
+        if [[ -n $desc ]]; then
+            tasks+=("$name:$desc")
+        else
+            tasks+=("$name")
+        fi
+    done < <(command karo --complete-tasks 2>/dev/null)
+
+    _describe -t tasks 'task' tasks
+
+    local -a opts
+    opts=(
+        '--list:list tasks from all runners'
+        '-l:list tasks from all runners'
+        '--help:show help'
+        '-h:show help'
+        '--version:show version'
+        '-V:show version'
+    )
+    _describe -t options 'option' opts
+}
+
+_karo "$@"

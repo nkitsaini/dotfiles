@@ -163,6 +163,22 @@
         "type": "github"
       }
     },
+    "karo": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "softwares/karo",
+        "type": "path"
+      },
+      "original": {
+        "path": "softwares/karo",
+        "type": "path"
+      },
+      "parent": []
+    },
     "kit": {
       "inputs": {
         "git_syncer": "git_syncer",
@@ -346,6 +362,7 @@
         "disko": "disko",
         "flake-utils": "flake-utils",
         "home-manager": "home-manager",
+        "karo": "karo",
         "kit": "kit",
         "markdown_lsp": "markdown_lsp",
         "nixgl": "nixgl",

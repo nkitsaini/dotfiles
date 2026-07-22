@@ -139,6 +139,9 @@
 
       # radioctl TUI (built from ./softwares/radioctl).
       inputs.radioctl.packages.${pkgs.stdenv.hostPlatform.system}.default
+
+      # karo: one front-end for every task runner (built from ./softwares/karo).
+      inputs.karo.packages.${pkgs.stdenv.hostPlatform.system}.default
     ]
     ++ (
       if nixGLCommandPrefix != "" then
