@@ -36,6 +36,11 @@
     };
     targets.genericLinux.enable = true;
 
+    # "work" is the container with the real cookie jar (userContextId 12);
+    # a second empty container named "Work" also exists - don't rename this
+    # to it (matching is exact-first, see kit_containers.sys.mjs).
+    kit.firefox.defaultContainer = "work";
+
     kit.services = {
       notes-sync = {
         enable = true;

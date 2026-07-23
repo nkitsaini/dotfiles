@@ -51,6 +51,10 @@
   home-manager.users.${username} = {
     imports = [ ../../packages/hm/setup-full.nix ];
 
+    # Matches the "Personal" container case-insensitively (unless multiple
+    # containers differ only by case; see kit_containers.sys.mjs).
+    kit.firefox.defaultContainer = "personal";
+
     kit.services = {
       notes-sync.enable = true;
       restic.enable = true;

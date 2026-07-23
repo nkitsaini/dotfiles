@@ -56,6 +56,13 @@
   };
 
   home.pointerCursor = {
+    # `enable` is the master switch: home-manager wraps ALL pointerCursor
+    # output (sway `seat * xcursor_theme`, XCURSOR_THEME/XCURSOR_SIZE session
+    # vars, ~/.icons + ~/.local/share/icons links) in `mkIf cfg.enable`.
+    # Without it the sub-options below are silently ignored, sway finds no
+    # cursor theme and falls back to its built-in arrow-only cursor - no
+    # resize/hover shapes. Verified in the VM debug test (tests/vm-debug.nix).
+    enable = true;
     gtk.enable = true;
     sway.enable = true;
     name = "breeze_cursors";
