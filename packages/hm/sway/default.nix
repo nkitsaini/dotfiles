@@ -44,6 +44,12 @@ let
 
   turn_off_output_cmd = "${sway_display_control}/bin/sway-display-control off";
   turn_on_output_cmd = "${sway_display_control}/bin/sway-display-control on";
+
+  # Routes brightness changes to the display the cursor is on: laptop panel
+  # via brightnessctl, external monitors over DDC/CI via ddcutil. Also the
+  # CLI for every other monitor setting (monitorctl vcp ...). Same derivation
+  # as the one installed by the ../monitorctl import below.
+  monitorctl = pkgs.callPackage ../monitorctl/package.nix { };
   # Locking goes through a dedicated systemd user service (defined below)
   # instead of launching gtklock straight from swayidle. Two reasons:
   #   1. swayidle fires the lock command from several places (1200s timeout,
@@ -102,6 +108,7 @@ in
   imports = [
     ../../hm/waybar
     ../wlsunset
+    ../monitorctl
   ];
   home.file = {
     ".home-manager-extras/README.md".text = ''
@@ -469,9 +476,13 @@ in
       "${modifier}+Shift+O" = "exec ${turn_off_output_cmd}";
       # "${modifier}+." = "exec ${pkgs.bemoji}/bin/bemoji";
 
-      # Brightness
-      "XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5+%";
-      "XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 5-%";
+      # Brightness: acts on the display the cursor is on. Laptop panel goes
+      # through the kernel backlight, external monitors through DDC/CI
+      # (see packages/hm/monitorctl; /dev/i2c-* access is required for the
+      # DDC path - hardware.i2c.enable on NixOS, devices/shifu/README.md on
+      # the Ubuntu host).
+      "XF86MonBrightnessUp" = "exec ${monitorctl}/bin/monitorctl brightness up";
+      "XF86MonBrightnessDown" = "exec ${monitorctl}/bin/monitorctl brightness down";
 
       # Screenshot
       "Print" = "exec ${pkgs.grim}/bin/grim -c && ${pkgs.libnotify}/bin/notify-send 'Screenshot saved'";

@@ -155,6 +155,16 @@ in
         {
           "sidebar.revamp" = true;
           "sidebar.verticalTabs" = true;
+
+          # PipeWire avoids Firefox's uncached V4L2 probing of every camera,
+          # which made Google Meet's permission overlay block the UI for ~5s.
+          # Portal gotcha: a dismissed prompt persists `devices/camera ""=no`.
+          # Verify/remedy it with (the empty app ID is for unsandboxed Firefox):
+          #   p=org.freedesktop.impl.portal.PermissionStore
+          #   o=/org/freedesktop/impl/portal/PermissionStore
+          #   busctl --user call $p $o $p Lookup ss devices camera
+          #   busctl --user call $p $o $p SetPermission sbssas devices true camera "" 1 yes
+          "media.webrtc.camera.allow-pipewire" = true;
         }
         // lib.optionalAttrs (cfg.defaultContainer != null) {
           "kit.containers.default" = cfg.defaultContainer;

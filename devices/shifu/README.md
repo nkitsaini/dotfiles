@@ -43,6 +43,31 @@ systemctl --user --now enable wireplumber.service
 systemctl --user restart pipewire pipewire-pulse wireplumber 
 ```
 
+- Allow DDC/CI control of external monitors without sudo. Needed by
+  `monitorctl` (`packages/hm/monitorctl`), which the sway brightness keys use:
+  when the cursor is on an external monitor, fn+f5/f6 change *its* brightness
+  over the i2c bus instead of the laptop backlight. On NixOS hosts this is
+  covered by `hardware.i2c.enable` (packages/os/core.nix) + the `i2c`
+  extraGroup (users/kit); on ubuntu it's manual:
+```sh
+# make sure the i2c char devices exist now and after reboots
+sudo modprobe i2c-dev
+echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf
+
+# let the i2c group access /dev/i2c-* and join it
+sudo groupadd --system i2c
+sudo usermod -aG i2c "$USER"
+echo 'KERNEL=="i2c-[0-9]*", GROUP="i2c", MODE="0660"' | sudo tee /etc/udev/rules.d/45-ddcutil-i2c.rules
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=i2c-dev
+
+# log out and back in (group membership), then verify:
+ddcutil detect     # should list the external monitor, no sudo
+monitorctl list    # should show the monitor with "ddc/ci on i2c bus N"
+```
+  If `ddcutil detect` finds nothing, check the monitor's OSD menu - some
+  monitors ship with DDC/CI turned off.
+
 - Silence the recurring "Some required themes are missing" notification. It
   comes from the `snapd-desktop-integration` snap trying to mirror our nix-set
   GTK theme (Breeze) into snap confinement; Breeze has no matching theme snap
