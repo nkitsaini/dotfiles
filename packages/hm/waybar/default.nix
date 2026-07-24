@@ -12,6 +12,21 @@ let
     # 2. Read the external file content
     text = builtins.readFile ./toggle-theme.sh;
   };
+
+  # Sparkline chart modules (cpu / ram / ping). One script, dispatched by arg.
+  # `iputils` gives it `ping`, `gawk` does the arithmetic + markup rendering,
+  # `coreutils` provides `mkdir`/`cat`. Waybar's systemd service has a minimal
+  # PATH, so these must be declared here.
+  metricsGraphScript = pkgs.writeShellApplication {
+    name = "waybar-graph";
+    runtimeInputs = [
+      pkgs.gawk
+      pkgs.iputils
+      pkgs.coreutils
+    ];
+    text = builtins.readFile ./graphs.sh;
+  };
+  graphBin = "${metricsGraphScript}/bin/waybar-graph";
 in
 {
   programs.waybar = {
@@ -36,9 +51,12 @@ in
         "custom/theme"
         "idle_inhibitor"
         "temperature"
-        "cpu"
-        "memory"
+        # cpu/memory replaced by the sparkline chart modules below (they still
+        # show the live percentage, plus a rolling history graph).
+        "custom/cpugraph"
+        "custom/ramgraph"
         "network"
+        "custom/pinggraph"
         "pulseaudio"
         "backlight"
         "battery"
@@ -195,6 +213,30 @@ in
             ""
           ];
         };
+      };
+      # --- Live sparkline charts (see ./graphs.sh) ------------------------
+      # Each polls the shared script with a metric arg and renders a rolling
+      # Unicode block chart. `return-type=json` carries the pango-markup text
+      # (so per-bar colours render) plus a severity `class` for CSS. `escape`
+      # is left false on purpose so the <span> markup is honoured.
+      "custom/cpugraph" = {
+        "return-type" = "json";
+        "exec" = "${graphBin} cpu";
+        "interval" = 2;
+        "tooltip" = true;
+      };
+      "custom/ramgraph" = {
+        "return-type" = "json";
+        "exec" = "${graphBin} ram";
+        "interval" = 2;
+        "tooltip" = true;
+      };
+      "custom/pinggraph" = {
+        "return-type" = "json";
+        "exec" = "${graphBin} ping";
+        # 3s: `ping -W1` can block up to a second, so keep some headroom.
+        "interval" = 3;
+        "tooltip" = true;
       };
       "custom/theme" = {
         "format" = "{}";

@@ -10,4 +10,9 @@
     sha256 = "177n6nfy9la5g1h1hdm6lmcsq587lk108zcl1zgigcnshlccki9d";
   };
   wallpaper3 = "${./my_neighbour_totoro_sunset.png}";
+
+  # Theme-aware pair used by the sway wallpaper daemon (see packages/hm/sway):
+  # the daytime scene for `prefer-light`, the night scene for `prefer-dark`.
+  wallpaperLight = "${./wallpaper_light.jpg}";
+  wallpaperDark = "${./wallpaper_dark.jpg}";
 }

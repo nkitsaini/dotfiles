@@ -18,6 +18,7 @@ import {
   LEVELS,
   logger,
   LogLevel,
+  notifyUrgencyKey,
 } from "./logger";
 import { readConfigForRepo } from "./config";
 import type { Logger } from "@logtape/logtape";
@@ -107,7 +108,9 @@ async function syncChanges(
   const newBinaries = binaryFiles.filter((f) => !skippedBinaries.has(f));
   if (newBinaries.length > 0) {
     const msg = `Skipped ${newBinaries.length} binary file(s) (not synced):\n${newBinaries.slice(0, 3).join("\n")}${newBinaries.length > 3 ? "\n..." : ""}`;
-    log.error(msg);
+    // Informational, not an emergency: surface it (error level clears the
+    // default notify threshold) but at normal urgency, not critical.
+    log.error(msg, { [notifyUrgencyKey]: "normal" });
   }
   skippedBinaries.clear();
   for (const f of binaryFiles) skippedBinaries.add(f);
@@ -163,13 +166,27 @@ async function verifyGitRepository(repo: string) {
   }
 }
 
+// Consecutive-failure backoff shared by the sync wrapper and the SSE reconnect
+// loop. Both go quiet during a burst of failures and only surface a persistent
+// problem, with the gap between notifications growing so a long outage doesn't
+// produce a steady drip of popups.
+const NOTIFY_FIRST_AFTER = 5; // consecutive failures before the first notification
+const NOTIFY_BACKOFF_FACTOR = 4; // then notify at 5, 20, 80, ... failures
+
+// True only when `n` is one of the geometric backoff points (5, 20, 80, ...).
+function isBackoffNotifyPoint(n: number): boolean {
+  let point = NOTIFY_FIRST_AFTER;
+  while (point < n) point *= NOTIFY_BACKOFF_FACTOR;
+  return point === n;
+}
+
 // Wrap a sync/pull task so transient failures don't spam notifications.
-// Rationale: connectivity blips (offline, just-resumed-from-suspend, flaky
-// wifi) make git pull/push fail in bursts. We want to stay quiet through those
-// (console-only `warn`, which is below the notification threshold) yet still
-// surface a *persistent* problem. So we only escalate to a notifying `error`
-// once every Nth consecutive failure, and reset the counter on any success.
-const NOTIFY_EVERY_N_CONSECUTIVE_FAILURES = 5;
+// Connectivity blips (offline, just-resumed-from-suspend, flaky wifi) make git
+// pull/push fail in bursts. We stay quiet through those (console-only `warn`,
+// below the notification threshold) and only surface a *persistent* problem —
+// and even then at `normal` urgency (it's almost always "you're offline", not
+// an emergency), with exponential backoff between notifications. The counter
+// resets on any success.
 function reportOnFailures(fn: () => Promise<void>): () => Promise<void> {
   let consecutiveFailures = 0;
   return async () => {
@@ -178,13 +195,16 @@ function reportOnFailures(fn: () => Promise<void>): () => Promise<void> {
       consecutiveFailures = 0;
     } catch (e) {
       consecutiveFailures++;
-      if (consecutiveFailures % NOTIFY_EVERY_N_CONSECUTIVE_FAILURES === 0) {
+      if (isBackoffNotifyPoint(consecutiveFailures)) {
         logger.error(
-          `Sync still failing after ${consecutiveFailures} consecutive attempts.`,
-          { e },
+          `Sync failing after ${consecutiveFailures} consecutive attempts (likely offline). Will keep retrying.`,
+          { e, [notifyUrgencyKey]: "normal" },
         );
       } else {
-        logger.warn(`Error occurred during sync (attempt ${consecutiveFailures}):`, { e });
+        logger.warn(
+          `Error occurred during sync (attempt ${consecutiveFailures}):`,
+          { e },
+        );
       }
     }
   };
@@ -275,6 +295,16 @@ async function runContinousSync(repository: string): Promise<() => void> {
   return cancel
 }
 
+// Reconnecting SSE stream for pull triggers. This used to log an `error`
+// (→ critical notification) on *every* 5s retry, which was the single biggest
+// source of "network down" spam: offline for an hour meant ~720 critical
+// popups. Now failed reconnects use exponential backoff (capped) and are
+// console-only `warn`; a notification is raised only once the stream has been
+// down for a while (and then backs off further), at `normal` urgency. Any
+// successful (re)connection or message resets everything.
+const SSE_BASE_RETRY_MS = 5000;
+const SSE_MAX_RETRY_MS = 5 * 60 * 1000; // cap backoff at 5 minutes
+
 function retryableEventSource(
   log: Logger,
   url: string,
@@ -283,26 +313,54 @@ function retryableEventSource(
   let eventSource: EventSource | null = null;
   let retryTimeout: Timer | null = null;
   let cancelled = false;
+  let consecutiveErrors = 0;
 
   function connect() {
     if (cancelled) return;
 
     eventSource = new EventSource(url);
 
+    eventSource.onopen = () => {
+      if (consecutiveErrors > 0) {
+        log.info(`[SSE] Reconnected to ${url}`);
+      }
+      consecutiveErrors = 0;
+    };
+
     eventSource.onmessage = () => {
       log.info(`[SSE] Message received from ${url}`);
+      consecutiveErrors = 0;
       onMessage();
     };
 
     eventSource.onerror = (err) => {
-      log.error(`[SSE] Connection error (will retry):`, { url, err});
       if (eventSource) {
         eventSource.close();
         eventSource = null;
       }
-      if (!cancelled) {
-        retryTimeout = setTimeout(connect, 5000); // Retry after 5 seconds
+      if (cancelled) return;
+
+      consecutiveErrors++;
+      const delay = Math.min(
+        SSE_BASE_RETRY_MS * 2 ** (consecutiveErrors - 1),
+        SSE_MAX_RETRY_MS,
+      );
+
+      if (isBackoffNotifyPoint(consecutiveErrors)) {
+        // Persistent outage: surface once at normal urgency, then keep backing
+        // off. Almost always "you're offline", so not critical.
+        logger.error(
+          `Pull-trigger stream down after ${consecutiveErrors} attempts (likely offline): ${url}`,
+          { err, [notifyUrgencyKey]: "normal" },
+        );
+      } else {
+        log.warn(`[SSE] Connection error (will retry in ${delay}ms):`, {
+          url,
+          err,
+        });
       }
+
+      retryTimeout = setTimeout(connect, delay);
     };
   }
 
@@ -328,7 +386,21 @@ async function main(repositories: string[]) {
     logger.info(` - ${repo}`);
   }
   for (const repo of repositories) {
-    await runContinousSync(repo);
+    try {
+      await runContinousSync(repo);
+    } catch (e) {
+      if (e instanceof NonRetryableError) {
+        // Misconfiguration (e.g. not a git repo). This genuinely needs the user
+        // to act, so it *is* critical. Skip just this repo rather than letting
+        // the rejection crash the daemon (which would stop syncing every other
+        // repo and get restarted into the same failure by systemd).
+        logger.error(`Cannot sync ${repo}: ${e.message}`, {
+          [notifyUrgencyKey]: "critical",
+        });
+      } else {
+        logger.error(`Failed to initialize sync for ${repo}:`, { e });
+      }
+    }
   }
 }
 

@@ -92,7 +92,87 @@ let
 
   menu = "${nixGLCommandPrefix}${pkgs.rofi}/bin/rofi -terminal ${terminal_cmd} -show drun -show-icons";
 
-  wallpaper = (import ../../shared/wallpapers.nix).wallpaper3;
+  # Theme-aware wallpaper. The desktop background follows the GNOME
+  # `color-scheme` gsettings key (the same key the darkmode scheduler and the
+  # waybar toggle already drive), so the wallpaper switches together with the
+  # rest of the light/dark theme.
+  wallpapers = import ../../shared/wallpapers.nix;
+  wallpaperLight = wallpapers.wallpaperLight;
+  wallpaperDark = wallpapers.wallpaperDark;
+
+  # gsettings inside a `systemd --user` service does not inherit the session's
+  # GIO_EXTRA_MODULES, so it silently falls back to the in-memory backend
+  # (reads return a phantom default, writes go nowhere). Point GIO at dconf's
+  # module explicitly. See the long note in ../darkmode/default.nix.
+  gioDconf = ''export GIO_EXTRA_MODULES="${pkgs.dconf.lib}/lib/gio/modules''${GIO_EXTRA_MODULES:+:$GIO_EXTRA_MODULES}"'';
+
+  # Prints the wallpaper path for the *current* color-scheme. Used by the lock
+  # screen so gtklock's background matches the active theme at lock time.
+  currentWallpaper = pkgs.writeShellApplication {
+    name = "current-wallpaper";
+    runtimeInputs = [ pkgs.glib ];
+    text = ''
+      ${gioDconf}
+      scheme=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || true)
+      if [ "$scheme" = "'prefer-dark'" ]; then
+        printf '%s' "${wallpaperDark}"
+      else
+        printf '%s' "${wallpaperLight}"
+      fi
+    '';
+  };
+
+  # Long-running background daemon: sets the wallpaper immediately, then reacts
+  # to every color-scheme change by swapping swaybg. It watches the gsettings
+  # key directly, so it stays in sync no matter what flips the theme (the
+  # time-of-day reconciler, the waybar toggle, or a manual gsettings set) with
+  # no coupling to those components.
+  wallpaperDaemon = pkgs.writeShellApplication {
+    name = "sway-wallpaper-daemon";
+    runtimeInputs = [
+      pkgs.glib
+      pkgs.swaybg
+      pkgs.coreutils
+    ];
+    text = ''
+      ${gioDconf}
+
+      current_pid=""
+
+      set_wallpaper() {
+        local scheme img
+        scheme=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || true)
+        if [ "$scheme" = "'prefer-dark'" ]; then
+          img="${wallpaperDark}"
+        else
+          img="${wallpaperLight}"
+        fi
+
+        # Start the new swaybg first, give it a moment to draw, then kill the
+        # previous one. Overlapping like this avoids a flash of empty root
+        # window during the swap.
+        swaybg -i "$img" -m fill &
+        local new_pid=$!
+        sleep 1
+        if [ -n "$current_pid" ]; then
+          kill "$current_pid" 2>/dev/null || true
+        fi
+        current_pid=$new_pid
+      }
+
+      set_wallpaper
+
+      # Process substitution (not a pipe) so the loop runs in this shell and
+      # `current_pid` persists across events. Wrapped in `while true` so the
+      # daemon re-establishes the monitor if `gsettings monitor` ever exits.
+      while true; do
+        while read -r _; do
+          set_wallpaper
+        done < <(gsettings monitor org.gnome.desktop.interface color-scheme)
+        sleep 2
+      done
+    '';
+  };
 in
 {
 
@@ -545,7 +625,11 @@ in
     };
     Service = {
       Type = "simple";
-      ExecStart = "${pkgs.gtklock}/bin/gtklock -b ${wallpaper}";
+      # Resolve the wallpaper at lock time so the lock screen matches the
+      # current light/dark theme (currentWallpaper reads the live color-scheme).
+      ExecStart = pkgs.writeShellScript "gtklock-start" ''
+        exec ${pkgs.gtklock}/bin/gtklock -b "$(${currentWallpaper}/bin/current-wallpaper)"
+      '';
       # gtklock exits 0 once the user authenticates. Any non-zero exit (e.g.
       # it lost its Wayland connection) means the screen is no longer locked,
       # so bring the locker back rather than leaving the session exposed.
@@ -555,11 +639,13 @@ in
     };
   };
 
-  # wallpaper
+  # wallpaper: theme-aware daemon (swaybg + a gsettings color-scheme watcher).
+  # Replaces the old static `swaybg -i <fixed>` one-shot so the background can
+  # switch with light/dark mode. See wallpaperDaemon in the `let` block above.
   systemd.user.services.sway-bg = {
     # Reference: https://github.com/nix-community/home-manager/blob/8d5e27b4807d25308dfe369d5a923d87e7dbfda3/modules/programs/waybar.nix#L305
     Unit = {
-      Description = "Set sway background";
+      Description = "Set sway background (theme-aware)";
       PartOf = [ "graphical-session.target" ];
       After = [ "graphical-session-pre.target" ];
     };
@@ -567,7 +653,7 @@ in
       WantedBy = [ "graphical-session.target" ];
     };
     Service = {
-      ExecStart = "${pkgs.swaybg}/bin/swaybg -i ${wallpaper} -m fill";
+      ExecStart = "${wallpaperDaemon}/bin/sway-wallpaper-daemon";
       Restart = "on-failure";
     };
   };

@@ -75,6 +75,9 @@ button:hover {
 #custom-media,
 #custom-theme,
 #custom-swaync,
+#custom-cpugraph,
+#custom-ramgraph,
+#custom-pinggraph,
 #mode,
 #tray,
 #idle_inhibitor,
@@ -86,6 +89,26 @@ button:hover {
   /* Solarized base2 without transparency */
   color: #657b83;
   /* Solarized base00 */
+}
+
+/* Sparkline chart modules. A monospaced family keeps the block glyphs
+   (▁▂▃▄▅▆▇█) evenly spaced so the chart doesn't jitter as bars change
+   height; the per-bar colours come from pango markup in ./graphs.sh. */
+#custom-cpugraph,
+#custom-ramgraph,
+#custom-pinggraph {
+  font-family: "Noto Sans Mono", "DejaVu Sans Mono", monospace;
+  padding: 0 6px;
+}
+
+/* Whole-module tint when the current value is in the critical band (the
+   individual bars are already coloured; this makes a sustained problem, e.g.
+   a downed link, obvious even at a glance). */
+#custom-cpugraph.crit,
+#custom-ramgraph.crit,
+#custom-pinggraph.crit {
+  color: #dc322f;
+  /* Solarized red */
 }
 
 #tray {
