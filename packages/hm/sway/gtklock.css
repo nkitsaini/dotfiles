@@ -1,0 +1,86 @@
+/*
+ * gtklock has no backdrop-filter support, and sway does not provide a
+ * compositor blur protocol.  A mostly opaque, cool-black surface gives the
+ * clock and authentication controls stable contrast while still letting the
+ * wallpaper tint the card slightly.
+ */
+#window-box {
+  background-color: rgba(17, 20, 27, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.38);
+  padding: 20px 24px 18px;
+}
+
+#clock-label {
+  color: #f8fafc;
+  font-weight: 400;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+#date-label {
+  color: #d8dee9;
+  font-weight: 400;
+}
+
+#input-label {
+  color: #c7cdd8;
+  font-weight: 300;
+}
+
+#body-grid {
+  margin-top: 8px;
+}
+
+#input-field {
+  background-color: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  color: #11141b;
+  caret-color: #11141b;
+  padding: 6px 9px;
+}
+
+#input-field:focus {
+  border-color: #88c0d0;
+  box-shadow: 0 0 0 1px rgba(136, 192, 208, 0.35);
+}
+
+#error-label {
+  color: #ffb4ab;
+  font-weight: 500;
+}
+
+#warning-label {
+  color: #f6d58a;
+  font-weight: 500;
+}
+
+#message-box {
+  color: #e5e9f0;
+}
+
+#unlock-button {
+  background-image: none;
+  background-color: transparent;
+  border: 1px solid rgba(216, 222, 233, 0.28);
+  border-radius: 4px;
+  color: #d8dee9;
+  font-weight: 400;
+  padding: 6px 12px;
+}
+
+#unlock-button:hover {
+  background-color: rgba(216, 222, 233, 0.06);
+  border-color: rgba(216, 222, 233, 0.42);
+}
+
+#unlock-button:focus {
+  background-color: transparent;
+  border-color: #88c0d0;
+  box-shadow: 0 0 0 1px rgba(136, 192, 208, 0.25);
+}
+
+#unlock-button:active {
+  background-color: rgba(216, 222, 233, 0.1);
+}

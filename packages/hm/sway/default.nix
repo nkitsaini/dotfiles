@@ -122,6 +122,11 @@ let
     '';
   };
 
+  # gtklock/GTK 3 cannot blur the wallpaper behind individual widgets, and
+  # sway does not expose compositor blur. Use a translucent high-contrast card
+  # around the complete clock + authentication area instead.
+  gtklockStyle = pkgs.writeText "gtklock.css" (builtins.readFile ./gtklock.css);
+
   # Long-running background daemon: sets the wallpaper immediately, then reacts
   # to every color-scheme change by swapping swaybg. It watches the gsettings
   # key directly, so it stays in sync no matter what flips the theme (the
@@ -628,7 +633,9 @@ in
       # Resolve the wallpaper at lock time so the lock screen matches the
       # current light/dark theme (currentWallpaper reads the live color-scheme).
       ExecStart = pkgs.writeShellScript "gtklock-start" ''
-        exec ${pkgs.gtklock}/bin/gtklock -b "$(${currentWallpaper}/bin/current-wallpaper)"
+        exec ${pkgs.gtklock}/bin/gtklock \
+          --style ${gtklockStyle} \
+          --background "$(${currentWallpaper}/bin/current-wallpaper)"
       '';
       # gtklock exits 0 once the user authenticates. Any non-zero exit (e.g.
       # it lost its Wayland connection) means the screen is no longer locked,
