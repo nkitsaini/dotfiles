@@ -143,16 +143,31 @@ rec {
       #   nix build .#checks.x86_64-linux.vm-debug              (automated)
       #   nix run   .#checks.x86_64-linux.vm-debug.driverInteractive  (manual)
       # See .agents/skills/nixos-vm-testing/SKILL.md for the iteration workflow.
-      checks.${system}.vm-debug = import ./tests/vm-debug.nix {
-        inherit
-          pkgs
-          inputs
-          system
-          home-manager
-          nur
-          disko
-          ;
-        lib = pkgs.lib;
+      checks.${system} = {
+        vm-debug = import ./tests/vm-debug.nix {
+          inherit
+            pkgs
+            inputs
+            system
+            home-manager
+            nur
+            disko
+            ;
+          lib = pkgs.lib;
+        };
+        karo-fish-completion =
+          let
+            hm = self.homeConfigurations.shifu.config;
+            completions = "${hm.home.path}/share/fish/vendor_completions.d";
+            karo-e2e = inputs.karo.checks.${system}.fish-completion;
+          in
+          assert pkgs.lib.hasInfix "/share/fish/vendor_completions.d"
+            hm.programs.fish.interactiveShellInit;
+          pkgs.runCommand "karo-home-manager-fish-completion" { } ''
+            test -f "${completions}/karo.fish"
+            test -e "${karo-e2e}"
+            touch "$out"
+          '';
       };
       # ===== Home-manager only configs
       homeConfigurations."shifu" = home-manager.lib.homeManagerConfiguration {

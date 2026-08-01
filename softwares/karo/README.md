@@ -58,8 +58,9 @@ installed by the nix package into the standard vendor directories
 (`share/fish/vendor_completions.d`, `share/bash-completion/completions`,
 `share/zsh/site-functions`), which nix profiles / home-manager shells pick up
 automatically. Task names are produced at completion time by
-`karo --complete-tasks`, which emits `name<TAB>description` lines and uses
-the qualified `runner:name` form for tasks defined by multiple runners.
+`karo --complete-tasks`, which emits `name<TAB>description` lines. Every task
+is available as `runner:name`, so a prefix such as `karo bun:` completes all
+bun scripts; unambiguous tasks are also available by their shorter names.
 Only the first argument is completed; everything after the task name is
 forwarded to the task verbatim.
 

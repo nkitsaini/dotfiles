@@ -52,5 +52,46 @@
           };
         };
       });
+
+      checks = forAllSystems (pkgs: {
+        fish-completion =
+          let
+            karo = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          in
+          pkgs.runCommand "karo-fish-completion"
+            {
+              nativeBuildInputs = [
+                pkgs.fish
+                karo
+              ];
+            }
+            ''
+              export HOME="$TMPDIR/home"
+              mkdir -p "$HOME" fixture
+              printf '%s\n' '{"scripts":{"build":"vite build","dev":"vite dev"}}' \
+                > fixture/package.json
+              cd fixture
+
+              # Point fish at the installed artifact, exercising both packaging
+              # and the completion definition through fish's public interface.
+              export fish_complete_path="${karo}/share/fish/vendor_completions.d"
+
+              tasks="$(karo --complete-tasks)"
+              printf '%s\n' "$tasks" | grep -Fx $'build\tvite build'
+              printf '%s\n' "$tasks" | grep -Fx $'bun:build\tvite build'
+
+              qualified="$(fish --no-config -c 'complete -C "karo bun:"')"
+              test "$qualified" = $'bun:build\tvite build\nbun:dev\tvite dev'
+
+              options="$(fish --no-config -c 'complete -C "karo --v"')"
+              test "$options" = $'--version\tShow version'
+
+              # Once the task has been selected, arguments belong to its runner;
+              # karo must not fall back to completing files itself.
+              test -z "$(fish --no-config -c 'complete -C "karo build "')"
+
+              touch "$out"
+            '';
+      });
     };
 }

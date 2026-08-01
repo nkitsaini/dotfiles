@@ -151,6 +151,10 @@
       pocker = "docker --context prod";
     };
     interactiveShellInit = ''
+      # Pick up completions shipped by every package in home.packages without
+      # depending on the NixOS programs.fish module to link vendor paths.
+      set --append fish_complete_path "${config.home.path}/share/fish/vendor_completions.d"
+
       # Keep `nix-shell -p ...` and `nix shell ...` in fish instead of dropping
       # into bash. any-nix-shell wraps both the legacy (nix-shell) and new
       # (nix shell) commands so the interactive shell inside them is fish.

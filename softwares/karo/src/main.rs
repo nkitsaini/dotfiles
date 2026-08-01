@@ -670,10 +670,10 @@ fn die(msg: &str) -> ! {
     exit(1)
 }
 
-/// Prints `name<TAB>description` lines for shell completion scripts. Names
-/// defined by multiple runners are emitted in their qualified `runner:name`
-/// form, since that is what will actually run. Never fails: completion must
-/// stay silent on errors.
+/// Prints `name<TAB>description` lines for shell completion scripts. Every
+/// task is emitted in its qualified `runner:name` form so users can complete
+/// from a runner prefix. Unambiguous tasks are also emitted in their shorter
+/// unqualified form. Never fails: completion must stay silent on errors.
 fn complete_tasks(cwd: &Path) -> ! {
     let runners = discover(cwd);
     let per: Vec<(&Runner, Vec<TaskEntry>)> = runners
@@ -690,21 +690,24 @@ fn complete_tasks(cwd: &Path) -> ! {
 
     for (r, tasks) in &per {
         for t in tasks {
-            let name = if counts[t.name.as_str()] > 1 {
-                format!("{}:{}", r.id, t.name)
-            } else {
-                t.name.clone()
-            };
             let desc: String = t
                 .desc
                 .chars()
                 .map(|c| if c == '\t' || c == '\n' { ' ' } else { c })
                 .collect();
-            if desc.is_empty() {
-                println!("{name}");
-            } else {
-                println!("{name}\t{desc}");
+
+            let print = |name: &str| {
+                if desc.is_empty() {
+                    println!("{name}");
+                } else {
+                    println!("{name}\t{desc}");
+                }
+            };
+
+            if counts[t.name.as_str()] == 1 {
+                print(&t.name);
             }
+            print(&format!("{}:{}", r.id, t.name));
         }
     }
     exit(0)
