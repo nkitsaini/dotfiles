@@ -1,0 +1,11 @@
+// Spoofed geolocation consumed by Tridactyl location.js.
+// Live edits win on key conflicts (kit.mutableConfig mergePriority = live).
+//
+// Examples:
+//   Paris:  latitude 48.8566, longitude 2.3522
+//   Mumbai: latitude 19.1162575, longitude 72.9109137
+{
+  "latitude": 19.1162575,
+  "longitude": 72.9109137,
+  "accuracy": 20
+}

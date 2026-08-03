@@ -21,7 +21,13 @@
       pkgs.slack
       pkgs.nixgl.nixVulkanIntel
       pkgs.nixgl.nixGLIntel
-      pkgs.wireplumber
+      # wpctl only — full pkgs.wireplumber puts share/wireplumber ahead of
+      # Ubuntu's on XDG_DATA_DIRS, so the system wireplumber binary loads
+      # nixpkgs scripts and crashes (PermissionManager / exit 78).
+      (pkgs.runCommand "wpctl" { } ''
+        mkdir -p $out/bin
+        ln -s ${pkgs.wireplumber}/bin/wpctl $out/bin/wpctl
+      '')
       pkgs.awscli2
       pkgs.code-cursor
       pkgs.cursor-cli
@@ -41,15 +47,19 @@
     # to it (matching is exact-first, see kit_containers.sys.mjs).
     kit.firefox.defaultContainer = "work";
 
+    kit.rebuild = {
+      enable = true;
+      kind = "home-manager";
+      attribute = "shifu";
+    };
+
     kit.services = {
       notes-sync = {
         enable = true;
         repositories = pkgs.lib.mkOptionDefault [
-           "${config.home.homeDirectory}/workspace/notes"
+          "${config.home.homeDirectory}/workspace/notes"
         ];
       };
     };
-
-    programs.fish.shellAliases.rebuild-system = "home-manager switch --flake ${homeDirectory}/code/dotfiles/#shifu";
   }
 )

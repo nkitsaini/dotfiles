@@ -47,7 +47,6 @@
   systemd.user.enable = true;
   systemd.user.startServices = true;
 
-  programs.gh.enable = true;
 
   programs.ssh.enable = true;
   programs.ssh.enableDefaultConfig = false;
@@ -242,6 +241,10 @@
 
       # httpie in rust
       xh
+
+
+      # not using gh.enable=true as I want config to be maintained per host
+      gh
 
       # hello
       # qbittorrent

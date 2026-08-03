@@ -1,4 +1,10 @@
-{ config, pkgs, lib, ... }: {
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
+{
   programs.bash = {
     enable = true;
     # bashrcExtra = ''
@@ -12,7 +18,11 @@
       export PATH="${config.home.homeDirectory}/.local/bin:$PATH"
       export PATH="${config.home.homeDirectory}/bin/:$PATH"
 
-      if [[ $(${pkgs.procps}/bin/ps --no-header --pid=$PPID --format=comm) != "fish" && -z ''${BASH_EXECUTION_STRING} ]]
+      # Let nix-shell finish its bash-based environment setup before
+      # any-nix-shell starts fish, so build inputs are added to PATH.
+      if [[ $(${pkgs.procps}/bin/ps --no-header --pid=$PPID --format=comm) != "fish" \
+        && -z ''${BASH_EXECUTION_STRING:-} \
+        && -z ''${IN_NIX_SHELL:-} ]]
       then
         shopt -q login_shell && LOGIN_OPTION='--login' || LOGIN_OPTION=""
         exec ${pkgs.fish}/bin/fish $LOGIN_OPTION
@@ -22,7 +32,11 @@
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
-    config = { global = { hide_env_diff = true; }; };
+    config = {
+      global = {
+        hide_env_diff = true;
+      };
+    };
   };
 
   programs.atuin = {
@@ -64,8 +78,7 @@
       };
 
       git_status = {
-        format =
-          "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218) ($ahead_behind$stashed)]($style)";
+        format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218) ($ahead_behind$stashed)]($style)";
         style = "cyan";
         conflicted = "​";
         untracked = "​";
@@ -122,10 +135,8 @@
 
       ## Monitor switch alias
       # Source: https://github.com/rockowitz/ddcutil/wiki/Switching-input-source-on-LG-monitors
-      monitor-work =
-        "ddcutil -d 1 setvcp xF4 x0090 --i2c-source-addr=x50 --noverify";
-      monitor-personal =
-        "ddcutil -d 1 setvcp xF4 x0091 --i2c-source-addr=x50 --noverify";
+      monitor-work = "ddcutil -d 1 setvcp xF4 x0090 --i2c-source-addr=x50 --noverify";
+      monitor-personal = "ddcutil -d 1 setvcp xF4 x0091 --i2c-source-addr=x50 --noverify";
       monitor-brightness = "ddcutil -d 1 setvcp x10";
 
       j = "z"; # jump
@@ -178,41 +189,6 @@
         done;
       done
     '')
-
-    # Detach a nix-generated file (a read-only /nix/store symlink or file) into
-    # a plain, writable local copy so it can be edited in place for quick
-    # iteration, keeping a <file>.bak backup. Mirrors the manual dance:
-    #   mv f f.bak; cp f.bak f; chmod +rw f
-    (pkgs.writeShellApplication {
-      name = "unfreeze";
-      runtimeInputs = [ pkgs.coreutils ];
-      text = ''
-        if [ "$#" -eq 0 ]; then
-          echo "usage: unfreeze <file>...  # make nix-managed files writable for local iteration" >&2
-          exit 2
-        fi
-        for f in "$@"; do
-          if [ ! -e "$f" ] && [ ! -L "$f" ]; then
-            echo "unfreeze: no such file: $f" >&2
-            exit 1
-          fi
-          # Pick a backup name that doesn't clobber an existing one: <file>.bak,
-          # then <file>.bak.1, <file>.bak.2, ... on repeated unfreezes.
-          bak="$f.bak"
-          n=1
-          while [ -e "$bak" ] || [ -L "$bak" ]; do
-            bak="$f.bak.$n"
-            n=$((n + 1))
-          done
-          # Move the original (symlink or file) aside, then copy its *contents*
-          # back (cp -L dereferences a store symlink) as a real writable file.
-          mv -- "$f" "$bak"
-          cp -L -- "$bak" "$f"
-          chmod u+rw -- "$f"
-          echo "unfreeze: '$f' is now a writable copy (backup at '$bak')"
-        done
-      '';
-    })
   ];
   programs.tmux = {
     enable = true;

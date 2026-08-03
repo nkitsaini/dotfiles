@@ -36,7 +36,10 @@ gdbus call --session \
 ```
 
 - restart to let things like .desktop discovery take effect
-- Install wireplumber for wpctl to work (used for volume_control_rs script)
+- Install Ubuntu's wireplumber session manager (audio + bluetooth A2DP).
+  Home-manager only ships the `wpctl` CLI (for `volume_control_rs`); do not
+  put full `pkgs.wireplumber` on the profile — its `share/` shadows Ubuntu's
+  scripts via `XDG_DATA_DIRS` and crashes the system daemon.
 ```
 sudo apt install wireplumber pipewire-audio-client-libraries libspa-0.2-bluetooth
 systemctl --user --now enable wireplumber.service 

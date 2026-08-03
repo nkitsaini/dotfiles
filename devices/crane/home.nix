@@ -10,13 +10,11 @@
   programs.bash.enable = true;
   programs.neovim.enable = true;
   programs.tmux.enable = true;
-  home.packages = with pkgs;
-    [
-      (writeScriptBin "rebuild-system" ''
-        #!/usr/bin/env bash
-        sudo nixos-rebuild switch --flake ${config.home.homeDirectory}/code/dotfiles#crane2
-      '')
 
-    ];
-
+  kit.rebuild = {
+    enable = true;
+    kind = "nixos";
+    # Historical attribute name used by this host's rebuild helper.
+    attribute = "crane2";
+  };
 }

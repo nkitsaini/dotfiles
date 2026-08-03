@@ -30,44 +30,42 @@ let
       pkgs.unzip
       pkgs.zip
     ];
-    buildCommand =
-      oldAttrs.buildCommand
-      + ''
-        omni="$out/lib/firefox/browser/omni.ja"
-        unpack=$(mktemp -d)
-        # unzip exits 1/2 on omni.ja's nonstandard-but-harmless zip layout
-        ${pkgs.unzip}/bin/unzip -q "$omni" -d "$unpack" || test $? -le 2
+    buildCommand = oldAttrs.buildCommand + ''
+      omni="$out/lib/firefox/browser/omni.ja"
+      unpack=$(mktemp -d)
+      # unzip exits 1/2 on omni.ja's nonstandard-but-harmless zip layout
+      ${pkgs.unzip}/bin/unzip -q "$omni" -d "$unpack" || test $? -le 2
 
-        cp ${./kit_containers.sys.mjs} "$unpack/modules/KitContainers.sys.mjs"
+      cp ${./kit_containers.sys.mjs} "$unpack/modules/KitContainers.sys.mjs"
 
-        # The try/catch IIFE guarantees a broken/missing helper degrades to
-        # stock behavior (uncontained tab, visibly badge-less) instead of
-        # breaking new-tab creation altogether.
-        kitResolve() {
-          echo "(() => { try { return ChromeUtils.importESModule(\"resource:///modules/KitContainers.sys.mjs\").KitContainers.defaultUserContextId($1); } catch (e) { return 0; } })()"
-        }
+      # The try/catch IIFE guarantees a broken/missing helper degrades to
+      # stock behavior (uncontained tab, visibly badge-less) instead of
+      # breaking new-tab creation altogether.
+      kitResolve() {
+        echo "(() => { try { return ChromeUtils.importESModule(\"resource:///modules/KitContainers.sys.mjs\").KitContainers.defaultUserContextId($1); } catch (e) { return 0; } })()"
+      }
 
-        # New tabs (BrowserCommands.openTab): open in the default container.
-        substituteInPlace "$unpack/chrome/browser/content/browser/browser-commands.js" \
-          --replace-fail \
-          'resolveOnNewTabCreated: resolve,' \
-          "resolveOnNewTabCreated: resolve, userContextId: $(kitResolve window),"
+      # New tabs (BrowserCommands.openTab): open in the default container.
+      substituteInPlace "$unpack/chrome/browser/content/browser/browser-commands.js" \
+        --replace-fail \
+        'resolveOnNewTabCreated: resolve,' \
+        "resolveOnNewTabCreated: resolve, userContextId: $(kitResolve window),"
 
-        # External opens: fall back to the default container when Firefox's
-        # native container guessing (most open tabs with the same host) finds
-        # nothing. guessUserContextIdEnabled = isExternal && !force-default
-        # pref, so both escape hatches stay honored.
-        substituteInPlace "$unpack/modules/BrowserDOMWindow.sys.mjs" \
-          --replace-fail \
-          'lazy.URILoadingHelper.guessUserContextId(aURI)) ||' \
-          "lazy.URILoadingHelper.guessUserContextId(aURI)) || (guessUserContextIdEnabled && $(kitResolve null)) ||"
+      # External opens: fall back to the default container when Firefox's
+      # native container guessing (most open tabs with the same host) finds
+      # nothing. guessUserContextIdEnabled = isExternal && !force-default
+      # pref, so both escape hatches stay honored.
+      substituteInPlace "$unpack/modules/BrowserDOMWindow.sys.mjs" \
+        --replace-fail \
+        'lazy.URILoadingHelper.guessUserContextId(aURI)) ||' \
+        "lazy.URILoadingHelper.guessUserContextId(aURI)) || (guessUserContextIdEnabled && $(kitResolve null)) ||"
 
-        grep -rlZF 'reserved="true"' "$unpack" | xargs -0 -r perl -i -pne 's/reserved="true"/               /g'
+      grep -rlZF 'reserved="true"' "$unpack" | xargs -0 -r perl -i -pne 's/reserved="true"/               /g'
 
-        rm "$omni"
-        (cd "$unpack" && ${pkgs.zip}/bin/zip -qr9XD "$omni" -- *)
-        rm -rf "$unpack"
-      '';
+      rm "$omni"
+      (cd "$unpack" && ${pkgs.zip}/bin/zip -qr9XD "$omni" -- *)
+      rm -rf "$unpack"
+    '';
   });
 in
 {
@@ -140,7 +138,13 @@ in
     xdg.configFile."tridactyl/grayscale.js".source =
       pkgs.runCommand "tridactyl-grayscale-build" { }
         "${pkgs.bun}/bin/bun build ${./tridactyl_grayscale.ts} --outfile=$out";
-    xdg.configFile."tridactyl/location.example.js".source = ./tridactyl_location.js;
+    xdg.configFile."tridactyl/location.js".source = ./tridactyl_location.js;
+    xdg.configFile."tridactyl/location.jsonc".source = ./tridactyl_location.jsonc;
+    kit.mutableConfig.files.".config/tridactyl/location.jsonc" = {
+      strategy = "merge";
+      mergePriority = "live";
+      mergeFormat = "json5";
+    };
 
     # TODO: Set `network.proxy.allow_hijacking_localhost=true` (about:config)
 
@@ -151,24 +155,30 @@ in
     };
 
     programs.firefox.profiles."default" = {
-      settings =
-        {
-          "sidebar.revamp" = true;
-          "sidebar.verticalTabs" = true;
+      settings = {
+        "sidebar.revamp" = true;
+        "sidebar.verticalTabs" = true;
 
-          # PipeWire avoids Firefox's uncached V4L2 probing of every camera,
-          # which made Google Meet's permission overlay block the UI for ~5s.
-          # Portal gotcha: a dismissed prompt persists `devices/camera ""=no`.
-          # Verify/remedy it with (the empty app ID is for unsandboxed Firefox):
-          #   p=org.freedesktop.impl.portal.PermissionStore
-          #   o=/org/freedesktop/impl/portal/PermissionStore
-          #   busctl --user call $p $o $p Lookup ss devices camera
-          #   busctl --user call $p $o $p SetPermission sbssas devices true camera "" 1 yes
-          "media.webrtc.camera.allow-pipewire" = true;
-        }
-        // lib.optionalAttrs (cfg.defaultContainer != null) {
-          "kit.containers.default" = cfg.defaultContainer;
-        };
+        # Firefox 152 blocks tabs.executeScript on moz-extension: pages, which
+        # breaks Tridactyl 1.24.6's :viewconfig / :colourscheme (they inject
+        # into their own newtab page). Upstream fixed this after the 1.24.6
+        # tag (tridactyl#5368); drop this once a newer release is packaged.
+        # https://github.com/tridactyl/tridactyl/issues/5368
+        "extensions.webextensions.allow_executeScript_in_moz_extension" = true;
+
+        # PipeWire avoids Firefox's uncached V4L2 probing of every camera,
+        # which made Google Meet's permission overlay block the UI for ~5s.
+        # Portal gotcha: a dismissed prompt persists `devices/camera ""=no`.
+        # Verify/remedy it with (the empty app ID is for unsandboxed Firefox):
+        #   p=org.freedesktop.impl.portal.PermissionStore
+        #   o=/org/freedesktop/impl/portal/PermissionStore
+        #   busctl --user call $p $o $p Lookup ss devices camera
+        #   busctl --user call $p $o $p SetPermission sbssas devices true camera "" 1 yes
+        "media.webrtc.camera.allow-pipewire" = true;
+      }
+      // lib.optionalAttrs (cfg.defaultContainer != null) {
+        "kit.containers.default" = cfg.defaultContainer;
+      };
       # containers = {
       #   personal = {
       #     color = "orange";
@@ -182,17 +192,28 @@ in
       #   };
       # };
       extensions.packages = with pkgs.nur.repos.rycee.firefox-addons; [
+        # Find on: https://nur.nix-community.org/repos/rycee/
         ublock-origin
+
+        # - run `:native` to verify if native-messenger is installed (it should be)
+        # - run `:source` one-time to load config from disk
+        # - run `:kit_setup` to trigger yt, location patches
         tridactyl
+
+        # - login
+        # - update lock settings
         bitwarden
         dearrow
         sponsorblock
         rsshub-radar
+
+        # You will need to configure each site to open in specific container one-by-one
+        # firefox sync has some weird issue that I don't fully remember
         multi-account-containers
 
-        # Currently missing
-        # tab-wrangler
-        # feedbro
+        # Install manually (not yet packaged)
+        # unhook -? needed after kit patch?
+
       ];
     };
   };
