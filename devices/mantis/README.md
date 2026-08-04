@@ -1,0 +1,1 @@
+Non-nix, termux setup
