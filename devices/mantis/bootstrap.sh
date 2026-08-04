@@ -2,9 +2,18 @@
 # Termux SSH bootstrap — safe to run multiple times (idempotent).
 set -euo pipefail
 
-PUBKEY="ssh-ed25519 AAAA... your-laptop-key-here"
+PUBKEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDnnPLI8nQHQRfJBU8VALLURlVja5LtrvqF/6Y1gCujI ankit@archlinux"
 SSH_PORT=8022
 SSHD_CONFIG="$PREFIX/etc/ssh/sshd_config"
+SOURCES_LIST="$PREFIX/etc/apt/sources.list"
+
+echo "==> Ensuring a package mirror is configured"
+# termux-change-repo is an interactive picker; this is the non-interactive
+# equivalent of its "Termux (default)" option (official CDN endpoint).
+if ! grep -q "^deb .*termux-main" "$SOURCES_LIST" 2>/dev/null; then
+    echo "deb https://packages.termux.dev/apt/termux-main stable main" > "$SOURCES_LIST"
+fi
+apt update -y
 
 echo "==> Installing packages"
 pkg install -y openssh termux-services
@@ -38,6 +47,15 @@ echo "==> Enabling sshd as a supervised service (auto-restart if killed)"
 if [ ! -L "$PREFIX/var/service/sshd" ]; then
     sv-enable sshd
 fi
-sv up sshd 2>/dev/null || true   # idempotent: no-op if already running
+
+# runsvdir needs a moment to notice a newly-enabled service and create its
+# supervise/ control files before "sv up" can talk to it. Poll instead of
+# racing ahead (avoids the "supervise/ok: file does not exist" warning).
+for i in $(seq 1 10); do
+    [ -e "$PREFIX/var/service/sshd/supervise/ok" ] && break
+    sleep 1
+done
+
+sv up sshd 2>/dev/null || echo "Note: sshd should start within a few seconds on its own; check with 'sv status sshd'."
 
 echo "==> Done. sshd is supervised on port ${SSH_PORT} and will auto-restart if killed."
