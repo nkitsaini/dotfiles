@@ -1,28 +1,29 @@
-mod nm;
 mod bt;
+mod nm;
 
-use std::error::Error;
-use std::collections::HashSet;
-use std::io;
-use std::time::Duration;
-use tokio::sync::mpsc;
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, KeyCode, KeyEvent, KeyModifiers},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
+use clap::Parser;
+use crossterm::event::{self, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
-    backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph, Row, Table, TableState, Tabs},
-    Frame, Terminal,
+    Frame,
 };
+use std::collections::HashSet;
+use std::error::Error;
+use std::time::Duration;
+use tokio::sync::mpsc;
 
-use nm::{NmClient, WifiApInfo};
-use bt::{BtClient, BtDeviceInfo};
 use bluer::Address;
+use bt::{BtClient, BtDeviceInfo};
+use nm::{NmClient, WifiApInfo};
+use radioctl::{
+    cli::{Cli, Command},
+    config::Settings,
+    logging,
+    terminal::TerminalSession,
+};
 
 const BLUETOOTH_SCAN_DURATION: Duration = Duration::from_secs(15);
 
@@ -37,12 +38,32 @@ pub enum AppCmd {
     },
     WifiDisconnect,
     BtScanToggle,
-    BtConnect { address: Address, name: String },
-    BtDisconnect { address: Address, name: String },
-    BtPair { address: Address, name: String },
-    BtTrust { address: Address, name: String, trust: bool },
-    BtBlock { address: Address, name: String, block: bool },
-    BtRemove { address: Address, name: String },
+    BtConnect {
+        address: Address,
+        name: String,
+    },
+    BtDisconnect {
+        address: Address,
+        name: String,
+    },
+    BtPair {
+        address: Address,
+        name: String,
+    },
+    BtTrust {
+        address: Address,
+        name: String,
+        trust: bool,
+    },
+    BtBlock {
+        address: Address,
+        name: String,
+        block: bool,
+    },
+    BtRemove {
+        address: Address,
+        name: String,
+    },
 }
 
 // Background Events
@@ -58,8 +79,15 @@ pub enum AppEvent {
         scanning: bool,
         devices: Vec<BtDeviceInfo>,
     },
-    WifiConnectFinished { ssid: String, error: Option<String> },
-    BtConnectFinished { address: Address, name: String, error: Option<String> },
+    WifiConnectFinished {
+        ssid: String,
+        error: Option<String>,
+    },
+    BtConnectFinished {
+        address: Address,
+        name: String,
+        error: Option<String>,
+    },
     Status(String),
     Error(String),
 }
@@ -81,7 +109,7 @@ struct PasswordPrompt {
 struct App {
     active_tab: Tab,
     running: bool,
-    
+
     // Wi-Fi State
     wifi_scanning: bool,
     wifi_interface: String,
@@ -90,17 +118,17 @@ struct App {
     wifi_table_state: TableState,
     password_prompt: Option<PasswordPrompt>,
     wifi_connecting_ssid: Option<String>,
-    
+
     // Bluetooth State
     bt_scanning: bool,
     bt_devices: Vec<BtDeviceInfo>,
     bt_table_state: TableState,
     bt_connecting_addresses: HashSet<Address>,
-    
+
     // Messages
     status_message: Option<(String, bool)>, // (message, is_error)
-    status_timer: u32,                       // ticks until cleared
-    
+    status_timer: u32,                      // ticks until cleared
+
     tick_count: u32,
 }
 
@@ -110,7 +138,7 @@ impl App {
         wifi_state.select(Some(0));
         let mut bt_state = TableState::default();
         bt_state.select(Some(0));
-        
+
         Self {
             active_tab: Tab::Wifi,
             running: true,
@@ -215,17 +243,31 @@ impl App {
     }
 }
 
-// Terminal Cleanup Guard
-struct TerminalGuard;
-impl Drop for TerminalGuard {
-    fn drop(&mut self) {
-        let _ = disable_raw_mode();
-        let _ = execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture);
-    }
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    let cli = Cli::parse();
+    let settings = Settings::load(&cli)?;
+    let logging_guard = logging::init(&settings.log_level, settings.log_file.as_deref())?;
+
+    tracing::info!(
+        backend = ?settings.backend,
+        wifi_interface = ?settings.wifi_interface,
+        bluetooth_adapter = ?settings.bluetooth_adapter,
+        auto_scan = settings.auto_scan,
+        log_path = %logging_guard.path.display(),
+        "starting radioctl"
+    );
+
+    if let Some(Command::Diagnose { json }) = cli.command {
+        if json {
+            println!("{{\"status\":\"diagnostics backend is not initialized yet\"}}");
+        } else {
+            println!("radioctl diagnostics backend is not initialized yet");
+            println!("log: {}", logging_guard.path.display());
+        }
+        return Ok(());
+    }
+
     // Channel for events from worker to main thread
     let (event_tx, mut event_rx) = mpsc::channel(100);
     // Channel for commands from main thread to worker
@@ -236,25 +278,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
         run_worker(cmd_rx, event_tx).await;
     });
 
-    // Initialize Terminal
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-    let _guard = TerminalGuard; // Will restore terminal settings on exit/panic
+    // Initialize the terminal only after fallible configuration and logging setup.
+    let mut terminal_session = TerminalSession::enter()?;
+    let terminal = terminal_session.terminal_mut();
 
     // Spawn keyboard event thread
     let (key_tx, mut key_rx) = mpsc::channel(100);
     tokio::spawn(async move {
         loop {
-            if event::poll(Duration::from_millis(50)).unwrap() {
+            let ready = match event::poll(Duration::from_millis(50)) {
+                Ok(ready) => ready,
+                Err(error) => {
+                    tracing::error!(%error, "terminal input polling failed");
+                    break;
+                }
+            };
+            if ready {
                 if let Ok(event::Event::Key(key)) = event::read() {
                     // Only send Press events (avoid double trigger on Windows/some terminals)
-                    if key.kind == event::KeyEventKind::Press || key.kind == event::KeyEventKind::Repeat {
-                        if key_tx.send(key).await.is_err() {
-                            break;
-                        }
+                    if (key.kind == event::KeyEventKind::Press
+                        || key.kind == event::KeyEventKind::Repeat)
+                        && key_tx.send(key).await.is_err()
+                    {
+                        break;
                     }
                 }
             }
@@ -262,7 +308,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
 
     // Trigger initial scans
-    let _ = cmd_tx.send(AppCmd::WifiScan).await;
+    if settings.auto_scan {
+        let _ = cmd_tx.send(AppCmd::WifiScan).await;
+    }
 
     let mut app = App::new();
     let mut interval = tokio::time::interval(Duration::from_millis(200));
@@ -273,7 +321,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 app.tick();
                 terminal.draw(|f| ui_draw(f, &mut app))?;
             }
-            
+
             Some(event) = event_rx.recv() => {
                 match event {
                     AppEvent::WifiState { scanning, interface, active_ssid, access_points } => {
@@ -285,7 +333,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         app.wifi_scanning = scanning;
                         app.wifi_interface = interface;
                         app.wifi_active_ssid = active_ssid;
-                        
+
                         // Stable Wifi AP update: preserve seen order, append new ones at the end
                         let mut updated_wifi_aps = Vec::new();
                         for old_ap in &app.wifi_aps {
@@ -299,7 +347,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             }
                         }
                         app.wifi_aps = updated_wifi_aps;
-                        
+
                         // Move active wifi to the top of the list stably
                         app.wifi_aps.sort_by_key(|ap| !ap.is_active);
 
@@ -317,7 +365,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             .map(|device| device.address);
 
                         app.bt_scanning = scanning;
-                        
+
                         // Stable Bluetooth devices update: preserve order, append new ones at the end
                         let mut updated_bt_devices = Vec::new();
                         for old_dev in &app.bt_devices {
@@ -331,7 +379,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             }
                         }
                         app.bt_devices = updated_bt_devices;
-                        
+
                         // Move connected devices first, then paired, keeping stable order for the rest
                         app.bt_devices.sort_by(|a, b| {
                             if a.is_connected != b.is_connected {
@@ -386,7 +434,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
                 terminal.draw(|f| ui_draw(f, &mut app))?;
             }
-            
+
             Some(key) = key_rx.recv() => {
                 handle_key(key, &mut app, &cmd_tx).await?;
                 terminal.draw(|f| ui_draw(f, &mut app))?;
@@ -394,9 +442,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // Explicitly restore terminal and exit the process immediately
-    drop(_guard);
-    std::process::exit(0);
+    tracing::info!("radioctl stopped");
+    Ok(())
 }
 
 // Background Worker Main Loop
@@ -404,7 +451,9 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
     let nm = match NmClient::new().await {
         Ok(c) => Some(c),
         Err(e) => {
-            let _ = event_tx.send(AppEvent::Error(format!("NetworkManager error: {}", e))).await;
+            let _ = event_tx
+                .send(AppEvent::Error(format!("NetworkManager error: {}", e)))
+                .await;
             None
         }
     };
@@ -412,7 +461,9 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
     let bt = match BtClient::new().await {
         Ok(c) => Some(c),
         Err(e) => {
-            let _ = event_tx.send(AppEvent::Error(format!("Bluetooth (BlueZ) error: {}", e))).await;
+            let _ = event_tx
+                .send(AppEvent::Error(format!("Bluetooth (BlueZ) error: {}", e)))
+                .await;
             None
         }
     };
@@ -422,7 +473,12 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
         match nm_client.find_wifi_device().await {
             Ok(p) => p,
             Err(e) => {
-                let _ = event_tx.send(AppEvent::Error(format!("Failed to find Wi-Fi device: {}", e))).await;
+                let _ = event_tx
+                    .send(AppEvent::Error(format!(
+                        "Failed to find Wi-Fi device: {}",
+                        e
+                    )))
+                    .await;
                 None
             }
         }
@@ -440,12 +496,14 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
 
     // Set up periodic update interval (2 seconds)
     let mut update_tick = tokio::time::interval(Duration::from_secs(2));
-    
+
     // Local copy of states to poll
     let mut bt_scanning = false;
     let mut bt_scan_deadline: Option<tokio::time::Instant> = None;
     let mut wifi_scan_deadline: Option<tokio::time::Instant> = None;
-    let mut bt_discovery_stream: Option<std::pin::Pin<Box<dyn futures_util::Stream<Item = bluer::AdapterEvent> + Send>>> = None;
+    let mut bt_discovery_stream: Option<
+        std::pin::Pin<Box<dyn futures_util::Stream<Item = bluer::AdapterEvent> + Send>>,
+    > = None;
 
     loop {
         tokio::select! {
@@ -470,7 +528,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                         }).await;
                     }
                 }
-                
+
                 // Poll Bluetooth State
                 if let Some(ref bt_client) = bt {
                     if let Ok(scanning) = bt_client.is_scanning().await {
@@ -484,14 +542,14 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                     }
                 }
             }
-            
+
             Some(cmd) = cmd_rx.recv() => {
                 match cmd {
                     AppCmd::WifiScan => {
                         if let (Some(ref nm_client), Some(ref dev_path)) = (&nm, &wifi_dev_path) {
                             wifi_scan_deadline = Some(tokio::time::Instant::now() + Duration::from_secs(3));
                             let _ = event_tx.send(AppEvent::Status("Initiating Wi-Fi scan...".to_string())).await;
-                            
+
                             // Send intermediate state
                             let active_ssid = nm_client.get_active_ssid(dev_path).await.ok().flatten();
                             let aps = nm_client.list_wifi_aps(dev_path).await.unwrap_or_default();
@@ -501,20 +559,20 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                                 active_ssid: active_ssid.clone(),
                                 access_points: aps,
                             }).await;
-                            
+
                             // Spawn asynchronous scan that sleeps for 2 seconds then reports results
                             let nm_c = nm_client.clone();
                             let dev_p = dev_path.clone();
                             let ev_tx = event_tx.clone();
                             let iface = wifi_interface.clone();
-                            
+
                             tokio::spawn(async move {
                                 if let Err(e) = nm_c.trigger_wifi_scan(&dev_p).await {
                                     let _ = ev_tx.send(AppEvent::Error(format!("Wi-Fi Scan failed: {}", e))).await;
                                 }
                                 // Sleep to let NM gather AP results
                                 tokio::time::sleep(Duration::from_secs(3)).await;
-                                
+
                                 let active_ssid = nm_c.get_active_ssid(&dev_p).await.ok().flatten();
                                 let aps = nm_c.list_wifi_aps(&dev_p).await.unwrap_or_default();
                                 let _ = ev_tx.send(AppEvent::WifiState {
@@ -529,7 +587,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             let _ = event_tx.send(AppEvent::Error("Wi-Fi hardware/service not available".to_string())).await;
                         }
                     }
-                    
+
                     AppCmd::WifiConnect { ap_path, ssid, password } => {
                         if let (Some(ref nm_client), Some(ref dev_path)) = (&nm, &wifi_dev_path) {
                             let _ = event_tx.send(AppEvent::Status(format!("Connecting to Wi-Fi: {}...", ssid))).await;
@@ -537,7 +595,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             let dev_p = dev_path.clone();
                             let ev_tx = event_tx.clone();
                             let iface = wifi_interface.clone();
-                            
+
                             tokio::spawn(async move {
                                 let pw = password.as_deref();
                                 match nm_c.connect_wifi(&dev_p, &ap_path, &ssid, pw).await {
@@ -560,7 +618,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             });
                         }
                     }
-                    
+
                     AppCmd::WifiDisconnect => {
                         if let (Some(ref nm_client), Some(ref dev_path)) = (&nm, &wifi_dev_path) {
                             let _ = event_tx.send(AppEvent::Status("Disconnecting from Wi-Fi...".to_string())).await;
@@ -574,7 +632,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             }
                         }
                     }
-                    
+
                     AppCmd::BtScanToggle => {
                         if let Some(ref bt_client) = bt {
                             if bt_discovery_stream.is_some() {
@@ -597,7 +655,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                                     }
                                 }
                             }
-                            
+
                             if let Ok(devices) = bt_client.list_devices().await {
                                 let _ = event_tx.send(AppEvent::BtState {
                                     scanning: bt_scanning,
@@ -608,7 +666,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             let _ = event_tx.send(AppEvent::Error("Bluetooth hardware/service not available".to_string())).await;
                         }
                     }
-                    
+
                     AppCmd::BtConnect { address, name } => {
                         if let Some(ref bt_client) = bt {
                             if bt_discovery_stream.is_some() {
@@ -632,7 +690,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             });
                         }
                     }
-                    
+
                     AppCmd::BtDisconnect { address, name } => {
                         if let Some(ref bt_client) = bt {
                             let _ = event_tx.send(AppEvent::Status(format!("Disconnecting from Bluetooth device \"{}\" ({})...", name, address))).await;
@@ -650,7 +708,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             });
                         }
                     }
-                    
+
                     AppCmd::BtPair { address, name } => {
                         if let Some(ref bt_client) = bt {
                             let _ = event_tx.send(AppEvent::Status(format!("Pairing with Bluetooth device \"{}\" ({})...", name, address))).await;
@@ -668,7 +726,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             });
                         }
                     }
-                    
+
                     AppCmd::BtTrust { address, name, trust } => {
                         if let Some(ref bt_client) = bt {
                             let status = if trust { "Trusting" } else { "Untrusting" };
@@ -684,7 +742,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             }
                         }
                     }
-                    
+
                     AppCmd::BtBlock { address, name, block } => {
                         if let Some(ref bt_client) = bt {
                             let status = if block { "Blocking" } else { "Unblocking" };
@@ -700,7 +758,7 @@ async fn run_worker(mut cmd_rx: mpsc::Receiver<AppCmd>, event_tx: mpsc::Sender<A
                             }
                         }
                     }
-                    
+
                     AppCmd::BtRemove { address, name } => {
                         if let Some(ref bt_client) = bt {
                             let _ = event_tx.send(AppEvent::Status(format!("Removing Bluetooth device \"{}\" ({})...", name, address))).await;
@@ -741,11 +799,13 @@ async fn handle_key(
                 } else {
                     Some(prompt.input.clone())
                 };
-                let _ = cmd_tx.send(AppCmd::WifiConnect {
-                    ap_path: prompt.ap_path.clone(),
-                    ssid: prompt.ssid.clone(),
-                    password,
-                }).await;
+                let _ = cmd_tx
+                    .send(AppCmd::WifiConnect {
+                        ap_path: prompt.ap_path.clone(),
+                        ssid: prompt.ssid.clone(),
+                        password,
+                    })
+                    .await;
                 app.wifi_connecting_ssid = Some(prompt.ssid.clone());
                 app.password_prompt = None;
             }
@@ -769,7 +829,7 @@ async fn handle_key(
         KeyCode::Char('q') => {
             app.running = false;
         }
-        
+
         KeyCode::Tab => {
             app.active_tab = match app.active_tab {
                 Tab::Wifi => Tab::Bluetooth,
@@ -784,32 +844,26 @@ async fn handle_key(
         KeyCode::Char('2') => {
             app.active_tab = Tab::Bluetooth;
         }
-        
-        KeyCode::Down | KeyCode::Char('j') => {
-            match app.active_tab {
-                Tab::Wifi => app.select_next_wifi(),
-                Tab::Bluetooth => app.select_next_bt(),
+
+        KeyCode::Down | KeyCode::Char('j') => match app.active_tab {
+            Tab::Wifi => app.select_next_wifi(),
+            Tab::Bluetooth => app.select_next_bt(),
+        },
+
+        KeyCode::Up | KeyCode::Char('k') => match app.active_tab {
+            Tab::Wifi => app.select_prev_wifi(),
+            Tab::Bluetooth => app.select_prev_bt(),
+        },
+
+        KeyCode::Char('s') => match app.active_tab {
+            Tab::Wifi => {
+                let _ = cmd_tx.send(AppCmd::WifiScan).await;
             }
-        }
-        
-        KeyCode::Up | KeyCode::Char('k') => {
-            match app.active_tab {
-                Tab::Wifi => app.select_prev_wifi(),
-                Tab::Bluetooth => app.select_prev_bt(),
+            Tab::Bluetooth => {
+                let _ = cmd_tx.send(AppCmd::BtScanToggle).await;
             }
-        }
-        
-        KeyCode::Char('s') => {
-            match app.active_tab {
-                Tab::Wifi => {
-                    let _ = cmd_tx.send(AppCmd::WifiScan).await;
-                }
-                Tab::Bluetooth => {
-                    let _ = cmd_tx.send(AppCmd::BtScanToggle).await;
-                }
-            }
-        }
-        
+        },
+
         KeyCode::Enter => {
             match app.active_tab {
                 Tab::Wifi => {
@@ -829,11 +883,13 @@ async fn handle_key(
                                 });
                             } else {
                                 // Connect immediately (open Wi-Fi or already saved)
-                                let _ = cmd_tx.send(AppCmd::WifiConnect {
-                                    ap_path: ap.path.clone(),
-                                    ssid: ap.ssid.clone(),
-                                    password: None,
-                                }).await;
+                                let _ = cmd_tx
+                                    .send(AppCmd::WifiConnect {
+                                        ap_path: ap.path.clone(),
+                                        ssid: ap.ssid.clone(),
+                                        password: None,
+                                    })
+                                    .await;
                                 app.wifi_connecting_ssid = Some(ap.ssid.clone());
                             }
                         }
@@ -845,9 +901,19 @@ async fn handle_key(
                             if app.bt_connecting_addresses.contains(&dev.address) {
                                 // Ignore repeated connect requests while this device is still connecting.
                             } else if dev.is_connected {
-                                let _ = cmd_tx.send(AppCmd::BtDisconnect { address: dev.address, name: dev.name.clone() }).await;
+                                let _ = cmd_tx
+                                    .send(AppCmd::BtDisconnect {
+                                        address: dev.address,
+                                        name: dev.name.clone(),
+                                    })
+                                    .await;
                             } else {
-                                let _ = cmd_tx.send(AppCmd::BtConnect { address: dev.address, name: dev.name.clone() }).await;
+                                let _ = cmd_tx
+                                    .send(AppCmd::BtConnect {
+                                        address: dev.address,
+                                        name: dev.name.clone(),
+                                    })
+                                    .await;
                                 app.bt_connecting_addresses.insert(dev.address);
                             }
                         }
@@ -863,73 +929,106 @@ async fn handle_key(
                         if app.bt_connecting_addresses.contains(&dev.address) {
                             // Ignore repeated connect requests while this device is still connecting.
                         } else if dev.is_connected {
-                            let _ = cmd_tx.send(AppCmd::BtDisconnect { address: dev.address, name: dev.name.clone() }).await;
+                            let _ = cmd_tx
+                                .send(AppCmd::BtDisconnect {
+                                    address: dev.address,
+                                    name: dev.name.clone(),
+                                })
+                                .await;
                         } else {
-                            let _ = cmd_tx.send(AppCmd::BtConnect { address: dev.address, name: dev.name.clone() }).await;
+                            let _ = cmd_tx
+                                .send(AppCmd::BtConnect {
+                                    address: dev.address,
+                                    name: dev.name.clone(),
+                                })
+                                .await;
                             app.bt_connecting_addresses.insert(dev.address);
                         }
                     }
                 }
             }
         }
-        
-        KeyCode::Char('d') => {
-            match app.active_tab {
-                Tab::Wifi => {
-                    let _ = cmd_tx.send(AppCmd::WifiDisconnect).await;
-                }
-                Tab::Bluetooth => {
-                    if let Some(idx) = app.bt_table_state.selected() {
-                        if let Some(dev) = app.bt_devices.get(idx) {
-                            if dev.is_connected {
-                                let _ = cmd_tx.send(AppCmd::BtDisconnect { address: dev.address, name: dev.name.clone() }).await;
-                            }
+
+        KeyCode::Char('d') => match app.active_tab {
+            Tab::Wifi => {
+                let _ = cmd_tx.send(AppCmd::WifiDisconnect).await;
+            }
+            Tab::Bluetooth => {
+                if let Some(idx) = app.bt_table_state.selected() {
+                    if let Some(dev) = app.bt_devices.get(idx) {
+                        if dev.is_connected {
+                            let _ = cmd_tx
+                                .send(AppCmd::BtDisconnect {
+                                    address: dev.address,
+                                    name: dev.name.clone(),
+                                })
+                                .await;
                         }
                     }
                 }
             }
-        }
-        
+        },
+
         KeyCode::Char('p') => {
             if app.active_tab == Tab::Bluetooth {
                 if let Some(idx) = app.bt_table_state.selected() {
                     if let Some(dev) = app.bt_devices.get(idx) {
-                        let _ = cmd_tx.send(AppCmd::BtPair { address: dev.address, name: dev.name.clone() }).await;
+                        let _ = cmd_tx
+                            .send(AppCmd::BtPair {
+                                address: dev.address,
+                                name: dev.name.clone(),
+                            })
+                            .await;
                     }
                 }
             }
         }
-        
+
         KeyCode::Char('t') => {
             if app.active_tab == Tab::Bluetooth {
                 if let Some(idx) = app.bt_table_state.selected() {
                     if let Some(dev) = app.bt_devices.get(idx) {
-                        let _ = cmd_tx.send(AppCmd::BtTrust { address: dev.address, name: dev.name.clone(), trust: !dev.is_trusted }).await;
+                        let _ = cmd_tx
+                            .send(AppCmd::BtTrust {
+                                address: dev.address,
+                                name: dev.name.clone(),
+                                trust: !dev.is_trusted,
+                            })
+                            .await;
                     }
                 }
             }
         }
-        
+
         KeyCode::Char('b') => {
             if app.active_tab == Tab::Bluetooth {
                 if let Some(idx) = app.bt_table_state.selected() {
                     if let Some(dev) = app.bt_devices.get(idx) {
-                        let _ = cmd_tx.send(AppCmd::BtBlock { address: dev.address, name: dev.name.clone(), block: !dev.is_blocked }).await;
+                        let _ = cmd_tx
+                            .send(AppCmd::BtBlock {
+                                address: dev.address,
+                                name: dev.name.clone(),
+                                block: !dev.is_blocked,
+                            })
+                            .await;
                     }
                 }
             }
         }
-        
-        KeyCode::Delete => {
-            if app.active_tab == Tab::Bluetooth {
-                if let Some(idx) = app.bt_table_state.selected() {
-                    if let Some(dev) = app.bt_devices.get(idx) {
-                        let _ = cmd_tx.send(AppCmd::BtRemove { address: dev.address, name: dev.name.clone() }).await;
-                    }
+
+        KeyCode::Delete if app.active_tab == Tab::Bluetooth => {
+            if let Some(idx) = app.bt_table_state.selected() {
+                if let Some(dev) = app.bt_devices.get(idx) {
+                    let _ = cmd_tx
+                        .send(AppCmd::BtRemove {
+                            address: dev.address,
+                            name: dev.name.clone(),
+                        })
+                        .await;
                 }
             }
         }
-        
+
         _ => {}
     }
 
@@ -939,7 +1038,7 @@ async fn handle_key(
 // UI Drawing / Layout Function
 fn ui_draw(f: &mut Frame, app: &mut App) {
     let size = f.size();
-    
+
     // Main outer vertical layout: Header, Tabs, Content, Messages, Footer
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -957,27 +1056,48 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
         .split(size);
 
     // 1. Header Rendering
-    let title = Paragraph::new(vec![
-        Line::from(vec![
-            Span::styled(" 📻 radioctl TUI ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            Span::styled(" v0.1.0 ", Style::default().fg(Color::DarkGray)),
-            Span::styled(" - Bluetooth & Wi-Fi replacement for bluetoothctl and nmtui", Style::default().fg(Color::Gray)),
-        ])
-    ])
-    .block(Block::default().borders(Borders::BOTTOM).border_style(Style::default().fg(Color::DarkGray)));
+    let title = Paragraph::new(vec![Line::from(vec![
+        Span::styled(
+            " 📻 radioctl TUI ",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" v0.1.0 ", Style::default().fg(Color::DarkGray)),
+        Span::styled(
+            " - Bluetooth & Wi-Fi replacement for bluetoothctl and nmtui",
+            Style::default().fg(Color::Gray),
+        ),
+    ])])
+    .block(
+        Block::default()
+            .borders(Borders::BOTTOM)
+            .border_style(Style::default().fg(Color::DarkGray)),
+    );
     f.render_widget(title, chunks[0]);
 
     // 2. Tabs Rendering
-    let tab_titles = vec!["📡 1. Wi-Fi (nmtui-connect)", "🔵 2. Bluetooth (bluetoothctl)"];
+    let tab_titles = vec![
+        "📡 1. Wi-Fi (nmtui-connect)",
+        "🔵 2. Bluetooth (bluetoothctl)",
+    ];
     let select_idx = match app.active_tab {
         Tab::Wifi => 0,
         Tab::Bluetooth => 1,
     };
     let tabs = Tabs::new(tab_titles)
-        .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::DarkGray)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::DarkGray)),
+        )
         .select(select_idx)
         .style(Style::default().fg(Color::Gray))
-        .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+        .highlight_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        );
     f.render_widget(tabs, chunks[1]);
 
     // 3. Content Rendering (based on Active Tab)
@@ -986,7 +1106,11 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
             // Wi-Fi Access Points list
             let header_cells = ["Status", "SSID", "Signal", "Security"];
             let headers = Row::new(header_cells.iter().map(|h| {
-                Cell::new(*h).style(Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                Cell::new(*h).style(
+                    Style::default()
+                        .fg(Color::LightBlue)
+                        .add_modifier(Modifier::BOLD),
+                )
             }))
             .height(1)
             .bottom_margin(1);
@@ -996,13 +1120,26 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
                 let is_current = ap.is_active || ap.ssid == active_ssid;
                 let status_span = if app.wifi_connecting_ssid.as_deref() == Some(&ap.ssid) {
                     let frame_idx = (app.tick_count as usize / 2) % 10;
-                    Span::styled(format!(" {} connecting ", ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"][frame_idx]), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                    Span::styled(
+                        format!(
+                            " {} connecting ",
+                            ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"][frame_idx]
+                        ),
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    )
                 } else if is_current {
-                    Span::styled("  connected ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+                    Span::styled(
+                        "  connected ",
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD),
+                    )
                 } else {
                     Span::styled("   ", Style::default().fg(Color::Gray))
                 };
-                
+
                 // Signal strength bar representation
                 let strength_bar = match ap.signal {
                     s if s > 75 => "▂▄▆█",
@@ -1018,7 +1155,7 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
                         Style::default().fg(Color::Yellow)
                     } else {
                         Style::default().fg(Color::Red)
-                    }
+                    },
                 );
 
                 let security_span = if ap.is_secure {
@@ -1029,7 +1166,10 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
 
                 Row::new(vec![
                     Cell::new(status_span),
-                    Cell::new(Span::styled(&ap.ssid, Style::default().add_modifier(Modifier::BOLD))),
+                    Cell::new(Span::styled(
+                        &ap.ssid,
+                        Style::default().add_modifier(Modifier::BOLD),
+                    )),
                     Cell::new(signal_span),
                     Cell::new(security_span),
                 ])
@@ -1045,28 +1185,37 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
             };
 
             let title_line = Line::from(vec![
-                Span::styled(format!(" Wi-Fi Networks on {} ", app.wifi_interface), Style::default().add_modifier(Modifier::BOLD)),
-                Span::styled(format!(" ({}) ", scan_status_text), Style::default().fg(Color::Cyan)),
+                Span::styled(
+                    format!(" Wi-Fi Networks on {} ", app.wifi_interface),
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" ({}) ", scan_status_text),
+                    Style::default().fg(Color::Cyan),
+                ),
             ]);
 
-            let table = Table::new(rows, [
-                Constraint::Length(14),
-                Constraint::Min(25),
-                Constraint::Length(16),
-                Constraint::Length(14),
-            ])
+            let table = Table::new(
+                rows,
+                [
+                    Constraint::Length(14),
+                    Constraint::Min(25),
+                    Constraint::Length(16),
+                    Constraint::Length(14),
+                ],
+            )
             .header(headers)
             .block(
                 Block::default()
                     .title(title_line)
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(Color::DarkGray))
+                    .border_style(Style::default().fg(Color::DarkGray)),
             )
             .highlight_style(
                 Style::default()
                     .bg(Color::Rgb(30, 40, 50))
                     .fg(Color::White)
-                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("▶ ");
 
@@ -1074,9 +1223,19 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
         }
         Tab::Bluetooth => {
             // Bluetooth Devices list
-            let header_cells = ["Connection", "Device Name", "MAC Address", "RSSI", "Pair/Trust/Block"];
+            let header_cells = [
+                "Connection",
+                "Device Name",
+                "MAC Address",
+                "RSSI",
+                "Pair/Trust/Block",
+            ];
             let headers = Row::new(header_cells.iter().map(|h| {
-                Cell::new(*h).style(Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                Cell::new(*h).style(
+                    Style::default()
+                        .fg(Color::LightBlue)
+                        .add_modifier(Modifier::BOLD),
+                )
             }))
             .height(1)
             .bottom_margin(1);
@@ -1084,9 +1243,22 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
             let rows = app.bt_devices.iter().map(|dev| {
                 let conn_span = if app.bt_connecting_addresses.contains(&dev.address) {
                     let frame_idx = (app.tick_count as usize / 2) % 10;
-                    Span::styled(format!("{} connecting", ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"][frame_idx]), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                    Span::styled(
+                        format!(
+                            "{} connecting",
+                            ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"][frame_idx]
+                        ),
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    )
                 } else if dev.is_connected {
-                    Span::styled(" connected", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+                    Span::styled(
+                        " connected",
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD),
+                    )
                 } else {
                     Span::styled("  disconnected", Style::default().fg(Color::DarkGray))
                 };
@@ -1095,30 +1267,48 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
                     Some(r) => format!("{} dBm", r),
                     None => "unknown".to_string(),
                 };
-                let rssi_span = Span::styled(rssi_str, match dev.rssi {
-                    Some(r) if r > -60 => Style::default().fg(Color::Green),
-                    Some(r) if r > -80 => Style::default().fg(Color::Yellow),
-                    _ => Style::default().fg(Color::DarkGray),
-                });
+                let rssi_span = Span::styled(
+                    rssi_str,
+                    match dev.rssi {
+                        Some(r) if r > -60 => Style::default().fg(Color::Green),
+                        Some(r) if r > -80 => Style::default().fg(Color::Yellow),
+                        _ => Style::default().fg(Color::DarkGray),
+                    },
+                );
 
                 // Tags for Paired, Trusted, Blocked
                 let mut tags = Vec::new();
                 if dev.is_paired {
-                    tags.push(Span::styled(" PAIRED ", Style::default().bg(Color::Blue).fg(Color::White)));
+                    tags.push(Span::styled(
+                        " PAIRED ",
+                        Style::default().bg(Color::Blue).fg(Color::White),
+                    ));
                     tags.push(Span::styled(" ", Style::default()));
                 }
                 if dev.is_trusted {
-                    tags.push(Span::styled(" TRUSTED ", Style::default().bg(Color::Cyan).fg(Color::Black)));
+                    tags.push(Span::styled(
+                        " TRUSTED ",
+                        Style::default().bg(Color::Cyan).fg(Color::Black),
+                    ));
                     tags.push(Span::styled(" ", Style::default()));
                 }
                 if dev.is_blocked {
-                    tags.push(Span::styled(" BLOCKED ", Style::default().bg(Color::Red).fg(Color::White)));
+                    tags.push(Span::styled(
+                        " BLOCKED ",
+                        Style::default().bg(Color::Red).fg(Color::White),
+                    ));
                 }
 
                 Row::new(vec![
                     Cell::new(conn_span),
-                    Cell::new(Span::styled(&dev.name, Style::default().add_modifier(Modifier::BOLD))),
-                    Cell::new(Span::styled(dev.address.to_string(), Style::default().fg(Color::Gray))),
+                    Cell::new(Span::styled(
+                        &dev.name,
+                        Style::default().add_modifier(Modifier::BOLD),
+                    )),
+                    Cell::new(Span::styled(
+                        dev.address.to_string(),
+                        Style::default().fg(Color::Gray),
+                    )),
                     Cell::new(rssi_span),
                     Cell::new(Line::from(tags)),
                 ])
@@ -1127,35 +1317,47 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
             let spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
             let scan_status_text = if app.bt_scanning {
                 let frame_idx = (app.tick_count as usize / 2) % spinner.len();
-                format!(" {} Scanning nearby Bluetooth devices...", spinner[frame_idx])
+                format!(
+                    " {} Scanning nearby Bluetooth devices...",
+                    spinner[frame_idx]
+                )
             } else {
                 " 🖳 Scan stopped (Press [s] to toggle scanning)".to_string()
             };
 
             let title_line = Line::from(vec![
-                Span::styled(" Bluetooth Devices ", Style::default().add_modifier(Modifier::BOLD)),
-                Span::styled(format!(" ({}) ", scan_status_text), Style::default().fg(Color::Cyan)),
+                Span::styled(
+                    " Bluetooth Devices ",
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" ({}) ", scan_status_text),
+                    Style::default().fg(Color::Cyan),
+                ),
             ]);
 
-            let table = Table::new(rows, [
-                Constraint::Length(16),
-                Constraint::Min(25),
-                Constraint::Length(20),
-                Constraint::Length(12),
-                Constraint::Length(30),
-            ])
+            let table = Table::new(
+                rows,
+                [
+                    Constraint::Length(16),
+                    Constraint::Min(25),
+                    Constraint::Length(20),
+                    Constraint::Length(12),
+                    Constraint::Length(30),
+                ],
+            )
             .header(headers)
             .block(
                 Block::default()
                     .title(title_line)
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(Color::DarkGray))
+                    .border_style(Style::default().fg(Color::DarkGray)),
             )
             .highlight_style(
                 Style::default()
                     .bg(Color::Rgb(30, 40, 50))
                     .fg(Color::White)
-                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("▶ ");
 
@@ -1168,20 +1370,31 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
         let style = if is_error {
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD)
         };
-        let prefix = if is_error { "🚨 ERROR: " } else { "ℹ STATUS: " };
-        let msg_p = Paragraph::new(vec![
-            Line::from(vec![
-                Span::styled(prefix, style),
-                Span::styled(msg, Style::default().fg(Color::White)),
-            ])
-        ])
-        .block(Block::default().borders(Borders::TOP).border_style(Style::default().fg(Color::DarkGray)));
+        let prefix = if is_error {
+            "🚨 ERROR: "
+        } else {
+            "ℹ STATUS: "
+        };
+        let msg_p = Paragraph::new(vec![Line::from(vec![
+            Span::styled(prefix, style),
+            Span::styled(msg, Style::default().fg(Color::White)),
+        ])])
+        .block(
+            Block::default()
+                .borders(Borders::TOP)
+                .border_style(Style::default().fg(Color::DarkGray)),
+        );
         f.render_widget(msg_p, chunks[3]);
     } else {
-        let empty_p = Paragraph::new("")
-            .block(Block::default().borders(Borders::TOP).border_style(Style::default().fg(Color::DarkGray)));
+        let empty_p = Paragraph::new("").block(
+            Block::default()
+                .borders(Borders::TOP)
+                .border_style(Style::default().fg(Color::DarkGray)),
+        );
         f.render_widget(empty_p, chunks[3]);
     }
 
@@ -1190,27 +1403,38 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
         Tab::Wifi => " [Tab] Switch Tab | [s] Scan Wifi | [Enter] Connect AP | [d] Disconnect | [q] Quit",
         Tab::Bluetooth => " [Tab] Switch Tab | [s] Toggle Scan | [Enter/c] Connect | [d] Discon. | [p] Pair | [t] Trust | [b] Block | [Del] Remove | [q] Quit",
     };
-    let footer = Paragraph::new(Span::styled(help_text, Style::default().fg(Color::DarkGray)));
+    let footer = Paragraph::new(Span::styled(
+        help_text,
+        Style::default().fg(Color::DarkGray),
+    ));
     f.render_widget(footer, chunks[4]);
 
     // Draw Password Prompt Modal Popup if active
     if let Some(ref prompt) = app.password_prompt {
         let area = centered_rect(60, 25, size);
         f.render_widget(Clear, area); // Clear the area below the modal
-        
+
         let modal_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(2), // Prompt label
-                Constraint::Length(3), // Input field
-                Constraint::Length(1), // Help footer
-            ].as_ref())
+            .constraints(
+                [
+                    Constraint::Length(2), // Prompt label
+                    Constraint::Length(3), // Input field
+                    Constraint::Length(1), // Help footer
+                ]
+                .as_ref(),
+            )
             .margin(2)
             .split(area);
 
         // Outer block
         let outer_block = Block::default()
-            .title(Span::styled(" Wi-Fi Password Required ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)))
+            .title(Span::styled(
+                " Wi-Fi Password Required ",
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ))
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Yellow));
         f.render_widget(outer_block, area);
@@ -1220,11 +1444,18 @@ fn ui_draw(f: &mut Frame, app: &mut App) {
 
         // Draw masked password
         let masked_input = "*".repeat(prompt.input.len());
-        let input_para = Paragraph::new(masked_input)
-            .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Cyan)).title("Password"));
+        let input_para = Paragraph::new(masked_input).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan))
+                .title("Password"),
+        );
         f.render_widget(input_para, modal_layout[1]);
 
-        let help = Paragraph::new(Span::styled("[Enter] Connect | [Esc] Cancel", Style::default().fg(Color::DarkGray)));
+        let help = Paragraph::new(Span::styled(
+            "[Enter] Connect | [Esc] Cancel",
+            Style::default().fg(Color::DarkGray),
+        ));
         f.render_widget(help, modal_layout[2]);
     }
 }

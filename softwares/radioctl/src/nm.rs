@@ -1,7 +1,7 @@
 use std::collections::HashMap;
+use uuid::Uuid;
 use zbus::{proxy, Connection};
 use zvariant::{OwnedObjectPath, Value};
-use uuid::Uuid;
 
 const NM_ACTIVE_CONNECTION_STATE_ACTIVATED: u32 = 2;
 const NM_ACTIVE_CONNECTION_STATE_DEACTIVATED: u32 = 4;
@@ -20,7 +20,10 @@ pub trait NetworkManager {
         device: &zbus::zvariant::ObjectPath<'_>,
         specific_object: &zbus::zvariant::ObjectPath<'_>,
     ) -> zbus::Result<OwnedObjectPath>;
-    fn deactivate_connection(&self, active_connection: &zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
+    fn deactivate_connection(
+        &self,
+        active_connection: &zbus::zvariant::ObjectPath<'_>,
+    ) -> zbus::Result<()>;
     fn add_and_activate_connection(
         &self,
         connection: &HashMap<String, HashMap<String, Value<'_>>>,
@@ -167,20 +170,24 @@ impl NmClient {
 
     pub async fn list_wifi_aps(&self, dev_path: &str) -> zbus::Result<Vec<WifiApInfo>> {
         let dev_path_obj = zvariant::ObjectPath::try_from(dev_path)?;
-        
+
         let dev_proxy = DeviceProxy::builder(&self.conn)
             .path(&dev_path_obj)?
             .build()
             .await?;
-        
+
         let active_conn_path = dev_proxy.active_connection().await;
         let mut active_ap_path = String::new();
-        
+
         if let Ok(active_path) = active_conn_path {
             if active_path.as_str() != "/" {
-                if let Ok(active_conn_builder) = ActiveConnectionProxy::builder(&self.conn).path(&active_path) {
+                if let Ok(active_conn_builder) =
+                    ActiveConnectionProxy::builder(&self.conn).path(&active_path)
+                {
                     if let Ok(active_conn_p) = active_conn_builder.build().await {
-                        if active_conn_p.state().await.ok() == Some(NM_ACTIVE_CONNECTION_STATE_ACTIVATED) {
+                        if active_conn_p.state().await.ok()
+                            == Some(NM_ACTIVE_CONNECTION_STATE_ACTIVATED)
+                        {
                             if let Ok(ap_path_obj) = active_conn_p.specific_object().await {
                                 active_ap_path = ap_path_obj.to_string();
                             }
@@ -194,17 +201,17 @@ impl NmClient {
             .path(&dev_path_obj)?
             .build()
             .await?;
-        
+
         let ap_paths = wireless_proxy.get_access_points().await?;
         let saved_connections = self.get_saved_wifi_connections().await?;
         let mut aps = Vec::new();
-        
+
         for ap_path in ap_paths {
             let ap_proxy = AccessPointProxy::builder(&self.conn)
                 .path(&ap_path)?
                 .build()
                 .await?;
-            
+
             let ssid_bytes = match ap_proxy.ssid().await {
                 Ok(bytes) => bytes,
                 Err(_) => continue,
@@ -213,15 +220,15 @@ impl NmClient {
             if ssid.is_empty() {
                 continue;
             }
-            
+
             let bssid = ap_proxy.hw_address().await.unwrap_or_default();
             let signal = ap_proxy.strength().await.unwrap_or(0);
-            
+
             let wpa_flags = ap_proxy.wpa_flags().await.unwrap_or(0);
             let rsn_flags = ap_proxy.rsn_flags().await.unwrap_or(0);
             let is_secure = wpa_flags != 0 || rsn_flags != 0;
             let is_active = ap_path.as_str() == active_ap_path.as_str();
-            
+
             aps.push(WifiApInfo {
                 is_saved: saved_connections.contains_key(&ssid),
                 ssid,
@@ -246,7 +253,7 @@ impl NmClient {
         }
 
         let mut res: Vec<WifiApInfo> = unique_aps.into_values().collect();
-        res.sort_by(|a, b| b.signal.cmp(&a.signal));
+        res.sort_by_key(|ap| std::cmp::Reverse(ap.signal));
         Ok(res)
     }
 
@@ -264,12 +271,17 @@ impl NmClient {
                 if let Some(wifi_settings) = settings.get("802-11-wireless") {
                     if let Some(ssid_val) = wifi_settings.get("ssid") {
                         if let Ok(Value::Array(arr)) = Value::try_from(ssid_val) {
-                            let bytes: Vec<u8> = arr.iter().filter_map(|value| match value {
-                                Value::U8(byte) => Some(*byte),
-                                _ => None,
-                            }).collect();
+                            let bytes: Vec<u8> = arr
+                                .iter()
+                                .filter_map(|value| match value {
+                                    Value::U8(byte) => Some(*byte),
+                                    _ => None,
+                                })
+                                .collect();
                             let ssid = String::from_utf8_lossy(&bytes).into_owned();
-                            saved_connections.entry(ssid).or_insert_with(|| conn_path.to_string());
+                            saved_connections
+                                .entry(ssid)
+                                .or_insert_with(|| conn_path.to_string());
                         }
                     }
                 }
@@ -283,14 +295,22 @@ impl NmClient {
         Ok(self.get_saved_wifi_connections().await?.remove(ssid))
     }
 
-    pub async fn connect_wifi(&self, dev_path: &str, ap_path: &str, ssid: &str, password: Option<&str>) -> zbus::Result<()> {
+    pub async fn connect_wifi(
+        &self,
+        dev_path: &str,
+        ap_path: &str,
+        ssid: &str,
+        password: Option<&str>,
+    ) -> zbus::Result<()> {
         let nm_proxy = NetworkManagerProxy::new(&self.conn).await?;
         let dev_path_obj = zvariant::ObjectPath::try_from(dev_path)?;
         let ap_path_obj = zvariant::ObjectPath::try_from(ap_path)?;
 
         let active_path = if let Some(saved_path) = self.get_saved_connection_path(ssid).await? {
             let saved_path_obj = zvariant::ObjectPath::try_from(saved_path.as_str())?;
-            nm_proxy.activate_connection(&saved_path_obj, &dev_path_obj, &ap_path_obj).await?
+            nm_proxy
+                .activate_connection(&saved_path_obj, &dev_path_obj, &ap_path_obj)
+                .await?
         } else {
             // Build setting maps
             let mut settings = HashMap::new();
@@ -328,7 +348,9 @@ impl NmClient {
             ipv6_setting.insert("method".to_string(), Value::new("auto"));
             settings.insert("ipv6".to_string(), ipv6_setting);
 
-            let (_, active_path) = nm_proxy.add_and_activate_connection(&settings, &dev_path_obj, &ap_path_obj).await?;
+            let (_, active_path) = nm_proxy
+                .add_and_activate_connection(&settings, &dev_path_obj, &ap_path_obj)
+                .await?;
             active_path
         };
 
@@ -346,10 +368,15 @@ impl NmClient {
             match active_connection.state().await? {
                 NM_ACTIVE_CONNECTION_STATE_ACTIVATED => return Ok(()),
                 NM_ACTIVE_CONNECTION_STATE_DEACTIVATED => {
-                    return Err(zbus::Error::Failure("NetworkManager deactivated the connection before it was established".to_string()));
+                    return Err(zbus::Error::Failure(
+                        "NetworkManager deactivated the connection before it was established"
+                            .to_string(),
+                    ));
                 }
                 _ if tokio::time::Instant::now() >= deadline => {
-                    return Err(zbus::Error::Failure("Timed out waiting for Wi-Fi to connect".to_string()));
+                    return Err(zbus::Error::Failure(
+                        "Timed out waiting for Wi-Fi to connect".to_string(),
+                    ));
                 }
                 _ => tokio::time::sleep(std::time::Duration::from_millis(200)).await,
             }
@@ -392,7 +419,7 @@ impl NmClient {
 
         // 1. Get Settings Connection path
         let settings_conn_path = active_conn_proxy.connection().await?;
-        
+
         // 2. Connect to Settings Connection
         let settings_conn_proxy = SettingsConnectionProxy::builder(&self.conn)
             .path(&settings_conn_path)?
@@ -404,10 +431,13 @@ impl NmClient {
             if let Some(wifi_settings) = settings.get("802-11-wireless") {
                 if let Some(ssid_val) = wifi_settings.get("ssid") {
                     if let Ok(Value::Array(arr)) = Value::try_from(ssid_val) {
-                        let bytes: Vec<u8> = arr.iter().filter_map(|v| match v {
-                            Value::U8(b) => Some(*b),
-                            _ => None,
-                        }).collect();
+                        let bytes: Vec<u8> = arr
+                            .iter()
+                            .filter_map(|v| match v {
+                                Value::U8(b) => Some(*b),
+                                _ => None,
+                            })
+                            .collect();
                         return Ok(Some(String::from_utf8_lossy(&bytes).into_owned()));
                     }
                 }

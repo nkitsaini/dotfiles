@@ -21,20 +21,27 @@ impl BtClient {
     pub async fn new() -> bluer::Result<Self> {
         let session = Session::new().await?;
         let adapter = session.default_adapter().await?;
-        
+
         // Ensure adapter is powered on
         if !adapter.is_powered().await? {
             adapter.set_powered(true).await?;
         }
-        
-        Ok(Self { _session: session, adapter })
+
+        Ok(Self {
+            _session: session,
+            adapter,
+        })
     }
 
     pub async fn is_scanning(&self) -> bluer::Result<bool> {
         self.adapter.is_discovering().await
     }
 
-    pub async fn start_scan(&self) -> bluer::Result<std::pin::Pin<Box<dyn futures_util::Stream<Item = bluer::AdapterEvent> + Send>>> {
+    pub async fn start_scan(
+        &self,
+    ) -> bluer::Result<
+        std::pin::Pin<Box<dyn futures_util::Stream<Item = bluer::AdapterEvent> + Send>>,
+    > {
         let stream = self.adapter.discover_devices().await?;
         Ok(Box::pin(stream))
     }
@@ -42,7 +49,7 @@ impl BtClient {
     pub async fn list_devices(&self) -> bluer::Result<Vec<BtDeviceInfo>> {
         let addrs = self.adapter.device_addresses().await?;
         let mut devices = Vec::new();
-        
+
         for addr in addrs {
             if let Ok(dev) = self.adapter.device(addr) {
                 let name = dev.name().await?.unwrap_or_else(|| "Unknown".to_string());
@@ -51,7 +58,7 @@ impl BtClient {
                 let is_trusted = dev.is_trusted().await?;
                 let is_blocked = dev.is_blocked().await?;
                 let rssi = dev.rssi().await?;
-                
+
                 devices.push(BtDeviceInfo {
                     name,
                     address: addr,
@@ -63,7 +70,7 @@ impl BtClient {
                 });
             }
         }
-        
+
         // Sort devices: connected first, then paired, then alphabetically by name, then MAC
         devices.sort_by(|a, b| {
             if a.is_connected != b.is_connected {
@@ -74,7 +81,7 @@ impl BtClient {
                 a.name.cmp(&b.name).then_with(|| a.address.cmp(&b.address))
             }
         });
-        
+
         Ok(devices)
     }
 

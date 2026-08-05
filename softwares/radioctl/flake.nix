@@ -18,6 +18,8 @@
             pkg-config
             cargo
             rustc
+            clippy
+            rustfmt
             rust-analyzer
           ];
 

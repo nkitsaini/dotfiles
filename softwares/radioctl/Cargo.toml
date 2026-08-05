@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 ratatui = "0.26"
-crossterm = "0.27"
+crossterm = { version = "0.27", features = ["event-stream"] }
 bluer = { version = "0.17", features = ["bluetoothd"] }
 zbus = { version = "4", features = ["tokio"] }
 zvariant = "4"
@@ -15,3 +15,10 @@ uuid = { version = "1.0", features = ["v4"] }
 serde = { version = "1", features = ["derive"] }
 tokio-stream = "0.1"
 libc = "0.2"
+clap = { version = "4", features = ["derive"] }
+thiserror = "2"
+toml = "0.8"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+zeroize = { version = "1", features = ["derive"] }
