@@ -1,5 +1,5 @@
-//! Folding ranges for headings (sections), lists, code blocks, block quotes,
-//! tables and front matter.
+//! Folding ranges for headings (sections), list items, code blocks, block
+//! quotes, tables and front matter.
 
 use ropey::Rope;
 use tower_lsp_server::ls_types::{FoldingRange, FoldingRangeKind};
@@ -18,7 +18,12 @@ pub fn folding_ranges(analysis: &Analysis, rope: &Rope, config: &FoldingConfig) 
 
     for block in &analysis.blocks {
         let enabled = match block.kind {
-            BlockKind::List | BlockKind::ListItem => config.lists,
+            // A list spans all of its items but starts on the same line as the
+            // first one, so a fold anchored there would collapse that item's
+            // siblings. Lists fold through their items instead: an item spans its
+            // own continuation lines and nested items, and nothing more.
+            BlockKind::List => false,
+            BlockKind::ListItem => config.lists,
             BlockKind::Code => config.code_blocks,
             BlockKind::BlockQuote => config.block_quotes,
             BlockKind::Table => config.tables,
@@ -29,6 +34,16 @@ pub fn folding_ranges(analysis: &Analysis, rope: &Rope, config: &FoldingConfig) 
         }
     }
 
+    innermost_per_start_line(ranges)
+}
+
+/// Clients honour at most one folding range per start line, so where several
+/// blocks begin on the same line (a block quote and the list opening it, say) we
+/// keep the innermost: folding a line must never hide structure that outlives
+/// the block that line belongs to.
+fn innermost_per_start_line(mut ranges: Vec<FoldingRange>) -> Vec<FoldingRange> {
+    ranges.sort_by_key(|r| (r.start_line, r.end_line));
+    ranges.dedup_by_key(|r| r.start_line);
     ranges
 }
 
@@ -111,9 +126,52 @@ end";
     }
 
     #[test]
-    fn list_folds() {
-        let text = "- one\n- two\n- three\n";
-        assert!(folds(text).contains(&(0, 2)));
+    fn list_item_folds_only_its_own_children() {
+        let text = "\
+- abc
+   - xyz
+- dbe";
+        // Folding `abc` hides `xyz` and leaves the sibling `dbe` visible.
+        assert_eq!(folds(text), vec![(0, 1)]);
+    }
+
+    #[test]
+    fn leaf_list_item_does_not_fold_its_siblings() {
+        let text = "\
+- abc
+  - xyz
+  - pqr
+- dbe";
+        assert_eq!(folds(text), vec![(0, 2)]);
+    }
+
+    #[test]
+    fn task_list_item_folds_only_its_own_children() {
+        let text = "\
+- [ ] abc
+  - [x] xyz
+- [ ] dbe";
+        assert_eq!(folds(text), vec![(0, 1)]);
+    }
+
+    #[test]
+    fn list_item_folds_continuation_lines() {
+        let text = "\
+1. abc
+   more abc
+2. dbe";
+        assert_eq!(folds(text), vec![(0, 1)]);
+    }
+
+    #[test]
+    fn single_line_list_items_have_nothing_to_fold() {
+        assert!(folds("- one\n- two\n- three\n").is_empty());
+    }
+
+    #[test]
+    fn one_range_per_start_line() {
+        // The block quote and the list it contains both start on line 0.
+        assert_eq!(folds("> - a\n> - b\n"), vec![(0, 1)]);
     }
 
     #[test]

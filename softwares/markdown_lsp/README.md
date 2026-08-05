@@ -65,8 +65,9 @@ It focuses on the things that make editing Markdown pleasant:
   today's / yesterday's / tomorrow's journal note* code actions) that opens the
   dated note — creating it from a configurable template the first time, like
   `cp journal/template.md journal/2026-07-07.md`, and just opening it thereafter.
-- **Folding** at heading/section, list, code-block, block-quote, table and
-  front-matter granularity.
+- **Folding** at heading/section, list-item, code-block, block-quote, table and
+  front-matter granularity. A list item folds its own continuation lines and
+  nested items only — never its siblings.
 - **Broken-link diagnostics**: warns when a link/image points at a local file
   that does not exist.
 - **Document outline** (headings) and **hover** (a link's resolved target and
