@@ -42,8 +42,12 @@ pub enum Intent {
     },
     Cancel(OperationId),
     ScanWifi,
+    AutomaticWifiScan,
     ToggleBluetoothDiscovery,
     StartBluetoothDiscovery,
+    EnsureBluetoothDiscovery,
+    StopBluetoothDiscovery,
+    ReleaseBluetoothDiscovery,
     ToggleWifiRadio,
     ToggleBluetoothRadio,
     OpenDiagnostics,
@@ -1648,6 +1652,7 @@ mod tests {
                 started_at_ms: 0,
                 deadline_ms: 100,
                 backend_epoch: 1,
+                background: false,
             }));
         assert!(matches!(
             app.handle_terminal_event(key(KeyCode::Enter)),

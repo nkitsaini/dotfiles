@@ -264,12 +264,14 @@ impl Reducer {
             });
         }
 
-        self.state.push_activity(ActivityEntry {
-            timestamp_ms: operation.started_at_ms,
-            level: ActivityLevel::Info,
-            message: format!("operation {} queued", operation.id.0),
-            operation: Some(operation.id),
-        });
+        if !operation.background {
+            self.state.push_activity(ActivityEntry {
+                timestamp_ms: operation.started_at_ms,
+                level: ActivityLevel::Info,
+                message: format!("operation {} queued", operation.id.0),
+                operation: Some(operation.id),
+            });
+        }
         self.state.operations.insert(operation.id, operation);
         ReduceOutcome::Changed
     }
@@ -310,20 +312,30 @@ impl Reducer {
             .remove(&operation.target);
 
         match result {
-            Ok(message) => self.state.push_activity(ActivityEntry {
-                timestamp_ms,
-                level: ActivityLevel::Success,
-                message,
-                operation: Some(id),
-            }),
+            Ok(message) => {
+                if !operation.background {
+                    self.state.push_activity(ActivityEntry {
+                        timestamp_ms,
+                        level: ActivityLevel::Success,
+                        message,
+                        operation: Some(id),
+                    });
+                }
+            }
             Err(error) => {
                 self.state.push_activity(ActivityEntry {
                     timestamp_ms,
-                    level: ActivityLevel::Error,
+                    level: if operation.background {
+                        ActivityLevel::Warning
+                    } else {
+                        ActivityLevel::Error
+                    },
                     message: error.summary.clone(),
                     operation: Some(id),
                 });
-                self.state.current_error = Some(error);
+                if !operation.background {
+                    self.state.current_error = Some(error);
+                }
             }
         }
         ReduceOutcome::Changed
@@ -886,6 +898,7 @@ mod tests {
             started_at_ms: 11,
             deadline_ms: 1_000,
             backend_epoch: 1,
+            background: false,
         }));
 
         reducer.apply(wifi_event(2, vec![]));
@@ -909,6 +922,7 @@ mod tests {
             started_at_ms: 11,
             deadline_ms: 1_000,
             backend_epoch: 1,
+            background: false,
         }));
         assert_eq!(reducer.state.operations.len(), 1);
 
@@ -933,6 +947,7 @@ mod tests {
             started_at_ms: 11,
             deadline_ms: 1_000,
             backend_epoch: 1,
+            background: false,
         }));
 
         reducer.apply(bluetooth_event(2, vec![device.clone()]));
@@ -974,6 +989,7 @@ mod tests {
                 started_at_ms: id,
                 deadline_ms: 100,
                 backend_epoch: 1,
+                background: false,
             }));
         }
 
@@ -1005,6 +1021,7 @@ mod tests {
                 started_at_ms: id,
                 deadline_ms: id + 100,
                 backend_epoch: 1,
+                background: false,
             }));
         }
         assert_eq!(reducer.state.activity.len(), ACTIVITY_CAPACITY);
@@ -1019,6 +1036,7 @@ mod tests {
             started_at_ms: 1,
             deadline_ms: 2,
             backend_epoch: 1,
+            background: false,
         }));
         reducer.apply(AppEvent::OperationFailed {
             id,
@@ -1037,6 +1055,44 @@ mod tests {
         assert_eq!(
             reducer.state.current_error.as_ref().unwrap().summary,
             "Password rejected"
+        );
+    }
+
+    #[test]
+    fn background_discovery_failure_warns_without_interrupting_the_user() {
+        let mut reducer = Reducer::default();
+        reducer.apply(AppEvent::OperationStarted(Operation {
+            id: OperationId(10_000),
+            backend: BackendKind::NetworkManager,
+            target: EntityId::WifiInterface(InterfaceId("wlan0".into())),
+            desired: super::super::DesiredState::Scanning,
+            phase: OperationPhase::Queued,
+            started_at_ms: 1,
+            deadline_ms: 100,
+            backend_epoch: 1,
+            background: true,
+        }));
+        assert!(reducer.state.activity.is_empty());
+
+        reducer.apply(AppEvent::OperationFailed {
+            id: OperationId(10_000),
+            error: UserFacingError {
+                category: ErrorCategory::Busy,
+                summary: "scan temporarily refused".into(),
+                detail: "the daemon is busy".into(),
+                recovery: Vec::new(),
+                retryable: true,
+                backend: Some(BackendKind::NetworkManager),
+                target: None,
+                raw_code: None,
+            },
+            timestamp_ms: 2,
+        });
+
+        assert!(reducer.state.current_error.is_none());
+        assert_eq!(
+            reducer.state.activity.back().unwrap().level,
+            ActivityLevel::Warning
         );
     }
 
@@ -1127,6 +1183,7 @@ mod tests {
             started_at_ms: 10,
             deadline_ms: 1_000,
             backend_epoch: 1,
+            background: false,
         }));
         reducer.apply(AppEvent::OperationProgress {
             id: OperationId(41),
@@ -1166,6 +1223,7 @@ mod tests {
             started_at_ms: 10,
             deadline_ms: 20,
             backend_epoch: 1,
+            background: false,
         }));
         reducer.apply(AppEvent::Tick(20));
 

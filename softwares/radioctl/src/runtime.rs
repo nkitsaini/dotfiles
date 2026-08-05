@@ -281,14 +281,20 @@ impl Runtime {
         self.updates_rx.recv().await
     }
 
-    pub fn dispatch(&self, intent: Intent, state: &AppState, now_ms: u64) {
+    pub fn dispatch(&self, intent: Intent, state: &AppState, now_ms: u64) -> Option<OperationId> {
+        let background = matches!(
+            intent,
+            Intent::AutomaticWifiScan
+                | Intent::EnsureBluetoothDiscovery
+                | Intent::ReleaseBluetoothDiscovery
+        );
         if let Intent::Cancel(operation_id) = intent {
             if let Some(operation) = state.operations.get(&operation_id) {
                 if matches!(
                     operation.desired,
                     DesiredState::Connected | DesiredState::Disconnected
                 ) {
-                    self.dispatch(
+                    return self.dispatch(
                         Intent::SetConnection {
                             target: operation.target.clone(),
                             desired: if operation.desired == DesiredState::Connected {
@@ -309,13 +315,10 @@ impl Runtime {
                     });
                 }
             }
-            return;
+            return None;
         }
 
-        let Some((backend_kind, target, desired, action, credential)) = route_intent(intent, state)
-        else {
-            return;
-        };
+        let (backend_kind, target, desired, action, credential) = route_intent(intent, state)?;
         let id = OperationId(self.next_operation.fetch_add(1, Ordering::Relaxed));
         let backend_epoch = state
             .backends
@@ -330,13 +333,14 @@ impl Runtime {
             started_at_ms: now_ms,
             deadline_ms: now_ms + timeout_ms(desired),
             backend_epoch,
+            background,
         };
         if let Err(error) = self
             .updates_tx
             .try_send(AppEvent::OperationStarted(operation))
         {
             tracing::error!(%error, operation = id.0, "runtime event queue is full; operation was not started");
-            return;
+            return None;
         }
 
         let Some(backend) = self.backends.get(&backend_kind).cloned() else {
@@ -345,7 +349,7 @@ impl Runtime {
                 error: unavailable_error(backend_kind, target),
                 timestamp_ms: now_ms,
             });
-            return;
+            return Some(id);
         };
         let updates = self.updates_tx.clone();
         tokio::spawn(async move {
@@ -388,6 +392,7 @@ impl Runtime {
                 }
             }
         });
+        Some(id)
     }
 
     pub async fn diagnostics(&self) -> Vec<BackendDiagnostics> {
@@ -467,7 +472,7 @@ fn route_intent(
             };
             Some((backend, target, desired, action, credential))
         }
-        Intent::ScanWifi => {
+        Intent::ScanWifi | Intent::AutomaticWifiScan => {
             let interface = state.wifi.selected_interface.as_ref()?;
             let info = state.wifi.interfaces.get(interface)?;
             Some((
@@ -494,7 +499,7 @@ fn route_intent(
                 None,
             ))
         }
-        Intent::StartBluetoothDiscovery => {
+        Intent::StartBluetoothDiscovery | Intent::EnsureBluetoothDiscovery => {
             let adapter = state.bluetooth.selected_adapter.as_ref()?;
             state.bluetooth.adapters.get(adapter)?;
             Some((
@@ -502,6 +507,17 @@ fn route_intent(
                 EntityId::BluetoothAdapter(adapter.clone()),
                 DesiredState::Scanning,
                 BackendAction::Scan,
+                None,
+            ))
+        }
+        Intent::StopBluetoothDiscovery | Intent::ReleaseBluetoothDiscovery => {
+            let adapter = state.bluetooth.selected_adapter.as_ref()?;
+            state.bluetooth.adapters.get(adapter)?;
+            Some((
+                BackendKind::Bluez,
+                EntityId::BluetoothAdapter(adapter.clone()),
+                DesiredState::Idle,
+                BackendAction::StopScan,
                 None,
             ))
         }

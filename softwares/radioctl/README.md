@@ -32,11 +32,22 @@ connection until the daemon reports the final state.
   or signal changes move its row. Mouse clicks use the actual scrolled offset.
 - No patched font is required.
 
-By default radioctl requests an immediate Wi-Fi scan and acquires its own BlueZ
-discovery session as soon as the adapters are ready. That discovery session is
-released automatically when radioctl exits, and `s` can pause/resume it. Use
-`--no-auto-scan` or `--no-auto-discover` when power usage matters more than
-immediate nearby-device visibility.
+By default radioctl requests an immediate Wi-Fi scan, refreshes every 15 seconds
+while the Wi-Fi pane is visible and every 60 seconds in the background, and
+refreshes on returning to a stale Wi-Fi pane. Scans pause during association,
+authentication, address configuration, disconnection, or an existing scan.
+Transient daemon refusals use exponential backoff and stay in the activity
+journal instead of interrupting the user with repeated error overlays.
+
+radioctl also acquires its own BlueZ discovery session as soon as an adapter is
+ready. Session ownership is tracked separately from BlueZ's global shared
+`Discovering` property, so `s` pauses or resumes radioctl's session even when
+another application is scanning. Discovery is reacquired after BlueZ restarts
+and adapter power cycles, with exponential retry after transient failures. A
+broad BlueZ filter improves RSSI updates while suppressing duplicate
+advertisement payloads. The session is released automatically when radioctl
+exits. Use `--no-auto-scan` or `--no-auto-discover` when power usage matters more
+than immediate nearby-device visibility.
 
 The list separates observed state (`connected`, `getting IP`, and so on) from a
 pending request (`waiting→connected`). Saved Wi-Fi networks and paired or trusted

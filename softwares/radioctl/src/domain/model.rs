@@ -316,6 +316,7 @@ pub struct Operation {
     pub started_at_ms: u64,
     pub deadline_ms: u64,
     pub backend_epoch: u64,
+    pub background: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

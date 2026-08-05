@@ -2,6 +2,7 @@ pub mod app;
 pub mod backend;
 pub mod cli;
 pub mod config;
+pub mod discovery;
 pub mod domain;
 pub mod error;
 pub mod logging;

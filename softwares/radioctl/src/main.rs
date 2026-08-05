@@ -7,6 +7,8 @@ use radioctl::{
     backend::Secret,
     cli::{Cli, Command},
     config::Settings,
+    discovery::DiscoveryCoordinator,
+    domain::OperationId,
     logging,
     runtime::Runtime,
     terminal::{self, TerminalSession},
@@ -46,8 +48,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut housekeeping = time::interval(Duration::from_secs(1));
     housekeeping.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut dirty = true;
-    let mut auto_scan_pending = settings.auto_scan;
-    let mut auto_discovery_pending = settings.auto_discover;
+    let mut discovery = DiscoveryCoordinator::new(settings.auto_scan, settings.auto_discover);
 
     while !application.should_quit() {
         if dirty {
@@ -61,8 +62,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
             maybe_event = input.next() => {
                 match maybe_event {
                     Some(Ok(event)) => {
+                        let now_ms = elapsed_ms(started);
                         if let Some(intent) = application.handle_terminal_event(event) {
-                            handle_intent(&mut application, &runtime, intent, elapsed_ms(started)).await;
+                            if let Some(intent) = discovery.prepare_user_intent(
+                                intent,
+                                &application.reducer.state,
+                                now_ms,
+                            ) {
+                                dispatch_intent(
+                                    &mut application,
+                                    &runtime,
+                                    &mut discovery,
+                                    intent,
+                                    now_ms,
+                                ).await;
+                            }
+                        }
+                        if !application.should_quit() {
+                            reconcile_discovery(
+                                &mut application,
+                                &runtime,
+                                &mut discovery,
+                                now_ms,
+                            ).await;
                         }
                         dirty = true;
                     }
@@ -80,34 +102,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             event = runtime.next_event() => {
                 if let Some(event) = event {
+                    let now_ms = elapsed_ms(started);
+                    discovery.observe_event(&event, now_ms);
                     application.reducer.apply(event);
-                    if auto_scan_pending
-                        && application.reducer.state.wifi.selected_interface.is_some()
-                    {
-                        runtime.dispatch(
-                            Intent::ScanWifi,
-                            &application.reducer.state,
-                            elapsed_ms(started),
-                        );
-                        auto_scan_pending = false;
-                    }
-                    if auto_discovery_pending
-                        && application
-                            .reducer
-                            .state
-                            .bluetooth
-                            .selected_adapter
-                            .as_ref()
-                            .and_then(|id| application.reducer.state.bluetooth.adapters.get(id))
-                            .is_some_and(|adapter| adapter.powered)
-                    {
-                        runtime.dispatch(
-                            Intent::StartBluetoothDiscovery,
-                            &application.reducer.state,
-                            elapsed_ms(started),
-                        );
-                        auto_discovery_pending = false;
-                    }
+                    reconcile_discovery(
+                        &mut application,
+                        &runtime,
+                        &mut discovery,
+                        now_ms,
+                    ).await;
                     dirty = true;
                 }
             }
@@ -115,7 +118,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 dirty = application.tick(elapsed_ms(started));
             }
             _ = housekeeping.tick() => {
-                dirty |= application.tick(elapsed_ms(started));
+                let now_ms = elapsed_ms(started);
+                dirty |= application.tick(now_ms);
+                reconcile_discovery(
+                    &mut application,
+                    &runtime,
+                    &mut discovery,
+                    now_ms,
+                ).await;
             }
             result = tokio::signal::ctrl_c() => {
                 if let Err(error) = result {
@@ -130,14 +140,42 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+async fn reconcile_discovery(
+    application: &mut Application,
+    runtime: &Runtime,
+    discovery: &mut DiscoveryCoordinator,
+    now_ms: u64,
+) {
+    discovery.observe_state(&application.reducer.state, now_ms);
+    let intents = discovery.reconcile(&application.reducer.state, application.pane, now_ms);
+    for intent in intents {
+        dispatch_intent(application, runtime, discovery, intent, now_ms).await;
+    }
+}
+
+async fn dispatch_intent(
+    application: &mut Application,
+    runtime: &Runtime,
+    discovery: &mut DiscoveryCoordinator,
+    intent: Intent,
+    now_ms: u64,
+) {
+    let attempt = discovery.attempt_for(&intent, &application.reducer.state);
+    let operation = handle_intent(application, runtime, intent, now_ms).await;
+    discovery.record_attempt(attempt, operation, now_ms);
+}
+
 async fn handle_intent(
     application: &mut Application,
     runtime: &Runtime,
     intent: Intent,
     now_ms: u64,
-) {
+) -> Option<OperationId> {
     match intent {
-        Intent::Quit => application.request_quit(),
+        Intent::Quit => {
+            application.request_quit();
+            None
+        }
         Intent::OpenDiagnostics => {
             let lines = runtime
                 .diagnostics()
@@ -170,6 +208,7 @@ async fn handle_intent(
                 })
                 .collect();
             application.show_diagnostics(lines);
+            None
         }
         Intent::ShowWifiSecret { id, qr } => {
             let open = application
@@ -196,6 +235,7 @@ async fn handle_intent(
                 }
                 Err(error) => application.report_user_error(error, now_ms),
             }
+            None
         }
         intent => runtime.dispatch(intent, &application.reducer.state, now_ms),
     }

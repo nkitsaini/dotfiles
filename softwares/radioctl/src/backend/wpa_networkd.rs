@@ -145,6 +145,16 @@ impl WpaNetworkdBackend {
     }
 
     async fn snapshot_inner(&self) -> Result<BackendEvent, BackendFailure> {
+        let wpa = probe_service(&self.connection, WPA_SERVICE, self.kind()).await;
+        if wpa.status != ProbeStatus::Available {
+            return Ok(self.clock.event(BackendPayload::Health {
+                health: crate::domain::BackendHealth::Unavailable,
+                detail: Some(
+                    wpa.detail
+                        .unwrap_or_else(|| "wpa_supplicant has no D-Bus owner".into()),
+                ),
+            }));
+        }
         let networkd = probe_service(&self.connection, NETWORKD_SERVICE, self.kind()).await;
         if networkd.status != ProbeStatus::Available {
             return Err(BackendFailure {

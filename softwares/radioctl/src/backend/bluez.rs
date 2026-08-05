@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, collections::HashMap, sync::Arc, time::Duration
 use async_trait::async_trait;
 use tokio::sync::broadcast;
 use zbus::{Connection, Proxy};
-use zvariant::{OwnedObjectPath, OwnedValue};
+use zvariant::{OwnedObjectPath, OwnedValue, Value};
 
 use super::{
     dbus::{dbus_failure, probe_service, spawn_signal_supervisor, ServiceClock, SnapshotFn},
@@ -277,21 +277,43 @@ impl RadioBackend for BluezBackend {
             }
             (BackendAction::Scan, EntityId::BluetoothAdapter(id)) => {
                 let adapter = self.adapter_path(id).await?;
-                Proxy::new(&self.connection, SERVICE, adapter, ADAPTER_INTERFACE)
+                let proxy = Proxy::new(&self.connection, SERVICE, adapter, ADAPTER_INTERFACE)
                     .await
-                    .map_err(|error| dbus_failure("start Bluetooth discovery", error))?
+                    .map_err(|error| dbus_failure("start Bluetooth discovery", error))?;
+                let filter = HashMap::from([
+                    ("Transport", Value::new("auto")),
+                    ("RSSI", Value::new(-127_i16)),
+                    ("DuplicateData", Value::new(false)),
+                ]);
+                if let Err(error) = proxy
+                    .call::<_, _, ()>("SetDiscoveryFilter", &(filter,))
+                    .await
+                {
+                    // Older controllers may reject one of these optional
+                    // filters. Discovery itself remains useful without them.
+                    tracing::debug!(%error, adapter = %id.0, "BlueZ discovery filter unavailable");
+                }
+                proxy
                     .call::<_, _, ()>("StartDiscovery", &())
                     .await
                     .map_err(|error| dbus_failure("start Bluetooth discovery", error))?;
             }
             (BackendAction::StopScan, EntityId::BluetoothAdapter(id)) => {
                 let adapter = self.adapter_path(id).await?;
-                Proxy::new(&self.connection, SERVICE, adapter, ADAPTER_INTERFACE)
+                let proxy = Proxy::new(&self.connection, SERVICE, adapter, ADAPTER_INTERFACE)
                     .await
-                    .map_err(|error| dbus_failure("stop Bluetooth discovery", error))?
+                    .map_err(|error| dbus_failure("stop Bluetooth discovery", error))?;
+                proxy
                     .call::<_, _, ()>("StopDiscovery", &())
                     .await
                     .map_err(|error| dbus_failure("stop Bluetooth discovery", error))?;
+                let empty_filter = HashMap::<String, Value<'_>>::new();
+                if let Err(error) = proxy
+                    .call::<_, _, ()>("SetDiscoveryFilter", &(empty_filter,))
+                    .await
+                {
+                    tracing::debug!(%error, adapter = %id.0, "could not clear BlueZ discovery filter");
+                }
             }
             (BackendAction::SetPowered(powered), EntityId::BluetoothAdapter(id)) => {
                 let adapter = self.adapter_path(id).await?;
