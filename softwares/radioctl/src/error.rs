@@ -17,5 +17,5 @@ pub enum AppError {
     },
 
     #[error("could not initialize logging: {0}")]
-    Logging(#[from] std::io::Error),
+    Logging(String),
 }

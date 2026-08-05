@@ -5,7 +5,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use tracing_appender::non_blocking::WorkerGuard;
+use tracing_appender::{
+    non_blocking::WorkerGuard,
+    rolling::{RollingFileAppender, Rotation},
+};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::{config::state_directory, error::AppError};
@@ -35,7 +38,11 @@ pub fn init(filter: &str, override_path: Option<&Path>) -> Result<LoggingGuard, 
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("radioctl.log");
-    let appender = tracing_appender::rolling::never(directory, filename);
+    let appender = RollingFileAppender::builder()
+        .rotation(Rotation::NEVER)
+        .filename_prefix(filename)
+        .build(directory)
+        .map_err(|error| AppError::Logging(error.to_string()))?;
     let (writer, guard) = tracing_appender::non_blocking(appender);
     let env_filter = EnvFilter::try_new(filter).unwrap_or_else(|_| EnvFilter::new("radioctl=info"));
 
