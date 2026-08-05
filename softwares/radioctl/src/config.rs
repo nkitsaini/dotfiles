@@ -16,6 +16,7 @@ struct FileConfig {
     wifi_interface: Option<String>,
     bluetooth_adapter: Option<String>,
     auto_scan: Option<bool>,
+    auto_discover: Option<bool>,
     log_level: Option<String>,
 }
 
@@ -25,6 +26,7 @@ pub struct Settings {
     pub wifi_interface: Option<String>,
     pub bluetooth_adapter: Option<String>,
     pub auto_scan: bool,
+    pub auto_discover: bool,
     pub log_level: String,
     pub log_file: Option<PathBuf>,
 }
@@ -51,6 +53,11 @@ impl Settings {
                 false
             } else {
                 file.auto_scan.unwrap_or(true)
+            },
+            auto_discover: if cli.no_auto_discover {
+                false
+            } else {
+                file.auto_discover.unwrap_or(true)
             },
             log_level: cli
                 .log_level
@@ -95,12 +102,14 @@ mod tests {
             "--wifi-interface",
             "wlan9",
             "--no-auto-scan",
+            "--no-auto-discover",
         ])
         .unwrap();
 
         assert_eq!(cli.backend, Some(BackendChoice::Iwd));
         assert_eq!(cli.wifi_interface.as_deref(), Some("wlan9"));
         assert!(cli.no_auto_scan);
+        assert!(cli.no_auto_discover);
     }
 
     #[test]

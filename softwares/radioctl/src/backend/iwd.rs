@@ -153,6 +153,7 @@ impl IwdBackend {
                 powered: bool_property(device_properties, "Powered").unwrap_or(false),
                 scanning: bool_property(station_properties, "Scanning").unwrap_or(false),
                 last_scan_ms: None,
+                addresses: super::system::interface_addresses(&interface.0),
                 capabilities: iwd_capabilities(),
             });
 
@@ -453,6 +454,21 @@ impl RadioBackend for IwdBackend {
                     .call::<_, _, ()>("Forget", &())
                     .await
                     .map_err(|error| dbus_failure("forget the iwd network", error))?;
+            }
+            (BackendAction::UpdateProfile(update), EntityId::Wifi(id))
+                if update.auto_join.is_some() =>
+            {
+                let network = self.find_network(id).await?;
+                let Some(path) = known_network_path(&self.managed_objects().await?, &network.path)
+                else {
+                    return Err(unsupported("auto-join requires a known iwd network"));
+                };
+                Proxy::new(&self.connection, SERVICE, path, KNOWN_NETWORK_INTERFACE)
+                    .await
+                    .map_err(|error| dbus_failure("update iwd auto-join", error))?
+                    .set_property("AutoConnect", update.auto_join.unwrap())
+                    .await
+                    .map_err(|error| dbus_failure("update iwd auto-join", error))?;
             }
             _ => return Err(unsupported("that action is not available through iwd")),
         }

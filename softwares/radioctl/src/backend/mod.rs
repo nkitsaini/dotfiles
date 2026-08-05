@@ -6,7 +6,7 @@ use zeroize::Zeroizing;
 
 use crate::domain::{
     BackendEvent, BackendKind, Capability, CapabilityState, DesiredState, EntityId, ErrorCategory,
-    OperationId, OperationPhase, UserFacingError,
+    OperationId, OperationPhase, UserFacingError, WifiNetworkId,
 };
 
 pub mod bluez;
@@ -14,6 +14,7 @@ pub mod connman;
 pub(crate) mod dbus;
 pub mod iwd;
 pub mod network_manager;
+pub(crate) mod system;
 pub mod wpa_networkd;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -163,6 +164,17 @@ pub trait RadioBackend: Send + Sync {
         -> Result<OperationAcceptance, BackendFailure>;
 
     async fn cancel(&self, operation_id: OperationId) -> Result<(), BackendFailure>;
+
+    async fn wifi_secret(&self, _id: &WifiNetworkId) -> Result<Secret, BackendFailure> {
+        Err(BackendFailure {
+            category: ErrorCategory::Unsupported,
+            summary: "Saved passwords are unavailable from this Wi-Fi service".into(),
+            detail: "The selected backend does not expose stored credentials through its supported D-Bus API".into(),
+            recovery: vec!["Use NetworkManager for retrievable system-stored secrets, or enter the password when connecting".into()],
+            retryable: false,
+            raw_code: Some("secret-retrieval-unsupported".into()),
+        })
+    }
 
     async fn diagnostics(&self) -> BackendDiagnostics;
 }

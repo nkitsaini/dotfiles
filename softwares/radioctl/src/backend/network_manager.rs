@@ -119,6 +119,11 @@ trait Settings {
 )]
 trait SettingsConnection {
     fn get_settings(&self) -> zbus::Result<HashMap<String, HashMap<String, OwnedValue>>>;
+    fn get_secrets(
+        &self,
+        setting_name: &str,
+    ) -> zbus::Result<HashMap<String, HashMap<String, OwnedValue>>>;
+    fn update(&self, properties: HashMap<String, HashMap<String, OwnedValue>>) -> zbus::Result<()>;
     fn delete(&self) -> zbus::Result<()>;
 }
 
@@ -307,13 +312,17 @@ impl NetworkManagerBackend {
         Ok(self.clock.event(BackendPayload::WifiSnapshot(WifiSnapshot {
             interfaces: devices
                 .into_iter()
-                .map(|device| WifiInterface {
-                    id: device.interface,
-                    backend: BackendKind::NetworkManager,
-                    powered: device.powered,
-                    scanning: false,
-                    last_scan_ms: device.last_scan,
-                    capabilities: capabilities.clone(),
+                .map(|device| {
+                    let addresses = super::system::interface_addresses(&device.interface.0);
+                    WifiInterface {
+                        id: device.interface,
+                        backend: BackendKind::NetworkManager,
+                        powered: device.powered,
+                        scanning: false,
+                        last_scan_ms: device.last_scan,
+                        addresses,
+                        capabilities: capabilities.clone(),
+                    }
                 })
                 .collect(),
             networks: networks.into_values().collect(),
@@ -595,6 +604,70 @@ impl NetworkManagerBackend {
             .await
             .map_err(|error| dbus_failure("forget the Wi-Fi profile", error))
     }
+
+    async fn set_auto_join(&self, id: &WifiNetworkId, enabled: bool) -> Result<(), BackendFailure> {
+        let profile = self
+            .saved_profiles()
+            .await?
+            .into_iter()
+            .find(|profile| profile.ssid == id.ssid && profile.security == id.security)
+            .ok_or_else(|| not_found(format!("{} has no saved profile", id.ssid.display())))?;
+        let proxy = SettingsConnectionProxy::builder(&self.connection)
+            .path(profile.path)
+            .map_err(|error| dbus_failure("update Wi-Fi auto-join", error))?
+            .build()
+            .await
+            .map_err(|error| dbus_failure("update Wi-Fi auto-join", error))?;
+        let mut settings = proxy
+            .get_settings()
+            .await
+            .map_err(|error| dbus_failure("read the Wi-Fi profile", error))?;
+        settings
+            .entry("connection".into())
+            .or_default()
+            .insert("autoconnect".into(), OwnedValue::from(enabled));
+        proxy
+            .update(settings)
+            .await
+            .map_err(|error| dbus_failure("update Wi-Fi auto-join", error))
+    }
+
+    async fn saved_secret(&self, id: &WifiNetworkId) -> Result<super::Secret, BackendFailure> {
+        let profile = self
+            .saved_profiles()
+            .await?
+            .into_iter()
+            .find(|profile| profile.ssid == id.ssid && profile.security == id.security)
+            .ok_or_else(|| not_found(format!("{} has no saved profile", id.ssid.display())))?;
+        let proxy = SettingsConnectionProxy::builder(&self.connection)
+            .path(profile.path)
+            .map_err(|error| dbus_failure("read the saved Wi-Fi password", error))?
+            .build()
+            .await
+            .map_err(|error| dbus_failure("read the saved Wi-Fi password", error))?;
+        let secrets = proxy
+            .get_secrets("802-11-wireless-security")
+            .await
+            .map_err(|error| dbus_failure("read the saved Wi-Fi password", error))?;
+        let key = if id.security == WifiSecurity::Wep {
+            "wep-key0"
+        } else {
+            "psk"
+        };
+        let password = secrets
+            .get("802-11-wireless-security")
+            .and_then(|security| security.get(key))
+            .and_then(|value| <&str>::try_from(value).ok())
+            .ok_or_else(|| BackendFailure {
+                category: ErrorCategory::MissingSecrets,
+                summary: format!("No saved password is available for {}", id.ssid.display()),
+                detail: "NetworkManager returned the profile but not its secret. It may be agent-owned, not saved, or unavailable to this session".into(),
+                recovery: vec!["Ensure a desktop secret agent is running in this login session, or reconnect and save the password".into()],
+                retryable: true,
+                raw_code: Some("saved-secret-unavailable".into()),
+            })?;
+        Ok(super::Secret::new(password.to_owned()))
+    }
 }
 
 #[async_trait]
@@ -666,6 +739,11 @@ impl RadioBackend for NetworkManagerBackend {
                     .map_err(|error| dbus_failure("change the Wi-Fi radio state", error))?;
             }
             (BackendAction::Forget, EntityId::Wifi(id)) => self.forget(&id).await?,
+            (BackendAction::UpdateProfile(update), EntityId::Wifi(id))
+                if update.auto_join.is_some() =>
+            {
+                self.set_auto_join(&id, update.auto_join.unwrap()).await?
+            }
             _ => {
                 return Err(unsupported(
                     "NetworkManager does not support that action for this item",
@@ -680,6 +758,10 @@ impl RadioBackend for NetworkManagerBackend {
 
     async fn cancel(&self, _operation_id: OperationId) -> Result<(), BackendFailure> {
         Ok(())
+    }
+
+    async fn wifi_secret(&self, id: &WifiNetworkId) -> Result<super::Secret, BackendFailure> {
+        self.saved_secret(id).await
     }
 
     async fn diagnostics(&self) -> BackendDiagnostics {
@@ -707,6 +789,7 @@ fn wifi_capabilities() -> CapabilityMap {
         Capability::HiddenNetwork,
         Capability::Enterprise,
         Capability::Forget,
+        Capability::SecretRetrieval,
         Capability::AutoJoin,
         Capability::Priority,
         Capability::PrivateMac,

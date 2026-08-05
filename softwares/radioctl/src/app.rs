@@ -28,6 +28,8 @@ pub enum Overlay {
     Credential,
     Diagnostics,
     Error,
+    Confirm,
+    WifiShare,
 }
 
 #[derive(Debug)]
@@ -41,9 +43,19 @@ pub enum Intent {
     Cancel(OperationId),
     ScanWifi,
     ToggleBluetoothDiscovery,
+    StartBluetoothDiscovery,
     ToggleWifiRadio,
     ToggleBluetoothRadio,
     OpenDiagnostics,
+    Forget(EntityId),
+    SetWifiAutoJoin {
+        id: WifiNetworkId,
+        enabled: bool,
+    },
+    ShowWifiSecret {
+        id: WifiNetworkId,
+        qr: bool,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,18 +65,28 @@ pub enum PaletteAction {
     ToggleBluetooth,
     DiscoverBluetooth,
     Diagnostics,
+    ToggleAutoJoin,
+    ForgetWifi,
+    ShowWifiPassword,
+    ShowWifiQr,
+    ForgetBluetooth,
     Activity,
     Help,
     Quit,
 }
 
 impl PaletteAction {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 13] = [
         Self::ToggleWifi,
         Self::ScanWifi,
         Self::ToggleBluetooth,
         Self::DiscoverBluetooth,
         Self::Diagnostics,
+        Self::ToggleAutoJoin,
+        Self::ForgetWifi,
+        Self::ShowWifiPassword,
+        Self::ShowWifiQr,
+        Self::ForgetBluetooth,
         Self::Activity,
         Self::Help,
         Self::Quit,
@@ -77,11 +99,25 @@ impl PaletteAction {
             Self::ToggleBluetooth => "Toggle Bluetooth radio",
             Self::DiscoverBluetooth => "Discover Bluetooth devices",
             Self::Diagnostics => "Open diagnostics",
+            Self::ToggleAutoJoin => "Toggle auto-join for selected Wi-Fi network",
+            Self::ForgetWifi => "Forget selected Wi-Fi network",
+            Self::ShowWifiPassword => "Show saved Wi-Fi password",
+            Self::ShowWifiQr => "Show Wi-Fi QR code",
+            Self::ForgetBluetooth => "Forget selected Bluetooth device",
             Self::Activity => "Open activity journal",
             Self::Help => "Open keyboard help",
             Self::Quit => "Quit radioctl",
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EntryAction {
+    ToggleConnection,
+    ToggleAutoJoin,
+    ShowPassword,
+    ShowQr,
+    Forget,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -100,15 +136,31 @@ pub struct Application {
     pub palette_selected: usize,
     pub list_hit_area: ListHitArea,
     pub diagnostics: Vec<String>,
+    pub detail_action_hit_areas: Vec<(Rect, EntryAction)>,
     wifi_list_offset: usize,
     bluetooth_list_offset: usize,
     credential_target: Option<EntityId>,
     credential: CredentialBuffer,
+    credential_revealed: bool,
+    confirmation_target: Option<EntityId>,
+    wifi_share: Option<WifiShare>,
     quit: bool,
 }
 
 #[derive(Default)]
 struct CredentialBuffer(Zeroizing<String>);
+
+struct WifiShare {
+    network_name: String,
+    password: Secret,
+    qr: Option<Zeroizing<String>>,
+}
+
+impl std::fmt::Debug for WifiShare {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("WifiShare([REDACTED])")
+    }
+}
 
 impl std::fmt::Debug for CredentialBuffer {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -140,10 +192,14 @@ impl Application {
             palette_selected: 0,
             list_hit_area: ListHitArea::default(),
             diagnostics: Vec::new(),
+            detail_action_hit_areas: Vec::new(),
             wifi_list_offset: 0,
             bluetooth_list_offset: 0,
             credential_target: None,
             credential: CredentialBuffer::default(),
+            credential_revealed: false,
+            confirmation_target: None,
+            wifi_share: None,
             quit: false,
         }
     }
@@ -158,6 +214,62 @@ impl Application {
 
     pub fn credential_length(&self) -> usize {
         self.credential.0.chars().count()
+    }
+
+    pub fn credential_revealed(&self) -> bool {
+        self.credential_revealed
+    }
+
+    pub fn credential_text(&self) -> &str {
+        self.credential.0.as_str()
+    }
+
+    pub fn confirmation_target(&self) -> Option<&EntityId> {
+        self.confirmation_target.as_ref()
+    }
+
+    pub fn wifi_share(&self) -> Option<(&str, &str, Option<&str>)> {
+        self.wifi_share.as_ref().map(|share| {
+            (
+                share.network_name.as_str(),
+                share.password.expose(),
+                share.qr.as_deref().map(String::as_str),
+            )
+        })
+    }
+
+    pub fn show_wifi_share(
+        &mut self,
+        id: &WifiNetworkId,
+        password: Secret,
+        with_qr: bool,
+    ) -> Result<(), String> {
+        let network = self
+            .reducer
+            .state
+            .wifi
+            .networks
+            .get(id)
+            .ok_or_else(|| "The selected Wi-Fi network disappeared".to_owned())?;
+        let qr = if with_qr {
+            let payload = wifi_qr_payload(id, password.expose())?;
+            let code = qrcode::QrCode::new(payload.as_bytes())
+                .map_err(|error| format!("Could not encode Wi-Fi QR code: {error}"))?;
+            Some(Zeroizing::new(
+                code.render::<qrcode::render::unicode::Dense1x2>()
+                    .quiet_zone(true)
+                    .build(),
+            ))
+        } else {
+            None
+        };
+        self.wifi_share = Some(WifiShare {
+            network_name: network.display_name.clone(),
+            password,
+            qr,
+        });
+        self.overlay = Some(Overlay::WifiShare);
+        Ok(())
     }
 
     pub fn show_diagnostics(&mut self, lines: Vec<String>) {
@@ -178,6 +290,81 @@ impl Application {
             Pane::Bluetooth => self.bluetooth_list_offset = first_visible_row,
         }
         self.set_list_hit_area(area, first_visible_row);
+    }
+
+    pub fn set_detail_action_hit_areas(&mut self, areas: Vec<(Rect, EntryAction)>) {
+        self.detail_action_hit_areas = areas;
+    }
+
+    pub fn entry_actions(&self) -> Vec<EntryAction> {
+        let mut actions = Vec::new();
+        let has_selection = match self.pane {
+            Pane::Wifi => self.selected_wifi().is_some(),
+            Pane::Bluetooth => self.reducer.state.bluetooth.selected.is_some(),
+        };
+        if has_selection {
+            actions.push(EntryAction::ToggleConnection);
+        }
+        match self.pane {
+            Pane::Wifi => {
+                if self.palette_action_available(PaletteAction::ToggleAutoJoin) {
+                    actions.push(EntryAction::ToggleAutoJoin);
+                }
+                if self.palette_action_available(PaletteAction::ShowWifiPassword) {
+                    actions.push(EntryAction::ShowPassword);
+                }
+                if self.palette_action_available(PaletteAction::ShowWifiQr) {
+                    actions.push(EntryAction::ShowQr);
+                }
+                if self.palette_action_available(PaletteAction::ForgetWifi) {
+                    actions.push(EntryAction::Forget);
+                }
+            }
+            Pane::Bluetooth => {
+                if self.palette_action_available(PaletteAction::ForgetBluetooth) {
+                    actions.push(EntryAction::Forget);
+                }
+            }
+        }
+        actions
+    }
+
+    pub fn entry_action_label(&self, action: EntryAction) -> String {
+        match action {
+            EntryAction::ToggleConnection => {
+                let connected = match self.pane {
+                    Pane::Wifi => self
+                        .selected_wifi()
+                        .is_some_and(|network| network.state == ConnectionState::Connected),
+                    Pane::Bluetooth => self
+                        .reducer
+                        .state
+                        .bluetooth
+                        .selected
+                        .as_ref()
+                        .and_then(|id| self.reducer.state.bluetooth.devices.get(id))
+                        .is_some_and(|device| device.state == ConnectionState::Connected),
+                };
+                format!(
+                    "[Enter] {}",
+                    if connected { "Disconnect" } else { "Connect" }
+                )
+            }
+            EntryAction::ToggleAutoJoin => format!(
+                "[a] {} auto-join",
+                if self
+                    .selected_wifi()
+                    .is_some_and(|network| network.auto_join)
+                {
+                    "Disable"
+                } else {
+                    "Enable"
+                }
+            ),
+            EntryAction::ShowPassword => "[p] Show saved password".into(),
+            EntryAction::ShowQr => "[r] Show Wi-Fi QR code".into(),
+            EntryAction::Forget => "[f] Forget".into(),
+        }
     }
 
     pub fn tick(&mut self, now_ms: u64) -> bool {
@@ -207,7 +394,8 @@ impl Application {
     pub fn handle_terminal_event(&mut self, event: Event) -> Option<Intent> {
         match event {
             Event::Key(key) if key.kind != KeyEventKind::Release => self.handle_key(key),
-            Event::Mouse(mouse) => self.handle_mouse(mouse),
+            Event::Mouse(mouse) if self.overlay.is_none() => self.handle_mouse(mouse),
+            Event::Mouse(_) => None,
             Event::Resize(_, _) => None,
             _ => None,
         }
@@ -295,8 +483,76 @@ impl Application {
                         },
                     )
                 }),
+            PaletteAction::ToggleAutoJoin | PaletteAction::ForgetWifi => {
+                self.selected_wifi().is_some_and(|network| {
+                    network.saved
+                        && self.selected_wifi_capability(
+                            if action == PaletteAction::ToggleAutoJoin {
+                                Capability::AutoJoin
+                            } else {
+                                Capability::Forget
+                            },
+                        )
+                })
+            }
+            PaletteAction::ShowWifiPassword => self.selected_wifi().is_some_and(|network| {
+                network.saved
+                    && matches!(
+                        network.id.security,
+                        WifiSecurity::Personal | WifiSecurity::Wep
+                    )
+                    && self.selected_wifi_capability(Capability::SecretRetrieval)
+            }),
+            PaletteAction::ShowWifiQr => self.selected_wifi().is_some_and(|network| {
+                network.saved
+                    && matches!(
+                        network.id.security,
+                        WifiSecurity::Open | WifiSecurity::Personal | WifiSecurity::Wep
+                    )
+                    && (network.id.security == WifiSecurity::Open
+                        || self.selected_wifi_capability(Capability::SecretRetrieval))
+            }),
+            PaletteAction::ForgetBluetooth => self
+                .reducer
+                .state
+                .bluetooth
+                .selected
+                .as_ref()
+                .and_then(|id| self.reducer.state.bluetooth.devices.get(id))
+                .is_some_and(|device| {
+                    (device.paired || device.trusted)
+                        && self
+                            .reducer
+                            .state
+                            .bluetooth
+                            .selected_adapter
+                            .as_ref()
+                            .and_then(|id| self.reducer.state.bluetooth.adapters.get(id))
+                            .is_some_and(|adapter| {
+                                capability_supported(&adapter.capabilities, Capability::Forget)
+                            })
+                }),
             _ => true,
         }
+    }
+
+    fn selected_wifi(&self) -> Option<&crate::domain::WifiNetwork> {
+        self.reducer
+            .state
+            .wifi
+            .selected
+            .as_ref()
+            .and_then(|id| self.reducer.state.wifi.networks.get(id))
+    }
+
+    fn selected_wifi_capability(&self, capability: Capability) -> bool {
+        self.reducer
+            .state
+            .wifi
+            .selected_interface
+            .as_ref()
+            .and_then(|id| self.reducer.state.wifi.interfaces.get(id))
+            .is_some_and(|interface| capability_supported(&interface.capabilities, capability))
     }
 
     pub fn set_list_hit_area(&mut self, area: Rect, first_visible_row: usize) {
@@ -334,12 +590,33 @@ impl Application {
         });
     }
 
+    pub fn report_user_error(&mut self, error: UserFacingError, now_ms: u64) {
+        let summary = error.summary.clone();
+        self.reducer.state.current_error = Some(error);
+        self.reducer.state.push_activity(ActivityEntry {
+            timestamp_ms: now_ms,
+            level: ActivityLevel::Error,
+            message: summary,
+            operation: None,
+        });
+    }
+
     fn handle_key(&mut self, key: KeyEvent) -> Option<Intent> {
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             return Some(Intent::Quit);
         }
         if self.overlay == Some(Overlay::Credential) {
             return self.handle_credential_key(key);
+        }
+        if self.overlay == Some(Overlay::Confirm) {
+            return self.handle_confirmation_key(key);
+        }
+        if self.overlay == Some(Overlay::WifiShare) {
+            if matches!(key.code, KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter) {
+                self.overlay = None;
+                self.wifi_share = None;
+            }
+            return None;
         }
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('p') {
             self.overlay = Some(Overlay::Palette);
@@ -351,7 +628,9 @@ impl Application {
         match self.overlay {
             Some(Overlay::Palette) => return self.handle_palette_key(key),
             Some(Overlay::Search) => return self.handle_search_key(key),
-            Some(Overlay::Credential) => unreachable!("credential overlay handled above"),
+            Some(Overlay::Credential | Overlay::Confirm | Overlay::WifiShare) => {
+                unreachable!("interactive overlays handled above")
+            }
             Some(Overlay::Help | Overlay::Activity | Overlay::Diagnostics | Overlay::Error) => {
                 if matches!(key.code, KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter) {
                     self.overlay = None;
@@ -418,7 +697,19 @@ impl Application {
                 self.select_edge(true);
                 None
             }
-            KeyCode::Enter => self.connection_intent(),
+            KeyCode::Enter => self.run_entry_action(EntryAction::ToggleConnection),
+            KeyCode::Char('a') if self.entry_actions().contains(&EntryAction::ToggleAutoJoin) => {
+                self.run_entry_action(EntryAction::ToggleAutoJoin)
+            }
+            KeyCode::Char('p') if self.entry_actions().contains(&EntryAction::ShowPassword) => {
+                self.run_entry_action(EntryAction::ShowPassword)
+            }
+            KeyCode::Char('r') if self.entry_actions().contains(&EntryAction::ShowQr) => {
+                self.run_entry_action(EntryAction::ShowQr)
+            }
+            KeyCode::Char('f') if self.entry_actions().contains(&EntryAction::Forget) => {
+                self.run_entry_action(EntryAction::Forget)
+            }
             KeyCode::Char('s') => Some(match self.pane {
                 Pane::Wifi => Intent::ScanWifi,
                 Pane::Bluetooth => Intent::ToggleBluetoothDiscovery,
@@ -486,11 +777,18 @@ impl Application {
     }
 
     fn handle_credential_key(&mut self, key: KeyEvent) -> Option<Intent> {
+        if (key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('r'))
+            || key.code == KeyCode::F(2)
+        {
+            self.credential_revealed = !self.credential_revealed;
+            return None;
+        }
         match key.code {
             KeyCode::Esc => {
                 self.overlay = None;
                 self.credential_target = None;
                 self.credential.0.clear();
+                self.credential_revealed = false;
                 None
             }
             KeyCode::Backspace => {
@@ -501,6 +799,7 @@ impl Application {
                 let target = self.credential_target.take()?;
                 let credential = std::mem::take(&mut self.credential.0);
                 self.overlay = None;
+                self.credential_revealed = false;
                 Some(Intent::SetConnection {
                     target,
                     desired: DesiredState::Connected,
@@ -519,6 +818,22 @@ impl Application {
         }
     }
 
+    fn handle_confirmation_key(&mut self, key: KeyEvent) -> Option<Intent> {
+        match key.code {
+            KeyCode::Enter | KeyCode::Char('y') => {
+                let target = self.confirmation_target.take()?;
+                self.overlay = None;
+                Some(Intent::Forget(target))
+            }
+            KeyCode::Esc | KeyCode::Char('n') | KeyCode::Char('q') => {
+                self.confirmation_target = None;
+                self.overlay = None;
+                None
+            }
+            _ => None,
+        }
+    }
+
     fn run_palette_action(&mut self, action: PaletteAction) -> Option<Intent> {
         match action {
             PaletteAction::ToggleWifi => Some(Intent::ToggleWifiRadio),
@@ -526,6 +841,39 @@ impl Application {
             PaletteAction::ToggleBluetooth => Some(Intent::ToggleBluetoothRadio),
             PaletteAction::DiscoverBluetooth => Some(Intent::ToggleBluetoothDiscovery),
             PaletteAction::Diagnostics => Some(Intent::OpenDiagnostics),
+            PaletteAction::ToggleAutoJoin => {
+                let network = self.selected_wifi()?;
+                Some(Intent::SetWifiAutoJoin {
+                    id: network.id.clone(),
+                    enabled: !network.auto_join,
+                })
+            }
+            PaletteAction::ForgetWifi => {
+                let id = self.reducer.state.wifi.selected.clone()?;
+                self.confirmation_target = Some(EntityId::Wifi(id));
+                self.overlay = Some(Overlay::Confirm);
+                None
+            }
+            PaletteAction::ShowWifiPassword => self
+                .reducer
+                .state
+                .wifi
+                .selected
+                .clone()
+                .map(|id| Intent::ShowWifiSecret { id, qr: false }),
+            PaletteAction::ShowWifiQr => self
+                .reducer
+                .state
+                .wifi
+                .selected
+                .clone()
+                .map(|id| Intent::ShowWifiSecret { id, qr: true }),
+            PaletteAction::ForgetBluetooth => {
+                let id = self.reducer.state.bluetooth.selected.clone()?;
+                self.confirmation_target = Some(EntityId::Bluetooth(id));
+                self.overlay = Some(Overlay::Confirm);
+                None
+            }
             PaletteAction::Activity => {
                 self.overlay = Some(Overlay::Activity);
                 None
@@ -535,6 +883,48 @@ impl Application {
                 None
             }
             PaletteAction::Quit => Some(Intent::Quit),
+        }
+    }
+
+    fn run_entry_action(&mut self, action: EntryAction) -> Option<Intent> {
+        match action {
+            EntryAction::ToggleConnection => self.connection_intent(),
+            EntryAction::ToggleAutoJoin => {
+                let network = self.selected_wifi()?;
+                Some(Intent::SetWifiAutoJoin {
+                    id: network.id.clone(),
+                    enabled: !network.auto_join,
+                })
+            }
+            EntryAction::ShowPassword => self
+                .reducer
+                .state
+                .wifi
+                .selected
+                .clone()
+                .map(|id| Intent::ShowWifiSecret { id, qr: false }),
+            EntryAction::ShowQr => self
+                .reducer
+                .state
+                .wifi
+                .selected
+                .clone()
+                .map(|id| Intent::ShowWifiSecret { id, qr: true }),
+            EntryAction::Forget => {
+                let target = match self.pane {
+                    Pane::Wifi => self.reducer.state.wifi.selected.clone().map(EntityId::Wifi),
+                    Pane::Bluetooth => self
+                        .reducer
+                        .state
+                        .bluetooth
+                        .selected
+                        .clone()
+                        .map(EntityId::Bluetooth),
+                }?;
+                self.confirmation_target = Some(target);
+                self.overlay = Some(Overlay::Confirm);
+                None
+            }
         }
     }
 
@@ -571,6 +961,7 @@ impl Application {
                 {
                     self.credential_target = Some(target);
                     self.credential.0.clear();
+                    self.credential_revealed = false;
                     self.overlay = Some(Overlay::Credential);
                     return None;
                 }
@@ -666,6 +1057,14 @@ impl Application {
                 None
             }
             MouseEventKind::Down(MouseButton::Left) => {
+                if let Some((_, action)) = self.detail_action_hit_areas.iter().find(|(area, _)| {
+                    mouse.column >= area.x
+                        && mouse.column < area.right()
+                        && mouse.row >= area.y
+                        && mouse.row < area.bottom()
+                }) {
+                    return self.run_entry_action(*action);
+                }
                 let area = self.list_hit_area.area?;
                 if mouse.column < area.x
                     || mouse.column >= area.right()
@@ -700,6 +1099,42 @@ fn capability_supported(
     capabilities.get(&capability) == Some(&CapabilityState::Supported)
 }
 
+fn wifi_qr_payload(id: &WifiNetworkId, password: &str) -> Result<Zeroizing<String>, String> {
+    let ssid = std::str::from_utf8(&id.ssid.0)
+        .map_err(|_| "QR sharing requires a UTF-8 Wi-Fi name".to_owned())?;
+    let security = match id.security {
+        WifiSecurity::Open => "nopass",
+        WifiSecurity::Wep => "WEP",
+        WifiSecurity::Personal => "WPA",
+        WifiSecurity::Enterprise => {
+            return Err("Enterprise Wi-Fi needs identity and EAP settings, so a password-only QR code would be incomplete".into())
+        }
+        WifiSecurity::Unknown(_) => {
+            return Err("The Wi-Fi security type is unknown, so a safe QR code cannot be generated".into())
+        }
+    };
+    let ssid = escape_wifi_qr_field(ssid);
+    if id.security == WifiSecurity::Open {
+        Ok(Zeroizing::new(format!("WIFI:T:{security};S:{ssid};;")))
+    } else {
+        Ok(Zeroizing::new(format!(
+            "WIFI:T:{security};S:{ssid};P:{};;",
+            escape_wifi_qr_field(password)
+        )))
+    }
+}
+
+fn escape_wifi_qr_field(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for character in value.chars() {
+        if matches!(character, '\\' | ';' | ',' | ':' | '"') {
+            escaped.push('\\');
+        }
+        escaped.push(character);
+    }
+    escaped
+}
+
 fn move_in_list<T: Clone + PartialEq>(
     items: &[T],
     selected: Option<&T>,
@@ -727,8 +1162,8 @@ mod tests {
 
     use super::*;
     use crate::domain::{
-        BackendEvent, BackendKind, BackendPayload, Connectivity, InterfaceId, Ssid, WifiNetwork,
-        WifiNetworkId, WifiSecurity, WifiSnapshot,
+        BackendEvent, BackendKind, BackendPayload, Connectivity, InterfaceId, IpAddressInfo, Ssid,
+        WifiInterface, WifiNetwork, WifiNetworkId, WifiSecurity, WifiSnapshot,
     };
 
     fn key(code: KeyCode) -> Event {
@@ -753,7 +1188,23 @@ mod tests {
             revision: 1,
             observed_at_ms: 1,
             payload: BackendPayload::WifiSnapshot(WifiSnapshot {
-                interfaces: Vec::new(),
+                interfaces: vec![WifiInterface {
+                    id: InterfaceId("wlan0".into()),
+                    backend: BackendKind::NetworkManager,
+                    powered: true,
+                    scanning: false,
+                    last_scan_ms: Some(1),
+                    addresses: vec![IpAddressInfo {
+                        address: "192.0.2.8".into(),
+                        prefix_len: 24,
+                        netmask: "255.255.255.0".into(),
+                    }],
+                    capabilities: std::collections::BTreeMap::from([
+                        (Capability::AutoJoin, CapabilityState::Supported),
+                        (Capability::Forget, CapabilityState::Supported),
+                        (Capability::SecretRetrieval, CapabilityState::Supported),
+                    ]),
+                }],
                 networks: vec![WifiNetwork {
                     id,
                     display_name: "Home".into(),
@@ -847,6 +1298,9 @@ mod tests {
         for character in "not-for-logs".chars() {
             app.handle_terminal_event(key(KeyCode::Char(character)));
         }
+        app.handle_terminal_event(key(KeyCode::F(2)));
+        assert!(app.credential_revealed());
+        assert_eq!(app.credential_text(), "not-for-logs");
         let intent = app.handle_terminal_event(key(KeyCode::Enter));
         let debug = format!("{intent:?}");
         assert!(matches!(
@@ -857,6 +1311,55 @@ mod tests {
             })
         ));
         assert!(!debug.contains("not-for-logs"));
+    }
+
+    #[test]
+    fn wifi_qr_payload_escapes_reserved_characters() {
+        let id = WifiNetworkId {
+            interface: InterfaceId("wlan0".into()),
+            ssid: Ssid(b"guest;wifi".to_vec()),
+            security: WifiSecurity::Personal,
+        };
+        let payload = wifi_qr_payload(&id, "a:b\\c").unwrap();
+        assert_eq!(payload.as_str(), "WIFI:T:WPA;S:guest\\;wifi;P:a\\:b\\\\c;;");
+
+        let open = WifiNetworkId {
+            security: WifiSecurity::Open,
+            ..id
+        };
+        assert_eq!(
+            wifi_qr_payload(&open, "").unwrap().as_str(),
+            "WIFI:T:nopass;S:guest\\;wifi;;"
+        );
+    }
+
+    #[test]
+    fn wifi_share_overlay_clears_sensitive_material_when_closed() {
+        let mut app = application_with_network(ConnectionState::Connected);
+        let id = app.reducer.state.wifi.selected.clone().unwrap();
+        app.show_wifi_share(&id, Secret::new("private-password".into()), true)
+            .unwrap();
+        assert_eq!(app.overlay, Some(Overlay::WifiShare));
+        assert!(app.wifi_share().unwrap().2.is_some());
+        assert!(!format!("{app:?}").contains("private-password"));
+
+        app.handle_terminal_event(key(KeyCode::Esc));
+        assert_eq!(app.overlay, None);
+        assert!(app.wifi_share().is_none());
+    }
+
+    #[test]
+    fn forget_requires_confirmation() {
+        let mut app = application_with_network(ConnectionState::Disconnected);
+        let id = app.reducer.state.wifi.selected.clone().unwrap();
+        app.confirmation_target = Some(EntityId::Wifi(id.clone()));
+        app.overlay = Some(Overlay::Confirm);
+
+        assert!(matches!(
+            app.handle_terminal_event(key(KeyCode::Char('y'))),
+            Some(Intent::Forget(EntityId::Wifi(confirmed))) if confirmed == id
+        ));
+        assert_eq!(app.overlay, None);
     }
 
     #[test]
@@ -898,6 +1401,27 @@ mod tests {
             modifiers: KeyModifiers::NONE,
         }));
         assert_eq!(app.reducer.state.wifi.selected, Some(expected));
+    }
+
+    #[test]
+    fn right_pane_action_click_dispatches_the_displayed_action() {
+        let mut app = application_with_network(ConnectionState::Connected);
+        app.set_detail_action_hit_areas(vec![(
+            Rect::new(80, 10, 20, 1),
+            EntryAction::ToggleAutoJoin,
+        )]);
+
+        let intent = app.handle_terminal_event(Event::Mouse(MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: 82,
+            row: 10,
+            modifiers: KeyModifiers::NONE,
+        }));
+
+        assert!(matches!(
+            intent,
+            Some(Intent::SetWifiAutoJoin { enabled: false, .. })
+        ));
     }
 
     #[test]

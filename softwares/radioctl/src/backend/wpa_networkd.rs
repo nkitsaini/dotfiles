@@ -171,6 +171,7 @@ impl WpaNetworkdBackend {
                 powered: interface.state != "interface_disabled",
                 scanning: interface.scanning,
                 last_scan_ms: None,
+                addresses: super::system::interface_addresses(&interface.id.0),
                 capabilities: wpa_capabilities(),
             });
             let profiles = self.profiles(interface).await;
@@ -450,6 +451,30 @@ impl RadioBackend for WpaNetworkdBackend {
                     .call::<_, _, ()>("RemoveNetwork", &(profile.path,))
                     .await
                     .map_err(|error| dbus_failure("forget a wpa_supplicant profile", error))?;
+            }
+            (BackendAction::UpdateProfile(update), EntityId::Wifi(id))
+                if update.auto_join.is_some() =>
+            {
+                let interface = self.interface(&id.interface).await?;
+                let profile = self
+                    .profiles(&interface)
+                    .await
+                    .into_iter()
+                    .find(|profile| profile.ssid == id.ssid && profile.security == id.security)
+                    .ok_or_else(|| {
+                        not_found(format!("{} has no saved profile", id.ssid.display()))
+                    })?;
+                Proxy::new(
+                    &self.connection,
+                    WPA_SERVICE,
+                    profile.path,
+                    WPA_NETWORK_INTERFACE,
+                )
+                .await
+                .map_err(|error| dbus_failure("update wpa_supplicant auto-join", error))?
+                .set_property("Enabled", update.auto_join.unwrap())
+                .await
+                .map_err(|error| dbus_failure("update wpa_supplicant auto-join", error))?;
             }
             (BackendAction::SetPowered(_), EntityId::WifiInterface(_)) => {
                 return Err(unsupported(

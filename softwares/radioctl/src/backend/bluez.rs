@@ -13,7 +13,7 @@ use super::{
 use crate::domain::{
     AdapterId, BackendEvent, BackendKind, BackendPayload, BluetoothAdapter, BluetoothDevice,
     BluetoothDeviceId, BluetoothSnapshot, Capability, CapabilityState, ConnectionState,
-    DesiredState, EntityId, ErrorCategory, HardwareAddress, OperationId, OperationPhase,
+    DesiredState, EntityId, ErrorCategory, HardwareAddress, OperationId, OperationPhase, Presence,
 };
 
 const SERVICE: &str = "org.bluez";
@@ -81,7 +81,7 @@ impl BluezBackend {
         let objects = self.managed_objects().await?;
         let now = super::dbus::monotonic_ms();
         let mut adapters = Vec::new();
-        let mut adapter_paths = HashMap::<AdapterId, OwnedObjectPath>::new();
+        let mut adapter_paths = HashMap::<AdapterId, (OwnedObjectPath, bool)>::new();
 
         for (path, interfaces) in &objects {
             let Some(properties) = interfaces.get(ADAPTER_INTERFACE) else {
@@ -95,11 +95,12 @@ impl BluezBackend {
             {
                 continue;
             }
-            adapter_paths.insert(id.clone(), path.clone());
+            let discovering = bool_property(properties, "Discovering").unwrap_or(false);
+            adapter_paths.insert(id.clone(), (path.clone(), discovering));
             adapters.push(BluetoothAdapter {
                 id,
                 powered: bool_property(properties, "Powered").unwrap_or(false),
-                scanning: bool_property(properties, "Discovering").unwrap_or(false),
+                scanning: discovering,
                 capabilities: bluetooth_capabilities(),
             });
         }
@@ -112,9 +113,10 @@ impl BluezBackend {
             let Some(adapter_path) = path_property(properties, "Adapter") else {
                 continue;
             };
-            let Some(adapter) = adapter_paths
-                .iter()
-                .find_map(|(id, path)| (path == &adapter_path).then_some(id.clone()))
+            let Some((adapter, discovering)) =
+                adapter_paths.iter().find_map(|(id, (path, discovering))| {
+                    (path == &adapter_path).then_some((id.clone(), *discovering))
+                })
             else {
                 continue;
             };
@@ -133,6 +135,7 @@ impl BluezBackend {
             let battery_percent = interfaces
                 .get(BATTERY_INTERFACE)
                 .and_then(|battery| u8_property(battery, "Percentage"));
+            let presence = bluez_presence(connected, rssi, discovering);
             devices.push(BluetoothDevice {
                 id: BluetoothDeviceId {
                     adapter,
@@ -150,8 +153,12 @@ impl BluezBackend {
                 services_resolved,
                 rssi,
                 battery_percent,
-                present: connected || rssi.is_some(),
-                last_seen_ms: now,
+                presence,
+                last_seen_ms: if presence == Presence::Present {
+                    now
+                } else {
+                    0
+                },
             });
         }
 
@@ -345,6 +352,16 @@ fn bluetooth_capabilities() -> CapabilityMap {
     .collect()
 }
 
+fn bluez_presence(connected: bool, rssi: Option<i16>, discovering: bool) -> Presence {
+    if connected || (discovering && rssi.is_some()) {
+        Presence::Present
+    } else {
+        // Device1 objects, particularly paired ones, outlive discovery. RSSI is
+        // optional, so its absence cannot establish that the radio is absent.
+        Presence::Unknown
+    }
+}
+
 fn string_property(properties: &Properties, name: &str) -> Option<String> {
     properties
         .get(name)
@@ -411,5 +428,13 @@ mod tests {
             CapabilityState::Supported
         );
         assert_eq!(capabilities[&Capability::Trust], CapabilityState::Supported);
+    }
+
+    #[test]
+    fn missing_rssi_does_not_claim_a_device_is_out_of_range() {
+        assert_eq!(bluez_presence(false, None, true), Presence::Unknown);
+        assert_eq!(bluez_presence(false, Some(-60), true), Presence::Present);
+        assert_eq!(bluez_presence(false, Some(-60), false), Presence::Unknown);
+        assert_eq!(bluez_presence(true, None, false), Presence::Present);
     }
 }

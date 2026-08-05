@@ -24,9 +24,13 @@ pub struct Cli {
     #[arg(long)]
     pub bluetooth_adapter: Option<String>,
 
-    /// Do not request a fresh scan when a radio pane is opened.
+    /// Do not request a fresh Wi-Fi scan at startup.
     #[arg(long)]
     pub no_auto_scan: bool,
+
+    /// Do not keep a BlueZ discovery session while radioctl is open.
+    #[arg(long)]
+    pub no_auto_discover: bool,
 
     /// Tracing filter, such as info or radioctl=debug.
     #[arg(long)]

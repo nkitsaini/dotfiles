@@ -13,13 +13,14 @@ use crate::{
     backend::{
         bluez::BluezBackend, connman::ConnManBackend, iwd::IwdBackend,
         network_manager::NetworkManagerBackend, wpa_networkd::WpaNetworkdBackend, BackendAction,
-        BackendCommand, BackendDiagnostics, RadioBackend,
+        BackendCommand, BackendDiagnostics, ProfileUpdate, RadioBackend, Secret,
     },
     cli::BackendChoice,
     config::Settings,
     domain::{
         AppEvent, AppState, BackendEvent, BackendHealth, BackendKind, BackendPayload, DesiredState,
         EntityId, ErrorCategory, Operation, OperationId, OperationPhase, UserFacingError,
+        WifiNetworkId,
     },
 };
 
@@ -283,7 +284,10 @@ impl Runtime {
     pub fn dispatch(&self, intent: Intent, state: &AppState, now_ms: u64) {
         if let Intent::Cancel(operation_id) = intent {
             if let Some(operation) = state.operations.get(&operation_id) {
-                if matches!(operation.target, EntityId::Wifi(_) | EntityId::Bluetooth(_)) {
+                if matches!(
+                    operation.desired,
+                    DesiredState::Connected | DesiredState::Disconnected
+                ) {
                     self.dispatch(
                         Intent::SetConnection {
                             target: operation.target.clone(),
@@ -395,6 +399,36 @@ impl Runtime {
         diagnostics
     }
 
+    pub async fn wifi_secret(
+        &self,
+        id: &WifiNetworkId,
+        state: &AppState,
+    ) -> Result<Secret, UserFacingError> {
+        let target = EntityId::Wifi(id.clone());
+        let backend_kind = backend_for_target(&target, state)
+            .ok_or_else(|| unavailable_error(BackendKind::NetworkManager, target.clone()))?;
+        let backend = self
+            .backends
+            .get(&backend_kind)
+            .ok_or_else(|| unavailable_error(backend_kind, target.clone()))?;
+        match tokio::time::timeout(std::time::Duration::from_secs(5), backend.wifi_secret(id)).await
+        {
+            Ok(Ok(secret)) => Ok(secret),
+            Ok(Err(error)) => Err(error.into_user_error(backend_kind, Some(target))),
+            Err(_) => Err(UserFacingError {
+                category: ErrorCategory::Timeout,
+                summary: "Reading the saved Wi-Fi password timed out".into(),
+                detail: "The Wi-Fi service did not answer the secret request within five seconds"
+                    .into(),
+                recovery: vec!["Check the desktop secret agent and retry".into()],
+                retryable: true,
+                backend: Some(backend_kind),
+                target: Some(target),
+                raw_code: Some("secret-read-timeout".into()),
+            }),
+        }
+    }
+
     fn queue_health(&self, backend: BackendKind, health: BackendHealth, detail: String) {
         let _ = self.updates_tx.try_send(AppEvent::Backend(BackendEvent {
             backend,
@@ -460,6 +494,17 @@ fn route_intent(
                 None,
             ))
         }
+        Intent::StartBluetoothDiscovery => {
+            let adapter = state.bluetooth.selected_adapter.as_ref()?;
+            state.bluetooth.adapters.get(adapter)?;
+            Some((
+                BackendKind::Bluez,
+                EntityId::BluetoothAdapter(adapter.clone()),
+                DesiredState::Scanning,
+                BackendAction::Scan,
+                None,
+            ))
+        }
         Intent::ToggleWifiRadio => {
             let interface = state.wifi.selected_interface.as_ref()?;
             let info = state.wifi.interfaces.get(interface)?;
@@ -492,7 +537,38 @@ fn route_intent(
                 None,
             ))
         }
-        Intent::Quit | Intent::Cancel(_) | Intent::OpenDiagnostics => None,
+        Intent::Forget(target) => {
+            let backend = backend_for_target(&target, state)?;
+            Some((
+                backend,
+                target,
+                DesiredState::Forgotten,
+                BackendAction::Forget,
+                None,
+            ))
+        }
+        Intent::SetWifiAutoJoin { id, enabled } => {
+            let target = EntityId::Wifi(id);
+            let backend = backend_for_target(&target, state)?;
+            Some((
+                backend,
+                target,
+                if enabled {
+                    DesiredState::AutoJoinEnabled
+                } else {
+                    DesiredState::AutoJoinDisabled
+                },
+                BackendAction::UpdateProfile(ProfileUpdate {
+                    auto_join: Some(enabled),
+                    ..ProfileUpdate::default()
+                }),
+                None,
+            ))
+        }
+        Intent::Quit
+        | Intent::Cancel(_)
+        | Intent::OpenDiagnostics
+        | Intent::ShowWifiSecret { .. } => None,
     }
 }
 
@@ -629,6 +705,7 @@ mod tests {
                 powered: true,
                 scanning: false,
                 last_scan_ms: None,
+                addresses: Vec::new(),
                 capabilities: BTreeMap::new(),
             },
         );
@@ -661,6 +738,75 @@ mod tests {
         assert_eq!(routed.3, BackendAction::Connect);
     }
 
+    #[test]
+    fn profile_intents_route_without_becoming_connection_operations() {
+        let interface = InterfaceId("wlan0".into());
+        let id = WifiNetworkId {
+            interface: interface.clone(),
+            ssid: Ssid(b"home".to_vec()),
+            security: WifiSecurity::Personal,
+        };
+        let mut state = AppState::default();
+        state.wifi.interfaces.insert(
+            interface.clone(),
+            WifiInterface {
+                id: interface,
+                backend: BackendKind::Iwd,
+                powered: true,
+                scanning: false,
+                last_scan_ms: None,
+                addresses: Vec::new(),
+                capabilities: BTreeMap::new(),
+            },
+        );
+
+        let auto_join = route_intent(
+            Intent::SetWifiAutoJoin {
+                id: id.clone(),
+                enabled: true,
+            },
+            &state,
+        )
+        .unwrap();
+        assert_eq!(auto_join.0, BackendKind::Iwd);
+        assert_eq!(auto_join.2, DesiredState::AutoJoinEnabled);
+        assert!(matches!(
+            auto_join.3,
+            BackendAction::UpdateProfile(ProfileUpdate {
+                auto_join: Some(true),
+                ..
+            })
+        ));
+
+        let forget = route_intent(Intent::Forget(EntityId::Wifi(id)), &state).unwrap();
+        assert_eq!(forget.2, DesiredState::Forgotten);
+        assert_eq!(forget.3, BackendAction::Forget);
+    }
+
+    #[test]
+    fn automatic_bluetooth_discovery_acquires_its_own_session() {
+        let id = crate::domain::AdapterId("hci0".into());
+        let mut state = AppState::default();
+        state.bluetooth.selected_adapter = Some(id.clone());
+        state.bluetooth.adapters.insert(
+            id.clone(),
+            crate::domain::BluetoothAdapter {
+                id,
+                powered: true,
+                scanning: true,
+                capabilities: BTreeMap::new(),
+            },
+        );
+
+        let automatic = route_intent(Intent::StartBluetoothDiscovery, &state).unwrap();
+        assert_eq!(automatic.2, DesiredState::Scanning);
+        assert_eq!(automatic.3, BackendAction::Scan);
+
+        let manual = route_intent(Intent::ToggleBluetoothDiscovery, &state).unwrap();
+        assert_eq!(manual.2, DesiredState::Idle);
+        assert_eq!(manual.3, BackendAction::StopScan);
+    }
+
     fn candidate_snapshot(kind: BackendKind, revision: u64, usable: bool) -> BackendEvent {
         BackendEvent {
             backend: kind,
@@ -675,6 +821,7 @@ mod tests {
                         powered: true,
                         scanning: false,
                         last_scan_ms: None,
+                        addresses: Vec::new(),
                         capabilities: BTreeMap::new(),
                     })
                     .into_iter()

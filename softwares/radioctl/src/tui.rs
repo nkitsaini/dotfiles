@@ -2,7 +2,10 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Tabs, Wrap},
+    widgets::{
+        Block, Borders, Cell, Clear, List, ListItem, ListState, Paragraph, Row, Table, TableState,
+        Tabs, Wrap,
+    },
     Frame,
 };
 
@@ -14,8 +17,15 @@ use crate::{
     },
 };
 
-const ACCENT: Color = Color::Cyan;
-const SELECTED_BG: Color = Color::Rgb(35, 48, 60);
+fn selection_style() -> Style {
+    Style::default().add_modifier(Modifier::BOLD | Modifier::REVERSED)
+}
+
+fn secondary_style() -> Style {
+    // Preserve the terminal theme's own high-contrast foreground. Italics add
+    // hierarchy without assuming whether the background is light or dark.
+    Style::default().add_modifier(Modifier::ITALIC)
+}
 
 pub fn draw(frame: &mut Frame<'_>, app: &mut Application) {
     let area = frame.size();
@@ -51,6 +61,8 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut Application) {
     draw_list(frame, content[0], app);
     if content[1].width > 0 {
         draw_details(frame, content[1], app);
+    } else {
+        app.set_detail_action_hit_areas(Vec::new());
     }
     draw_notification(frame, chunks[3], app);
     draw_footer(frame, chunks[4], app);
@@ -63,6 +75,8 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut Application) {
         Some(Overlay::Credential) => draw_credential(frame, area, app),
         Some(Overlay::Diagnostics) => draw_diagnostics(frame, area, app),
         Some(Overlay::Error) => draw_error(frame, area, app),
+        Some(Overlay::Confirm) => draw_confirmation(frame, area, app),
+        Some(Overlay::WifiShare) => draw_wifi_share(frame, area, app),
         None => {}
     }
 }
@@ -92,15 +106,12 @@ fn draw_header(frame: &mut Frame<'_>, area: Rect, app: &Application) {
     };
     frame.render_widget(
         Paragraph::new(Line::from(vec![
-            Span::styled(
-                "radioctl",
-                Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
-            ),
+            Span::styled("radioctl", Style::default().add_modifier(Modifier::BOLD)),
             Span::raw("  "),
             backend_text,
             Span::styled(
                 format!("  {} events", app.reducer.state.activity.len()),
-                Style::default().fg(Color::DarkGray),
+                secondary_style(),
             ),
         ])),
         area,
@@ -147,12 +158,7 @@ fn draw_tabs(frame: &mut Frame<'_>, area: Rect, app: &Application) {
     ])
     .select(selected)
     .block(Block::default().borders(Borders::ALL))
-    .highlight_style(
-        Style::default()
-            .fg(Color::Black)
-            .bg(ACCENT)
-            .add_modifier(Modifier::BOLD),
-    );
+    .highlight_style(selection_style());
     frame.render_widget(tabs, area);
 }
 
@@ -178,7 +184,24 @@ fn draw_list(frame: &mut Frame<'_>, area: Rect, app: &mut Application) {
                 .selected
                 .as_ref()
                 .and_then(|selected| ids.iter().position(|id| id == selected));
-            render_list(frame, area, " Wi-Fi networks ", rows, selected, offset)
+            render_table(
+                frame,
+                area,
+                TableSpec {
+                    title: " Wi-Fi networks ",
+                    headers: ["State", "Network", "Signal", "Saved", "Range"],
+                    widths: [
+                        Constraint::Length(14),
+                        Constraint::Min(12),
+                        Constraint::Length(7),
+                        Constraint::Length(6),
+                        Constraint::Length(12),
+                    ],
+                },
+                rows,
+                selected,
+                offset,
+            )
         }
         Pane::Bluetooth => {
             let ids = app.visible_bluetooth_ids();
@@ -199,91 +222,113 @@ fn draw_list(frame: &mut Frame<'_>, area: Rect, app: &mut Application) {
                 .selected
                 .as_ref()
                 .and_then(|selected| ids.iter().position(|id| id == selected));
-            render_list(frame, area, " Bluetooth devices ", rows, selected, offset)
+            render_table(
+                frame,
+                area,
+                TableSpec {
+                    title: " Bluetooth devices ",
+                    headers: ["State", "Device", "Address", "Paired", "Range"],
+                    widths: [
+                        Constraint::Length(14),
+                        Constraint::Min(8),
+                        Constraint::Length(17),
+                        Constraint::Length(7),
+                        Constraint::Length(13),
+                    ],
+                },
+                rows,
+                selected,
+                offset,
+            )
         }
     };
     app.set_rendered_list(
         Rect {
             x: area.x.saturating_add(1),
-            y: area.y.saturating_add(1),
+            y: area.y.saturating_add(2),
             width: area.width.saturating_sub(2),
-            height: area.height.saturating_sub(2),
+            height: area.height.saturating_sub(3),
         },
         first_visible_row,
     );
 }
 
-fn render_list(
+struct TableSpec<const COLUMNS: usize> {
+    title: &'static str,
+    headers: [&'static str; COLUMNS],
+    widths: [Constraint; COLUMNS],
+}
+
+fn render_table<const COLUMNS: usize>(
     frame: &mut Frame<'_>,
     area: Rect,
-    title: &str,
-    rows: Vec<ListItem<'static>>,
+    spec: TableSpec<COLUMNS>,
+    rows: Vec<Row<'static>>,
     selected: Option<usize>,
     offset: usize,
 ) -> usize {
     let empty = rows.is_empty();
-    let items = if empty {
-        vec![ListItem::new(Line::styled(
+    let rows = if empty {
+        vec![Row::new([Cell::from(Line::styled(
             "No items yet. The service may still be initializing.",
-            Style::default().fg(Color::DarkGray),
-        ))]
+            secondary_style(),
+        ))])]
     } else {
         rows
     };
-    let list = List::new(items)
-        .block(Block::default().title(title).borders(Borders::ALL))
+    let table = Table::new(rows, spec.widths)
+        .header(Row::new(spec.headers).style(Style::default().add_modifier(Modifier::BOLD)))
+        .column_spacing(1)
+        .block(Block::default().title(spec.title).borders(Borders::ALL))
         .highlight_symbol("▸ ")
-        .highlight_style(
-            Style::default()
-                .bg(SELECTED_BG)
-                .add_modifier(Modifier::BOLD),
-        );
-    let mut state = ListState::default().with_offset(offset);
+        .highlight_style(selection_style());
+    let mut state = TableState::default().with_offset(offset);
     state.select(if empty { None } else { selected });
-    frame.render_stateful_widget(list, area, &mut state);
+    frame.render_stateful_widget(table, area, &mut state);
     state.offset()
 }
 
-fn wifi_row(network: &WifiNetwork, operation: Option<&Operation>) -> ListItem<'static> {
+fn wifi_row(network: &WifiNetwork, operation: Option<&Operation>) -> Row<'static> {
     let (status, status_style) = status_label(network.state, operation);
-    let present = if network.present {
-        ""
+    let range = if network.present {
+        "in range"
     } else {
-        "  out of range"
+        "out of range"
     };
-    let saved = if network.saved { "  known" } else { "" };
-    ListItem::new(Line::from(vec![
-        Span::styled(format!("{status:<14}"), status_style),
-        Span::styled(
+    let saved = if network.saved { "known" } else { "" };
+    Row::new(vec![
+        Cell::from(Span::styled(status, status_style)),
+        Cell::from(Span::styled(
             network.display_name.clone(),
             Style::default().add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            format!("  {:>3}%", network.signal),
+        )),
+        Cell::from(Span::styled(
+            format!("{}%", network.signal),
             signal_style(network.signal),
-        ),
-        Span::styled(saved, Style::default().fg(Color::Blue)),
-        Span::styled(present, Style::default().fg(Color::DarkGray)),
-    ]))
+        )),
+        Cell::from(Span::styled(saved, secondary_style())),
+        Cell::from(Span::styled(range, secondary_style())),
+    ])
 }
 
-fn bluetooth_row(device: &BluetoothDevice, operation: Option<&Operation>) -> ListItem<'static> {
+fn bluetooth_row(device: &BluetoothDevice, operation: Option<&Operation>) -> Row<'static> {
     let (status, status_style) = status_label(device.state, operation);
-    let paired = if device.paired { "  paired" } else { "" };
-    let present = if device.present { "" } else { "  out of range" };
-    ListItem::new(Line::from(vec![
-        Span::styled(format!("{status:<14}"), status_style),
-        Span::styled(
+    let paired = if device.paired { "yes" } else { "" };
+    let presence = match device.presence {
+        crate::domain::Presence::Present => "in range",
+        crate::domain::Presence::Unknown => "unknown",
+        crate::domain::Presence::OutOfRange => "out of range",
+    };
+    Row::new(vec![
+        Cell::from(Span::styled(status, status_style)),
+        Cell::from(Span::styled(
             device.name.clone(),
             Style::default().add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            format!("  {}", device.id.address.0),
-            Style::default().fg(Color::DarkGray),
-        ),
-        Span::styled(paired, Style::default().fg(Color::Blue)),
-        Span::styled(present, Style::default().fg(Color::DarkGray)),
-    ]))
+        )),
+        Cell::from(Span::styled(device.id.address.0.clone(), secondary_style())),
+        Cell::from(Span::styled(paired, secondary_style())),
+        Cell::from(Span::styled(presence, secondary_style())),
+    ])
 }
 
 fn status_label(state: ConnectionState, operation: Option<&Operation>) -> (String, Style) {
@@ -311,7 +356,7 @@ fn connection_label(state: ConnectionState) -> (&'static str, Style) {
         ConnectionState::ObtainingAddress => ("getting IP", Style::default().fg(Color::Yellow)),
         ConnectionState::Disconnecting => ("disconnecting", Style::default().fg(Color::Yellow)),
         ConnectionState::Failed => ("failed", Style::default().fg(Color::Red)),
-        ConnectionState::Disconnected => ("", Style::default().fg(Color::DarkGray)),
+        ConnectionState::Disconnected => ("", secondary_style()),
     }
 }
 
@@ -323,7 +368,7 @@ fn signal_style(signal: u8) -> Style {
     })
 }
 
-fn draw_details(frame: &mut Frame<'_>, area: Rect, app: &Application) {
+fn draw_details(frame: &mut Frame<'_>, area: Rect, app: &mut Application) {
     let lines = match app.pane {
         Pane::Wifi => app
             .reducer
@@ -333,7 +378,8 @@ fn draw_details(frame: &mut Frame<'_>, area: Rect, app: &Application) {
             .as_ref()
             .and_then(|id| app.reducer.state.wifi.networks.get(id))
             .map(|network| {
-                vec![
+                let interface = app.reducer.state.wifi.interfaces.get(&network.id.interface);
+                let mut lines = vec![
                     Line::from(network.display_name.clone()),
                     Line::from(format!("State: {:?}", network.state)),
                     Line::from(format!(
@@ -344,7 +390,45 @@ fn draw_details(frame: &mut Frame<'_>, area: Rect, app: &Application) {
                     Line::from(format!("Security: {:?}", network.id.security)),
                     Line::from(format!("BSS count: {}", network.bss_count)),
                     Line::from(format!("Auto-join: {}", yes_no(network.auto_join))),
-                ]
+                    Line::from(format!("Interface: {}", network.id.interface.0)),
+                    Line::from(format!(
+                        "Active BSSID: {}",
+                        network
+                            .active_bssid
+                            .as_ref()
+                            .map_or("not reported", |address| address.0.as_str())
+                    )),
+                ];
+                if let Some(interface) = interface {
+                    lines.push(Line::from(format!("Backend: {}", interface.backend)));
+                    lines.push(Line::from(format!(
+                        "Radio powered: {}",
+                        yes_no(interface.powered)
+                    )));
+                    match network.state {
+                        ConnectionState::Connected if interface.addresses.is_empty() => {
+                            lines.push(Line::from("IP address: not reported"));
+                        }
+                        ConnectionState::Connected => {
+                            lines.extend(interface.addresses.iter().map(|address| {
+                                let family = if address.address.contains(':') {
+                                    "IPv6"
+                                } else {
+                                    "IPv4"
+                                };
+                                Line::from(format!(
+                                    "{family}: {}/{}  mask {}",
+                                    address.address, address.prefix_len, address.netmask
+                                ))
+                            }));
+                        }
+                        ConnectionState::ObtainingAddress => {
+                            lines.push(Line::from("IP address: obtaining address"));
+                        }
+                        _ => lines.push(Line::from("IP address: network not connected")),
+                    }
+                }
+                lines
             }),
         Pane::Bluetooth => app
             .reducer
@@ -357,12 +441,28 @@ fn draw_details(frame: &mut Frame<'_>, area: Rect, app: &Application) {
                 vec![
                     Line::from(device.name.clone()),
                     Line::from(format!("State: {:?}", device.state)),
+                    Line::from(format!(
+                        "Range: {}",
+                        match device.presence {
+                            crate::domain::Presence::Present => "present",
+                            crate::domain::Presence::Unknown => "unknown (scan to update)",
+                            crate::domain::Presence::OutOfRange => "out of range",
+                        }
+                    )),
                     Line::from(format!("Address: {}", device.id.address.0)),
+                    Line::from(format!("Adapter: {}", device.id.adapter.0)),
                     Line::from(format!("Paired: {}", yes_no(device.paired))),
                     Line::from(format!("Trusted: {}", yes_no(device.trusted))),
+                    Line::from(format!("Blocked: {}", yes_no(device.blocked))),
                     Line::from(format!(
                         "Services ready: {}",
                         yes_no(device.services_resolved)
+                    )),
+                    Line::from(format!(
+                        "RSSI: {}",
+                        device
+                            .rssi
+                            .map_or_else(|| "unknown".into(), |value| format!("{value} dBm"))
                     )),
                     Line::from(format!(
                         "Battery: {}",
@@ -373,18 +473,50 @@ fn draw_details(frame: &mut Frame<'_>, area: Rect, app: &Application) {
                 ]
             }),
     }
-    .unwrap_or_else(|| {
-        vec![Line::styled(
-            "Nothing selected",
-            Style::default().fg(Color::DarkGray),
-        )]
-    });
+    .unwrap_or_else(|| vec![Line::styled("Nothing selected", secondary_style())]);
 
+    let actions = app.entry_actions();
+    let block = Block::default().title(" Details ").borders(Borders::ALL);
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+    if actions.is_empty() {
+        frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
+        app.set_detail_action_hit_areas(Vec::new());
+        return;
+    }
+
+    let action_height = u16::try_from(actions.len() + 1)
+        .unwrap_or(u16::MAX)
+        .min(inner.height);
+    let sections = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Length(action_height)])
+        .split(inner);
     frame.render_widget(
-        Paragraph::new(lines)
-            .block(Block::default().title(" Details ").borders(Borders::ALL))
-            .wrap(Wrap { trim: false }),
-        area,
+        Paragraph::new(lines).wrap(Wrap { trim: false }),
+        sections[0],
+    );
+    let mut action_lines = vec![Line::styled(
+        "Actions",
+        Style::default().add_modifier(Modifier::BOLD),
+    )];
+    action_lines.extend(actions.iter().map(|action| {
+        Line::styled(
+            format!("  {}", app.entry_action_label(*action)),
+            Style::default().add_modifier(Modifier::BOLD),
+        )
+    }));
+    frame.render_widget(Paragraph::new(action_lines), sections[1]);
+    app.set_detail_action_hit_areas(
+        actions
+            .into_iter()
+            .enumerate()
+            .filter_map(|(index, action)| {
+                let y = sections[1].y.saturating_add(index as u16 + 1);
+                (y < sections[1].bottom())
+                    .then_some((Rect::new(sections[1].x, y, sections[1].width, 1), action))
+            })
+            .collect(),
     );
 }
 
@@ -416,10 +548,7 @@ fn draw_notification(frame: &mut Frame<'_>, area: Rect, app: &Application) {
                     Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(error.summary.clone()),
-                Span::styled(
-                    "  e details · Esc dismisses",
-                    Style::default().fg(Color::DarkGray),
-                ),
+                Span::styled("  e details · Esc dismisses", secondary_style()),
             ]))
             .block(Block::default().borders(Borders::TOP))
             .wrap(Wrap { trim: true }),
@@ -434,12 +563,12 @@ fn draw_notification(frame: &mut Frame<'_>, area: Rect, app: &Application) {
 }
 
 fn activity_style(level: ActivityLevel) -> Style {
-    Style::default().fg(match level {
-        ActivityLevel::Info => Color::Gray,
-        ActivityLevel::Success => Color::Green,
-        ActivityLevel::Warning => Color::Yellow,
-        ActivityLevel::Error => Color::Red,
-    })
+    match level {
+        ActivityLevel::Info => Style::default(),
+        ActivityLevel::Success => Style::default().fg(Color::Green),
+        ActivityLevel::Warning => Style::default().fg(Color::Yellow),
+        ActivityLevel::Error => Style::default().fg(Color::Red),
+    }
 }
 
 fn draw_footer(frame: &mut Frame<'_>, area: Rect, app: &Application) {
@@ -452,7 +581,7 @@ fn draw_footer(frame: &mut Frame<'_>, area: Rect, app: &Application) {
         Paragraph::new(format!(
             "Enter connect/disconnect  s scan  / search  Ctrl-P actions  l activity  e error  ? help  q quit{search}"
         ))
-        .style(Style::default().fg(Color::DarkGray)),
+        .style(secondary_style()),
         area,
     );
 }
@@ -470,15 +599,14 @@ fn draw_help(frame: &mut Frame<'_>, area: Rect) {
             Line::from("Actions"),
             Line::from("  Enter           connect or disconnect"),
             Line::from("  s               scan/discover"),
+            Line::from("  a / p / r / f   auto-join / password / QR / forget"),
             Line::from("  Ctrl-P          command palette"),
+            Line::from("  F2 / Ctrl-R     reveal password while typing"),
             Line::from("  /               filter visible items"),
             Line::from("  l               activity journal"),
             Line::from("  q / Ctrl-C      quit"),
             Line::from(""),
-            Line::styled(
-                "Esc, Enter, or q closes this window",
-                Style::default().fg(Color::DarkGray),
-            ),
+            Line::styled("Esc, Enter, or q closes this window", secondary_style()),
         ])
         .block(Block::default().title(" Help ").borders(Borders::ALL))
         .wrap(Wrap { trim: false }),
@@ -540,11 +668,7 @@ fn draw_palette(frame: &mut Frame<'_>, area: Rect, app: &Application) {
         List::new(items)
             .block(Block::default().borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM))
             .highlight_symbol("▸ ")
-            .highlight_style(
-                Style::default()
-                    .bg(SELECTED_BG)
-                    .add_modifier(Modifier::BOLD),
-            ),
+            .highlight_style(selection_style()),
         inner[1],
         &mut state,
     );
@@ -564,23 +688,27 @@ fn draw_search(frame: &mut Frame<'_>, area: Rect, app: &Application) {
 fn draw_credential(frame: &mut Frame<'_>, area: Rect, app: &Application) {
     let popup = centered_rect(64, 24, area);
     frame.render_widget(Clear, popup);
-    let bullets = "•".repeat(app.credential_length());
+    let credential = if app.credential_revealed() {
+        app.credential_text().to_owned()
+    } else {
+        "•".repeat(app.credential_length())
+    };
     frame.render_widget(
         Paragraph::new(vec![
             Line::from("Enter the network password:"),
             Line::from(""),
             Line::styled(
-                if bullets.is_empty() {
+                if credential.is_empty() {
                     " ".to_owned()
                 } else {
-                    bullets
+                    credential
                 },
-                Style::default().fg(ACCENT),
+                Style::default().add_modifier(Modifier::BOLD),
             ),
             Line::from(""),
             Line::styled(
-                "Enter connects; Esc cancels. The password is never logged.",
-                Style::default().fg(Color::DarkGray),
+                "F2/Ctrl-R reveals · Enter connects · Esc cancels · never logged",
+                secondary_style(),
             ),
         ])
         .block(
@@ -589,6 +717,78 @@ fn draw_credential(frame: &mut Frame<'_>, area: Rect, app: &Application) {
                 .borders(Borders::ALL),
         )
         .wrap(Wrap { trim: false }),
+        popup,
+    );
+}
+
+fn draw_confirmation(frame: &mut Frame<'_>, area: Rect, app: &Application) {
+    let Some(target) = app.confirmation_target() else {
+        return;
+    };
+    let label = match target {
+        EntityId::Wifi(id) => format!("Wi-Fi network {}", id.ssid.display()),
+        EntityId::Bluetooth(id) => format!("Bluetooth device {}", id.address.0),
+        _ => "selected radio item".into(),
+    };
+    let popup = centered_rect(64, 24, area);
+    frame.render_widget(Clear, popup);
+    frame.render_widget(
+        Paragraph::new(vec![
+            Line::from(format!("Forget {label}?")),
+            Line::from(""),
+            Line::from("This removes the saved profile or pairing."),
+            Line::from("Press y or Enter to confirm; n or Esc cancels."),
+        ])
+        .block(
+            Block::default()
+                .title(" Confirm forget ")
+                .borders(Borders::ALL),
+        )
+        .wrap(Wrap { trim: false }),
+        popup,
+    );
+}
+
+fn draw_wifi_share(frame: &mut Frame<'_>, area: Rect, app: &Application) {
+    let Some((network, password, qr)) = app.wifi_share() else {
+        return;
+    };
+    let popup = centered_rect(74, if qr.is_some() { 88 } else { 28 }, area);
+    frame.render_widget(Clear, popup);
+    let mut lines = vec![
+        Line::from(format!("Network: {network}")),
+        Line::from(format!(
+            "Password: {}",
+            if password.is_empty() {
+                "(none)"
+            } else {
+                password
+            }
+        )),
+    ];
+    if let Some(qr) = qr {
+        lines.push(Line::from(""));
+        lines.extend(qr.lines().map(|line| {
+            Line::styled(
+                line.to_owned(),
+                Style::default().fg(Color::Black).bg(Color::White),
+            )
+        }));
+    }
+    lines.push(Line::from(""));
+    lines.push(Line::styled(
+        "Enter, q, or Esc closes and clears these credentials",
+        secondary_style(),
+    ));
+    frame.render_widget(
+        Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .title(" Wi-Fi sharing ")
+                    .borders(Borders::ALL),
+            )
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: false }),
         popup,
     );
 }
@@ -644,7 +844,7 @@ fn draw_error(frame: &mut Frame<'_>, area: Rect, app: &Application) {
         lines.push(Line::from(""));
         lines.push(Line::styled(
             format!("Service code: {code}"),
-            Style::default().fg(Color::DarkGray),
+            secondary_style(),
         ));
     }
     frame.render_widget(
@@ -680,10 +880,17 @@ fn centered_rect(width_percent: u16, height_percent: u16, area: Rect) -> Rect {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use ratatui::{backend::TestBackend, Terminal};
 
     use super::*;
     use crate::app::Application;
+    use crate::domain::{
+        AppEvent, BackendEvent, BackendKind, BackendPayload, Capability, CapabilityState,
+        Connectivity, InterfaceId, IpAddressInfo, Ssid, WifiInterface, WifiNetwork, WifiNetworkId,
+        WifiSecurity, WifiSnapshot,
+    };
 
     fn render(width: u16, height: u16, app: &mut Application) -> String {
         let backend = TestBackend::new(width, height);
@@ -705,6 +912,11 @@ mod tests {
         let screen = render(100, 24, &mut Application::new());
         assert!(screen.contains("probing services"));
         assert!(screen.contains("No items yet"));
+        assert!(screen.contains("State"));
+        assert!(screen.contains("Network"));
+        assert!(screen.contains("Signal"));
+        assert!(screen.contains("Saved"));
+        assert!(screen.contains("Range"));
         assert!(screen.contains("Ctrl-P actions"));
     }
 
@@ -712,6 +924,64 @@ mod tests {
     fn minimal_terminal_does_not_panic() {
         let screen = render(20, 6, &mut Application::new());
         assert!(!screen.is_empty());
+    }
+
+    #[test]
+    fn wide_layout_shows_network_facts_and_entry_actions() {
+        let mut app = Application::new();
+        let interface = InterfaceId("wlan0".into());
+        let id = WifiNetworkId {
+            interface: interface.clone(),
+            ssid: Ssid(b"Home".to_vec()),
+            security: WifiSecurity::Personal,
+        };
+        app.reducer.apply(AppEvent::Backend(BackendEvent {
+            backend: BackendKind::NetworkManager,
+            epoch: 1,
+            revision: 1,
+            observed_at_ms: 1,
+            payload: BackendPayload::WifiSnapshot(WifiSnapshot {
+                interfaces: vec![WifiInterface {
+                    id: interface,
+                    backend: BackendKind::NetworkManager,
+                    powered: true,
+                    scanning: false,
+                    last_scan_ms: Some(1),
+                    addresses: vec![IpAddressInfo {
+                        address: "192.0.2.8".into(),
+                        prefix_len: 24,
+                        netmask: "255.255.255.0".into(),
+                    }],
+                    capabilities: BTreeMap::from([
+                        (Capability::AutoJoin, CapabilityState::Supported),
+                        (Capability::Forget, CapabilityState::Supported),
+                        (Capability::SecretRetrieval, CapabilityState::Supported),
+                    ]),
+                }],
+                networks: vec![WifiNetwork {
+                    id,
+                    display_name: "Home".into(),
+                    signal: 80,
+                    state: ConnectionState::Connected,
+                    connectivity: Connectivity::Internet,
+                    saved: true,
+                    auto_join: true,
+                    bss_count: 1,
+                    active_bssid: None,
+                    present: true,
+                    last_seen_ms: 1,
+                }],
+            }),
+        }));
+
+        let screen = render(140, 35, &mut app);
+        assert!(screen.contains("IPv4: 192.0.2.8/24"));
+        assert!(screen.contains("mask 255.255.255.0"));
+        assert!(screen.contains("[Enter] Disconnect"));
+        assert!(screen.contains("[a] Disable auto-join"));
+        assert!(screen.contains("[p] Show saved password"));
+        assert!(screen.contains("[r] Show Wi-Fi QR code"));
+        assert!(screen.contains("[f] Forget"));
     }
 
     #[test]
@@ -743,5 +1013,13 @@ mod tests {
         let screen = render(100, 30, &mut app);
         assert!(screen.contains("The system bus is unavailable"));
         assert!(screen.contains("Start the D-Bus service"));
+    }
+
+    #[test]
+    fn selection_and_secondary_text_preserve_terminal_contrast() {
+        let selected = selection_style();
+        assert!(selected.add_modifier.contains(Modifier::REVERSED));
+        assert_eq!(selected.bg, None);
+        assert_eq!(secondary_style().fg, None);
     }
 }

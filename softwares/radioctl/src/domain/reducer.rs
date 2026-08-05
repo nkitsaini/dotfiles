@@ -172,7 +172,12 @@ impl Reducer {
         let mut merged = incoming;
 
         for (id, previous) in &self.state.wifi.networks {
+            let being_forgotten = self
+                .state
+                .active_operation(&super::EntityId::Wifi(id.clone()))
+                .is_some_and(|operation| operation.desired == super::DesiredState::Forgotten);
             if !merged.contains_key(id)
+                && !being_forgotten
                 && self.state.wifi.interfaces.contains_key(&id.interface)
                 && (previous.saved
                     || now_ms.saturating_sub(previous.last_seen_ms) <= MISSING_WIFI_RETENTION_MS)
@@ -208,13 +213,25 @@ impl Reducer {
         let incoming: BTreeMap<_, _> = snapshot
             .devices
             .into_iter()
-            .map(|device| (device.id.clone(), device))
+            .map(|mut device| {
+                if device.presence == super::Presence::Unknown {
+                    if let Some(previous) = self.state.bluetooth.devices.get(&device.id) {
+                        device.last_seen_ms = previous.last_seen_ms;
+                    }
+                }
+                (device.id.clone(), device)
+            })
             .collect();
         let selected = self.state.bluetooth.selected.clone();
         let mut merged = incoming;
 
         for (id, previous) in &self.state.bluetooth.devices {
+            let being_forgotten = self
+                .state
+                .active_operation(&super::EntityId::Bluetooth(id.clone()))
+                .is_some_and(|operation| operation.desired == super::DesiredState::Forgotten);
             if !merged.contains_key(id)
+                && !being_forgotten
                 && self.state.bluetooth.adapters.contains_key(&id.adapter)
                 && (previous.paired
                     || previous.trusted
@@ -222,7 +239,7 @@ impl Reducer {
                         <= MISSING_BLUETOOTH_RETENTION_MS)
             {
                 let mut missing = previous.clone();
-                missing.present = false;
+                missing.presence = super::Presence::OutOfRange;
                 merged.insert(id.clone(), missing);
             }
         }
@@ -390,7 +407,7 @@ impl Reducer {
 
         let bt_before = self.state.bluetooth.devices.len();
         self.state.bluetooth.devices.retain(|_, device| {
-            device.present
+            device.presence != super::Presence::OutOfRange
                 || device.paired
                 || device.trusted
                 || now_ms.saturating_sub(device.last_seen_ms) <= MISSING_BLUETOOTH_RETENTION_MS
@@ -453,6 +470,21 @@ fn desired_state_is_observed(state: &AppState, operation: &Operation) -> bool {
             .networks
             .get(id)
             .is_none_or(|network| network.state == ConnectionState::Disconnected),
+        (EntityId::Wifi(id), DesiredState::Forgotten) => state
+            .wifi
+            .networks
+            .get(id)
+            .is_none_or(|network| !network.saved),
+        (EntityId::Wifi(id), DesiredState::AutoJoinEnabled) => state
+            .wifi
+            .networks
+            .get(id)
+            .is_some_and(|network| network.auto_join),
+        (EntityId::Wifi(id), DesiredState::AutoJoinDisabled) => state
+            .wifi
+            .networks
+            .get(id)
+            .is_some_and(|network| !network.auto_join),
         (EntityId::Bluetooth(id), DesiredState::Connected) => state
             .bluetooth
             .devices
@@ -463,6 +495,11 @@ fn desired_state_is_observed(state: &AppState, operation: &Operation) -> bool {
             .devices
             .get(id)
             .is_none_or(|device| device.state == ConnectionState::Disconnected),
+        (EntityId::Bluetooth(id), DesiredState::Forgotten) => state
+            .bluetooth
+            .devices
+            .get(id)
+            .is_none_or(|device| !device.paired && !device.trusted),
         (EntityId::WifiInterface(id), DesiredState::Powered) => state
             .wifi
             .interfaces
@@ -539,21 +576,20 @@ fn stable_bluetooth_order(
 }
 
 fn bluetooth_section(device: &BluetoothDevice) -> u8 {
-    if !device.present {
-        return if device.paired || device.trusted {
-            4
-        } else {
-            5
-        };
-    }
     match device.state {
         super::ConnectionState::Connected => 0,
         super::ConnectionState::Associating
         | super::ConnectionState::Authenticating
         | super::ConnectionState::ObtainingAddress
         | super::ConnectionState::Disconnecting => 1,
-        _ if device.paired => 2,
-        _ => 3,
+        _ => match (device.presence, device.paired || device.trusted) {
+            (super::Presence::Present, true) => 2,
+            (super::Presence::Present, false) => 3,
+            (super::Presence::Unknown, true) => 4,
+            (super::Presence::Unknown, false) => 5,
+            (super::Presence::OutOfRange, true) => 6,
+            (super::Presence::OutOfRange, false) => 7,
+        },
     }
 }
 
@@ -598,8 +634,8 @@ mod tests {
     use super::*;
     use crate::domain::{
         AdapterId, BackendHealth, BackendKind, BluetoothAdapter, BluetoothDeviceId,
-        ConnectionState, Connectivity, EntityId, ErrorCategory, HardwareAddress, InterfaceId, Ssid,
-        WifiInterface, WifiNetworkId, WifiSecurity, ACTIVITY_CAPACITY,
+        ConnectionState, Connectivity, EntityId, ErrorCategory, HardwareAddress, InterfaceId,
+        Presence, Ssid, WifiInterface, WifiNetworkId, WifiSecurity, ACTIVITY_CAPACITY,
     };
 
     fn wifi_id(name: &[u8]) -> WifiNetworkId {
@@ -640,6 +676,7 @@ mod tests {
                     powered: true,
                     scanning: false,
                     last_scan_ms: None,
+                    addresses: Vec::new(),
                     capabilities: BTreeMap::new(),
                 }],
                 networks,
@@ -665,7 +702,7 @@ mod tests {
             services_resolved: false,
             rssi: Some(-45),
             battery_percent: None,
-            present: true,
+            presence: Presence::Present,
             last_seen_ms: now,
         }
     }
@@ -802,8 +839,58 @@ mod tests {
         ));
         reducer.apply(AppEvent::Tick(120_000));
 
-        assert!(!reducer.state.bluetooth.devices[&paired_id].present);
+        assert_eq!(
+            reducer.state.bluetooth.devices[&paired_id].presence,
+            Presence::OutOfRange
+        );
         assert_eq!(reducer.state.bluetooth.order, vec![nearby_id, paired_id]);
+    }
+
+    #[test]
+    fn forget_operation_allows_a_saved_item_to_leave_the_model() {
+        let mut reducer = Reducer::default();
+        let mut saved = wifi_network(b"saved", ConnectionState::Disconnected, 10);
+        saved.saved = true;
+        reducer.apply(wifi_event(1, vec![saved]));
+        reducer.apply(AppEvent::OperationStarted(Operation {
+            id: OperationId(91),
+            backend: BackendKind::NetworkManager,
+            target: EntityId::Wifi(wifi_id(b"saved")),
+            desired: super::super::DesiredState::Forgotten,
+            phase: OperationPhase::AwaitingConfirmation("forgetting".into()),
+            started_at_ms: 11,
+            deadline_ms: 1_000,
+            backend_epoch: 1,
+        }));
+
+        reducer.apply(wifi_event(2, vec![]));
+
+        assert!(!reducer.state.wifi.networks.contains_key(&wifi_id(b"saved")));
+        assert!(reducer.state.operations.is_empty());
+    }
+
+    #[test]
+    fn auto_join_change_finishes_only_after_the_snapshot_confirms_it() {
+        let mut reducer = Reducer::default();
+        let mut saved = wifi_network(b"saved", ConnectionState::Disconnected, 10);
+        saved.saved = true;
+        reducer.apply(wifi_event(1, vec![saved.clone()]));
+        reducer.apply(AppEvent::OperationStarted(Operation {
+            id: OperationId(92),
+            backend: BackendKind::NetworkManager,
+            target: EntityId::Wifi(wifi_id(b"saved")),
+            desired: super::super::DesiredState::AutoJoinEnabled,
+            phase: OperationPhase::AwaitingConfirmation("updating".into()),
+            started_at_ms: 11,
+            deadline_ms: 1_000,
+            backend_epoch: 1,
+        }));
+        assert_eq!(reducer.state.operations.len(), 1);
+
+        saved.auto_join = true;
+        saved.last_seen_ms = 20;
+        reducer.apply(wifi_event(2, vec![saved]));
+        assert!(reducer.state.operations.is_empty());
     }
 
     #[test]
@@ -940,7 +1027,7 @@ mod tests {
                     services_resolved: true,
                     rssi: None,
                     battery_percent: None,
-                    present: true,
+                    presence: Presence::Present,
                     last_seen_ms: 1,
                 }],
             }),

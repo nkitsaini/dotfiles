@@ -181,6 +181,7 @@ impl ConnManBackend {
                     powered: technology.powered,
                     scanning: false,
                     last_scan_ms: None,
+                    addresses: super::system::interface_addresses(&interface.0),
                     capabilities: connman_capabilities(),
                 });
                 for service in self.services(&interface).await? {
@@ -367,6 +368,20 @@ impl RadioBackend for ConnManBackend {
                     .call::<_, _, ()>("Remove", &())
                     .await
                     .map_err(|error| dbus_failure("forget a ConnMan service", error))?;
+            }
+            (BackendAction::UpdateProfile(update), EntityId::Wifi(id))
+                if update.auto_join.is_some() =>
+            {
+                let service = self.service(id).await?;
+                Proxy::new(&self.connection, SERVICE, service.path, SERVICE_INTERFACE)
+                    .await
+                    .map_err(|error| dbus_failure("update ConnMan auto-connect", error))?
+                    .call::<_, _, ()>(
+                        "SetProperty",
+                        &("AutoConnect", Value::new(update.auto_join.unwrap())),
+                    )
+                    .await
+                    .map_err(|error| dbus_failure("update ConnMan auto-connect", error))?;
             }
             _ => return Err(unsupported("that action does not apply to this service")),
         }

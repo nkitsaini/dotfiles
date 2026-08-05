@@ -148,6 +148,7 @@ pub enum Capability {
     HiddenNetwork,
     Enterprise,
     Forget,
+    SecretRetrieval,
     AutoJoin,
     Priority,
     PrivateMac,
@@ -181,6 +182,13 @@ pub enum ConnectionState {
     Failed,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Presence {
+    Present,
+    Unknown,
+    OutOfRange,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WifiNetwork {
     pub id: WifiNetworkId,
@@ -203,7 +211,15 @@ pub struct WifiInterface {
     pub powered: bool,
     pub scanning: bool,
     pub last_scan_ms: Option<u64>,
+    pub addresses: Vec<IpAddressInfo>,
     pub capabilities: BTreeMap<Capability, CapabilityState>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct IpAddressInfo {
+    pub address: String,
+    pub prefix_len: u8,
+    pub netmask: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -217,7 +233,7 @@ pub struct BluetoothDevice {
     pub services_resolved: bool,
     pub rssi: Option<i16>,
     pub battery_percent: Option<u8>,
-    pub present: bool,
+    pub presence: Presence,
     pub last_seen_ms: u64,
 }
 
@@ -273,6 +289,8 @@ pub enum DesiredState {
     Idle,
     Present,
     Forgotten,
+    AutoJoinEnabled,
+    AutoJoinDisabled,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

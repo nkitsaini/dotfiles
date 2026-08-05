@@ -4,6 +4,7 @@ use clap::Parser;
 use futures_util::StreamExt;
 use radioctl::{
     app::{Application, Intent},
+    backend::Secret,
     cli::{Cli, Command},
     config::Settings,
     logging,
@@ -24,6 +25,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         wifi_interface = ?settings.wifi_interface,
         bluetooth_adapter = ?settings.bluetooth_adapter,
         auto_scan = settings.auto_scan,
+        auto_discover = settings.auto_discover,
         log_path = %logging_guard.path.display(),
         "starting radioctl"
     );
@@ -45,6 +47,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     housekeeping.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut dirty = true;
     let mut auto_scan_pending = settings.auto_scan;
+    let mut auto_discovery_pending = settings.auto_discover;
 
     while !application.should_quit() {
         if dirty {
@@ -87,6 +90,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             elapsed_ms(started),
                         );
                         auto_scan_pending = false;
+                    }
+                    if auto_discovery_pending
+                        && application
+                            .reducer
+                            .state
+                            .bluetooth
+                            .selected_adapter
+                            .as_ref()
+                            .and_then(|id| application.reducer.state.bluetooth.adapters.get(id))
+                            .is_some_and(|adapter| adapter.powered)
+                    {
+                        runtime.dispatch(
+                            Intent::StartBluetoothDiscovery,
+                            &application.reducer.state,
+                            elapsed_ms(started),
+                        );
+                        auto_discovery_pending = false;
                     }
                     dirty = true;
                 }
@@ -150,6 +170,32 @@ async fn handle_intent(
                 })
                 .collect();
             application.show_diagnostics(lines);
+        }
+        Intent::ShowWifiSecret { id, qr } => {
+            let open = application
+                .reducer
+                .state
+                .wifi
+                .networks
+                .get(&id)
+                .is_some_and(|network| network.id.security == radioctl::domain::WifiSecurity::Open);
+            let secret = if open {
+                Ok(Secret::new(String::new()))
+            } else {
+                runtime.wifi_secret(&id, &application.reducer.state).await
+            };
+            match secret {
+                Ok(secret) => {
+                    if let Err(error) = application.show_wifi_share(&id, secret, qr) {
+                        application.report_runtime_error(
+                            "Could not show Wi-Fi sharing details",
+                            error,
+                            now_ms,
+                        );
+                    }
+                }
+                Err(error) => application.report_user_error(error, now_ms),
+            }
         }
         intent => runtime.dispatch(intent, &application.reducer.state, now_ms),
     }

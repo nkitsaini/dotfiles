@@ -14,15 +14,36 @@ connection until the daemon reports the final state.
 - `s` scans or toggles Bluetooth discovery, `/` filters, `Ctrl-P` opens the
   capability-aware command palette, `l` opens the activity journal, and `e`
   explains the current error and its recovery steps.
+- The command palette can toggle auto-join, forget saved Wi-Fi profiles or
+  Bluetooth pairings, reveal a retrievable saved password, and render a local
+  Wi-Fi QR code. Forget actions require confirmation.
+- On wide terminals, the right-hand inspector exposes the actions available for
+  the selected entry; click one or use its displayed shortcut (`a`, `p`, `r`,
+  or `f`). Wi-Fi details include the active IP addresses, prefix lengths,
+  subnet masks, interface, backend, and BSSID. Bluetooth details include its
+  adapter and address, RSSI when BlueZ supplies it, pairing/trust/block state,
+  service readiness, and battery level when available.
+- `F2` or `Ctrl-R` reveals/hides a password while it is being entered. Closing
+  a password or QR overlay immediately clears its credential material.
 - Focus follows the stable network/device identity even when connection state
   or signal changes move its row. Mouse clicks use the actual scrolled offset.
 - No patched font is required.
+
+By default radioctl requests an immediate Wi-Fi scan and acquires its own BlueZ
+discovery session as soon as the adapters are ready. That discovery session is
+released automatically when radioctl exits, and `s` can pause/resume it. Use
+`--no-auto-scan` or `--no-auto-discover` when power usage matters more than
+immediate nearby-device visibility.
 
 The list separates observed state (`connected`, `getting IP`, and so on) from a
 pending request (`waiting→connected`). Saved Wi-Fi networks and paired or trusted
 Bluetooth devices remain visible as `out of range` and sort below devices that
 are currently present. Unsaved transient entries receive a short grace period,
 which prevents scan snapshots from making the list flicker.
+
+BlueZ's RSSI property is optional. A remembered device without RSSI is shown as
+`range unknown` rather than incorrectly labelled out of range; starting
+discovery gives BlueZ an opportunity to update it.
 
 ## Backends
 
@@ -58,6 +79,11 @@ Known constraints are surfaced instead of guessed:
   it as local/limited, never as verified Internet.
 - wpa_supplicant has no radio-power D-Bus method; that command is omitted from
   the palette for that backend.
+- Saved-password retrieval currently uses NetworkManager's `GetSecrets` API.
+  It can return only secrets available from persistent storage or a secret
+  agent in the current login session. iwd, ConnMan, and wpa_supplicant do not
+  expose a comparably safe supported retrieval path, so those actions are
+  omitted rather than reading daemon-private files.
 
 ## Diagnostics and logs
 
@@ -86,6 +112,7 @@ backend = "auto"
 wifi_interface = "wlan0"
 bluetooth_adapter = "hci0"
 auto_scan = true
+auto_discover = true
 log_level = "radioctl=info"
 ```
 
