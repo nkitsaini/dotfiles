@@ -6,6 +6,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
+use std::sync::Once;
 
 pub type AppTerminal = Terminal<CrosstermBackend<Stdout>>;
 
@@ -35,6 +36,22 @@ impl TerminalSession {
     pub fn terminal_mut(&mut self) -> &mut AppTerminal {
         &mut self.terminal
     }
+}
+
+pub fn install_panic_hook() {
+    static INSTALL: Once = Once::new();
+    INSTALL.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |information| {
+            restore_terminal();
+            previous(information);
+        }));
+    });
+}
+
+fn restore_terminal() {
+    let _ = disable_raw_mode();
+    let _ = execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture);
 }
 
 impl Drop for TerminalSession {

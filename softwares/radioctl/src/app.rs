@@ -7,9 +7,9 @@ use zeroize::Zeroizing;
 use crate::{
     backend::Secret,
     domain::{
-        ActivityEntry, ActivityLevel, AppEvent, BluetoothDeviceId, ConnectionState, DesiredState,
-        EntityId, ErrorCategory, OperationId, Reducer, UserFacingError, WifiNetworkId,
-        WifiSecurity,
+        ActivityEntry, ActivityLevel, AppEvent, BluetoothDeviceId, Capability, CapabilityState,
+        ConnectionState, DesiredState, EntityId, ErrorCategory, OperationId, Reducer,
+        UserFacingError, WifiNetworkId, WifiSecurity,
     },
 };
 
@@ -27,6 +27,7 @@ pub enum Overlay {
     Search,
     Credential,
     Diagnostics,
+    Error,
 }
 
 #[derive(Debug)]
@@ -99,6 +100,8 @@ pub struct Application {
     pub palette_selected: usize,
     pub list_hit_area: ListHitArea,
     pub diagnostics: Vec<String>,
+    wifi_list_offset: usize,
+    bluetooth_list_offset: usize,
     credential_target: Option<EntityId>,
     credential: CredentialBuffer,
     quit: bool,
@@ -137,6 +140,8 @@ impl Application {
             palette_selected: 0,
             list_hit_area: ListHitArea::default(),
             diagnostics: Vec::new(),
+            wifi_list_offset: 0,
+            bluetooth_list_offset: 0,
             credential_target: None,
             credential: CredentialBuffer::default(),
             quit: false,
@@ -158,6 +163,21 @@ impl Application {
     pub fn show_diagnostics(&mut self, lines: Vec<String>) {
         self.diagnostics = lines;
         self.overlay = Some(Overlay::Diagnostics);
+    }
+
+    pub fn list_offset(&self) -> usize {
+        match self.pane {
+            Pane::Wifi => self.wifi_list_offset,
+            Pane::Bluetooth => self.bluetooth_list_offset,
+        }
+    }
+
+    pub fn set_rendered_list(&mut self, area: Rect, first_visible_row: usize) {
+        match self.pane {
+            Pane::Wifi => self.wifi_list_offset = first_visible_row,
+            Pane::Bluetooth => self.bluetooth_list_offset = first_visible_row,
+        }
+        self.set_list_hit_area(area, first_visible_row);
     }
 
     pub fn tick(&mut self, now_ms: u64) -> bool {
@@ -232,8 +252,51 @@ impl Application {
         let query = self.palette_query.to_lowercase();
         PaletteAction::ALL
             .into_iter()
-            .filter(|action| action.label().to_lowercase().contains(&query))
+            .filter(|action| {
+                self.palette_action_available(*action)
+                    && action.label().to_lowercase().contains(&query)
+            })
             .collect()
+    }
+
+    fn palette_action_available(&self, action: PaletteAction) -> bool {
+        match action {
+            PaletteAction::ToggleWifi | PaletteAction::ScanWifi => self
+                .reducer
+                .state
+                .wifi
+                .selected_interface
+                .as_ref()
+                .and_then(|id| self.reducer.state.wifi.interfaces.get(id))
+                .is_some_and(|interface| {
+                    capability_supported(
+                        &interface.capabilities,
+                        if action == PaletteAction::ToggleWifi {
+                            Capability::RadioToggle
+                        } else {
+                            Capability::Scan
+                        },
+                    )
+                }),
+            PaletteAction::ToggleBluetooth | PaletteAction::DiscoverBluetooth => self
+                .reducer
+                .state
+                .bluetooth
+                .selected_adapter
+                .as_ref()
+                .and_then(|id| self.reducer.state.bluetooth.adapters.get(id))
+                .is_some_and(|adapter| {
+                    capability_supported(
+                        &adapter.capabilities,
+                        if action == PaletteAction::ToggleBluetooth {
+                            Capability::RadioToggle
+                        } else {
+                            Capability::Scan
+                        },
+                    )
+                }),
+            _ => true,
+        }
     }
 
     pub fn set_list_hit_area(&mut self, area: Rect, first_visible_row: usize) {
@@ -289,7 +352,7 @@ impl Application {
             Some(Overlay::Palette) => return self.handle_palette_key(key),
             Some(Overlay::Search) => return self.handle_search_key(key),
             Some(Overlay::Credential) => unreachable!("credential overlay handled above"),
-            Some(Overlay::Help | Overlay::Activity | Overlay::Diagnostics) => {
+            Some(Overlay::Help | Overlay::Activity | Overlay::Diagnostics | Overlay::Error) => {
                 if matches!(key.code, KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter) {
                     self.overlay = None;
                 }
@@ -329,6 +392,10 @@ impl Application {
             }
             KeyCode::Char('l') => {
                 self.overlay = Some(Overlay::Activity);
+                None
+            }
+            KeyCode::Char('e') if self.reducer.state.current_error.is_some() => {
+                self.overlay = Some(Overlay::Error);
                 None
             }
             KeyCode::Char('/') => {
@@ -626,6 +693,13 @@ impl Application {
     }
 }
 
+fn capability_supported(
+    capabilities: &std::collections::BTreeMap<Capability, CapabilityState>,
+    capability: Capability,
+) -> bool {
+    capabilities.get(&capability) == Some(&CapabilityState::Supported)
+}
+
 fn move_in_list<T: Clone + PartialEq>(
     items: &[T],
     selected: Option<&T>,
@@ -783,5 +857,67 @@ mod tests {
             })
         ));
         assert!(!debug.contains("not-for-logs"));
+    }
+
+    #[test]
+    fn mouse_click_uses_the_rendered_scroll_offset() {
+        let mut app = application_with_network(ConnectionState::Disconnected);
+        let template = app
+            .reducer
+            .state
+            .wifi
+            .networks
+            .values()
+            .next()
+            .unwrap()
+            .clone();
+        let networks = (0..12)
+            .map(|index| {
+                let mut network = template.clone();
+                network.id.ssid = Ssid(format!("network-{index:02}").into_bytes());
+                network.display_name = network.id.ssid.display();
+                network
+            })
+            .collect();
+        app.reducer.apply(AppEvent::Backend(BackendEvent {
+            backend: BackendKind::NetworkManager,
+            epoch: 1,
+            revision: 2,
+            observed_at_ms: 2,
+            payload: BackendPayload::WifiSnapshot(WifiSnapshot {
+                interfaces: Vec::new(),
+                networks,
+            }),
+        }));
+        let expected = app.visible_wifi_ids()[6].clone();
+        app.set_rendered_list(Rect::new(2, 4, 20, 3), 6);
+        app.handle_terminal_event(Event::Mouse(MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: 2,
+            row: 4,
+            modifiers: KeyModifiers::NONE,
+        }));
+        assert_eq!(app.reducer.state.wifi.selected, Some(expected));
+    }
+
+    #[test]
+    fn enter_on_an_in_flight_connection_requests_reversal() {
+        let mut app = application_with_network(ConnectionState::Disconnected);
+        let target = EntityId::Wifi(app.reducer.state.wifi.selected.clone().unwrap());
+        app.reducer
+            .apply(AppEvent::OperationStarted(crate::domain::Operation {
+                id: OperationId(9),
+                backend: BackendKind::NetworkManager,
+                target,
+                desired: DesiredState::Connected,
+                phase: crate::domain::OperationPhase::Queued,
+                started_at_ms: 0,
+                deadline_ms: 100,
+                backend_epoch: 1,
+            }));
+        assert!(matches!(
+            app.handle_terminal_event(key(KeyCode::Enter)),
+            Some(Intent::Cancel(OperationId(9)))
+        ));
     }
 }

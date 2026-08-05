@@ -8,7 +8,7 @@ use radioctl::{
     config::Settings,
     logging,
     runtime::Runtime,
-    terminal::TerminalSession,
+    terminal::{self, TerminalSession},
     tui,
 };
 use tokio::time::{self, Duration, MissedTickBehavior};
@@ -34,12 +34,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
+    terminal::install_panic_hook();
     let mut terminal_session = TerminalSession::enter()?;
     let mut application = Application::new();
     let started = Instant::now();
     let mut input = crossterm::event::EventStream::new();
     let mut animation = time::interval(Duration::from_millis(100));
     animation.set_missed_tick_behavior(MissedTickBehavior::Skip);
+    let mut housekeeping = time::interval(Duration::from_secs(1));
+    housekeeping.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut dirty = true;
     let mut auto_scan_pending = settings.auto_scan;
 
@@ -88,8 +91,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     dirty = true;
                 }
             }
-            _ = animation.tick() => {
+            _ = animation.tick(), if application.needs_animation() => {
                 dirty = application.tick(elapsed_ms(started));
+            }
+            _ = housekeeping.tick() => {
+                dirty |= application.tick(elapsed_ms(started));
             }
             result = tokio::signal::ctrl_c() => {
                 if let Err(error) = result {

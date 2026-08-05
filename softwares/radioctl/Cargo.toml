@@ -8,7 +8,7 @@ default = []
 simulator = []
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync", "time"] }
 ratatui = "0.26"
 crossterm = { version = "0.27", features = ["event-stream"] }
 zbus = { version = "4", features = ["tokio"] }
@@ -25,6 +25,11 @@ tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 zeroize = { version = "1", features = ["derive"] }
 uuid = { version = "1", features = ["v4"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
 
 [dev-dependencies]
 proptest = "1"

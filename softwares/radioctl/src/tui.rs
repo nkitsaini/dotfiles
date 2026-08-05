@@ -9,7 +9,8 @@ use ratatui::{
 use crate::{
     app::{Application, Overlay, Pane},
     domain::{
-        ActivityLevel, BackendHealth, BluetoothDevice, ConnectionState, Connectivity, WifiNetwork,
+        ActivityLevel, BackendHealth, BluetoothDevice, ConnectionState, Connectivity, EntityId,
+        Operation, OperationPhase, WifiNetwork,
     },
 };
 
@@ -61,6 +62,7 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut Application) {
         Some(Overlay::Search) => draw_search(frame, area, app),
         Some(Overlay::Credential) => draw_credential(frame, area, app),
         Some(Overlay::Diagnostics) => draw_diagnostics(frame, area, app),
+        Some(Overlay::Error) => draw_error(frame, area, app),
         None => {}
     }
 }
@@ -107,25 +109,67 @@ fn draw_header(frame: &mut Frame<'_>, area: Rect, app: &Application) {
 
 fn draw_tabs(frame: &mut Frame<'_>, area: Rect, app: &Application) {
     let selected = usize::from(app.pane == Pane::Bluetooth);
-    let tabs = Tabs::new(["1 Wi-Fi", "2 Bluetooth"])
-        .select(selected)
-        .block(Block::default().borders(Borders::ALL))
-        .highlight_style(
-            Style::default()
-                .fg(Color::Black)
-                .bg(ACCENT)
-                .add_modifier(Modifier::BOLD),
-        );
+    let wifi_status = app
+        .reducer
+        .state
+        .wifi
+        .selected_interface
+        .as_ref()
+        .and_then(|id| app.reducer.state.wifi.interfaces.get(id))
+        .map_or("", |interface| {
+            if !interface.powered {
+                " [off]"
+            } else if interface.scanning {
+                " [scanning]"
+            } else {
+                ""
+            }
+        });
+    let bluetooth_status = app
+        .reducer
+        .state
+        .bluetooth
+        .selected_adapter
+        .as_ref()
+        .and_then(|id| app.reducer.state.bluetooth.adapters.get(id))
+        .map_or("", |adapter| {
+            if !adapter.powered {
+                " [off]"
+            } else if adapter.scanning {
+                " [discovering]"
+            } else {
+                ""
+            }
+        });
+    let tabs = Tabs::new([
+        format!("1 Wi-Fi{wifi_status}"),
+        format!("2 Bluetooth{bluetooth_status}"),
+    ])
+    .select(selected)
+    .block(Block::default().borders(Borders::ALL))
+    .highlight_style(
+        Style::default()
+            .fg(Color::Black)
+            .bg(ACCENT)
+            .add_modifier(Modifier::BOLD),
+    );
     frame.render_widget(tabs, area);
 }
 
 fn draw_list(frame: &mut Frame<'_>, area: Rect, app: &mut Application) {
-    match app.pane {
+    let offset = app.list_offset();
+    let first_visible_row = match app.pane {
         Pane::Wifi => {
             let ids = app.visible_wifi_ids();
             let rows = ids
                 .iter()
-                .map(|id| wifi_row(&app.reducer.state.wifi.networks[id]))
+                .map(|id| {
+                    let operation = app
+                        .reducer
+                        .state
+                        .active_operation(&EntityId::Wifi(id.clone()));
+                    wifi_row(&app.reducer.state.wifi.networks[id], operation)
+                })
                 .collect::<Vec<_>>();
             let selected = app
                 .reducer
@@ -134,13 +178,19 @@ fn draw_list(frame: &mut Frame<'_>, area: Rect, app: &mut Application) {
                 .selected
                 .as_ref()
                 .and_then(|selected| ids.iter().position(|id| id == selected));
-            render_list(frame, area, " Wi-Fi networks ", rows, selected);
+            render_list(frame, area, " Wi-Fi networks ", rows, selected, offset)
         }
         Pane::Bluetooth => {
             let ids = app.visible_bluetooth_ids();
             let rows = ids
                 .iter()
-                .map(|id| bluetooth_row(&app.reducer.state.bluetooth.devices[id]))
+                .map(|id| {
+                    let operation = app
+                        .reducer
+                        .state
+                        .active_operation(&EntityId::Bluetooth(id.clone()));
+                    bluetooth_row(&app.reducer.state.bluetooth.devices[id], operation)
+                })
                 .collect::<Vec<_>>();
             let selected = app
                 .reducer
@@ -149,17 +199,17 @@ fn draw_list(frame: &mut Frame<'_>, area: Rect, app: &mut Application) {
                 .selected
                 .as_ref()
                 .and_then(|selected| ids.iter().position(|id| id == selected));
-            render_list(frame, area, " Bluetooth devices ", rows, selected);
+            render_list(frame, area, " Bluetooth devices ", rows, selected, offset)
         }
-    }
-    app.set_list_hit_area(
+    };
+    app.set_rendered_list(
         Rect {
             x: area.x.saturating_add(1),
             y: area.y.saturating_add(1),
             width: area.width.saturating_sub(2),
             height: area.height.saturating_sub(2),
         },
-        0,
+        first_visible_row,
     );
 }
 
@@ -169,7 +219,8 @@ fn render_list(
     title: &str,
     rows: Vec<ListItem<'static>>,
     selected: Option<usize>,
-) {
+    offset: usize,
+) -> usize {
     let empty = rows.is_empty();
     let items = if empty {
         vec![ListItem::new(Line::styled(
@@ -187,13 +238,14 @@ fn render_list(
                 .bg(SELECTED_BG)
                 .add_modifier(Modifier::BOLD),
         );
-    let mut state = ListState::default();
+    let mut state = ListState::default().with_offset(offset);
     state.select(if empty { None } else { selected });
     frame.render_stateful_widget(list, area, &mut state);
+    state.offset()
 }
 
-fn wifi_row(network: &WifiNetwork) -> ListItem<'static> {
-    let (status, status_style) = connection_label(network.state);
+fn wifi_row(network: &WifiNetwork, operation: Option<&Operation>) -> ListItem<'static> {
+    let (status, status_style) = status_label(network.state, operation);
     let present = if network.present {
         ""
     } else {
@@ -215,8 +267,8 @@ fn wifi_row(network: &WifiNetwork) -> ListItem<'static> {
     ]))
 }
 
-fn bluetooth_row(device: &BluetoothDevice) -> ListItem<'static> {
-    let (status, status_style) = connection_label(device.state);
+fn bluetooth_row(device: &BluetoothDevice, operation: Option<&Operation>) -> ListItem<'static> {
+    let (status, status_style) = status_label(device.state, operation);
     let paired = if device.paired { "  paired" } else { "" };
     let present = if device.present { "" } else { "  out of range" };
     ListItem::new(Line::from(vec![
@@ -232,6 +284,23 @@ fn bluetooth_row(device: &BluetoothDevice) -> ListItem<'static> {
         Span::styled(paired, Style::default().fg(Color::Blue)),
         Span::styled(present, Style::default().fg(Color::DarkGray)),
     ]))
+}
+
+fn status_label(state: ConnectionState, operation: Option<&Operation>) -> (String, Style) {
+    if let Some(operation) = operation {
+        let phase = match &operation.phase {
+            OperationPhase::Queued => "queued",
+            OperationPhase::Running(_) => "running",
+            OperationPhase::AwaitingConfirmation(_) => "waiting",
+            OperationPhase::Reconciling => "reconciling",
+        };
+        return (
+            format!("{phase}→{:?}", operation.desired).to_lowercase(),
+            Style::default().fg(Color::Yellow),
+        );
+    }
+    let (label, style) = connection_label(state);
+    (label.into(), style)
 }
 
 fn connection_label(state: ConnectionState) -> (&'static str, Style) {
@@ -347,7 +416,10 @@ fn draw_notification(frame: &mut Frame<'_>, area: Rect, app: &Application) {
                     Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(error.summary.clone()),
-                Span::styled("  Esc dismisses", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    "  e details · Esc dismisses",
+                    Style::default().fg(Color::DarkGray),
+                ),
             ]))
             .block(Block::default().borders(Borders::TOP))
             .wrap(Wrap { trim: true }),
@@ -378,7 +450,7 @@ fn draw_footer(frame: &mut Frame<'_>, area: Rect, app: &Application) {
     };
     frame.render_widget(
         Paragraph::new(format!(
-            "Enter connect/disconnect  s scan  / search  Ctrl-P actions  l activity  ? help  q quit{search}"
+            "Enter connect/disconnect  s scan  / search  Ctrl-P actions  l activity  e error  ? help  q quit{search}"
         ))
         .style(Style::default().fg(Color::DarkGray)),
         area,
@@ -541,6 +613,52 @@ fn draw_diagnostics(frame: &mut Frame<'_>, area: Rect, app: &Application) {
     );
 }
 
+fn draw_error(frame: &mut Frame<'_>, area: Rect, app: &Application) {
+    let Some(error) = &app.reducer.state.current_error else {
+        return;
+    };
+    let popup = centered_rect(78, 64, area);
+    frame.render_widget(Clear, popup);
+    let mut lines = vec![
+        Line::styled(
+            error.summary.clone(),
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
+        Line::from(""),
+        Line::from(error.detail.clone()),
+    ];
+    if !error.recovery.is_empty() {
+        lines.push(Line::from(""));
+        lines.push(Line::styled(
+            "What to try",
+            Style::default().add_modifier(Modifier::BOLD),
+        ));
+        lines.extend(
+            error
+                .recovery
+                .iter()
+                .map(|step| Line::from(format!("  • {step}"))),
+        );
+    }
+    if let Some(code) = &error.raw_code {
+        lines.push(Line::from(""));
+        lines.push(Line::styled(
+            format!("Service code: {code}"),
+            Style::default().fg(Color::DarkGray),
+        ));
+    }
+    frame.render_widget(
+        Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .title(" Error details ")
+                    .borders(Borders::ALL),
+            )
+            .wrap(Wrap { trim: false }),
+        popup,
+    );
+}
+
 fn centered_rect(width_percent: u16, height_percent: u16, area: Rect) -> Rect {
     let vertical = Layout::default()
         .direction(Direction::Vertical)
@@ -613,5 +731,17 @@ mod tests {
         let screen = render(100, 30, &mut app);
         assert!(screen.contains("Open diagnostics"));
         assert!(!screen.contains("Toggle Wi-Fi radio"));
+    }
+
+    #[test]
+    fn error_details_include_recovery_steps() {
+        let mut app = Application::new();
+        app.report_runtime_error("No service", "The system bus is unavailable", 1);
+        app.reducer.state.current_error.as_mut().unwrap().recovery =
+            vec!["Start the D-Bus service".into()];
+        app.overlay = Some(Overlay::Error);
+        let screen = render(100, 30, &mut app);
+        assert!(screen.contains("The system bus is unavailable"));
+        assert!(screen.contains("Start the D-Bus service"));
     }
 }

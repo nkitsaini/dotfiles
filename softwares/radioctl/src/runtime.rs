@@ -283,7 +283,21 @@ impl Runtime {
     pub fn dispatch(&self, intent: Intent, state: &AppState, now_ms: u64) {
         if let Intent::Cancel(operation_id) = intent {
             if let Some(operation) = state.operations.get(&operation_id) {
-                if let Some(backend) = self.backends.get(&operation.backend).cloned() {
+                if matches!(operation.target, EntityId::Wifi(_) | EntityId::Bluetooth(_)) {
+                    self.dispatch(
+                        Intent::SetConnection {
+                            target: operation.target.clone(),
+                            desired: if operation.desired == DesiredState::Connected {
+                                DesiredState::Disconnected
+                            } else {
+                                DesiredState::Connected
+                            },
+                            credential: None,
+                        },
+                        state,
+                        now_ms,
+                    );
+                } else if let Some(backend) = self.backends.get(&operation.backend).cloned() {
                     tokio::spawn(async move {
                         if let Err(error) = backend.cancel(operation_id).await {
                             tracing::warn!(%error, operation = operation_id.0, "backend could not cancel operation");
@@ -313,9 +327,13 @@ impl Runtime {
             deadline_ms: now_ms + timeout_ms(desired),
             backend_epoch,
         };
-        let _ = self
+        if let Err(error) = self
             .updates_tx
-            .try_send(AppEvent::OperationStarted(operation));
+            .try_send(AppEvent::OperationStarted(operation))
+        {
+            tracing::error!(%error, operation = id.0, "runtime event queue is full; operation was not started");
+            return;
+        }
 
         let Some(backend) = self.backends.get(&backend_kind).cloned() else {
             let _ = self.updates_tx.try_send(AppEvent::OperationFailed {

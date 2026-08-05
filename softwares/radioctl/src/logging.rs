@@ -2,6 +2,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -44,7 +45,12 @@ pub fn init(filter: &str, override_path: Option<&Path>) -> Result<LoggingGuard, 
         .build(directory)
         .map_err(|error| AppError::Logging(error.to_string()))?;
     let (writer, guard) = tracing_appender::non_blocking(appender);
-    let env_filter = EnvFilter::try_new(filter).unwrap_or_else(|_| EnvFilter::new("radioctl=info"));
+    let env_filter = EnvFilter::try_new(filter)
+        .unwrap_or_else(|_| EnvFilter::new("radioctl=info"))
+        // zbus trace records may contain serialized method bodies. Those can
+        // include credentials even though radioctl's own types redact them.
+        .add_directive("zbus=info".parse().expect("valid static directive"))
+        .add_directive("zvariant=info".parse().expect("valid static directive"));
 
     tracing_subscriber::registry()
         .with(env_filter)
@@ -59,13 +65,16 @@ pub fn init(filter: &str, override_path: Option<&Path>) -> Result<LoggingGuard, 
 }
 
 fn session_log_path() -> PathBuf {
+    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
-        .as_secs();
-    state_directory()
-        .join("logs")
-        .join(format!("radioctl-{timestamp}-{}.log", process::id()))
+        .as_nanos();
+    state_directory().join("logs").join(format!(
+        "radioctl-{timestamp}-{}-{}.log",
+        process::id(),
+        SEQUENCE.fetch_add(1, Ordering::Relaxed)
+    ))
 }
 
 fn prune_logs(directory: &Path) -> Result<(), AppError> {
@@ -104,5 +113,10 @@ mod tests {
         let name = path.file_name().unwrap().to_string_lossy();
         assert!(name.contains(&process::id().to_string()));
         assert!(name.ends_with(".log"));
+    }
+
+    #[test]
+    fn successive_session_paths_are_unique() {
+        assert_ne!(session_log_path(), session_log_path());
     }
 }
