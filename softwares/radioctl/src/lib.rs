@@ -5,6 +5,7 @@ pub mod config;
 pub mod domain;
 pub mod error;
 pub mod logging;
+pub mod runtime;
 pub mod terminal;
 #[cfg(any(test, feature = "simulator"))]
 pub mod test_support;

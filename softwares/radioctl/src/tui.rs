@@ -59,6 +59,7 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut Application) {
         Some(Overlay::Activity) => draw_activity(frame, area, app),
         Some(Overlay::Palette) => draw_palette(frame, area, app),
         Some(Overlay::Search) => draw_search(frame, area, app),
+        Some(Overlay::Credential) => draw_credential(frame, area, app),
         None => {}
     }
 }
@@ -483,6 +484,38 @@ fn draw_search(frame: &mut Frame<'_>, area: Rect, app: &Application) {
         Paragraph::new(format!("/{}", app.search))
             .block(Block::default().title(" Filter ").borders(Borders::ALL))
             .alignment(Alignment::Left),
+        popup,
+    );
+}
+
+fn draw_credential(frame: &mut Frame<'_>, area: Rect, app: &Application) {
+    let popup = centered_rect(64, 24, area);
+    frame.render_widget(Clear, popup);
+    let bullets = "•".repeat(app.credential_length());
+    frame.render_widget(
+        Paragraph::new(vec![
+            Line::from("Enter the network password:"),
+            Line::from(""),
+            Line::styled(
+                if bullets.is_empty() {
+                    " ".to_owned()
+                } else {
+                    bullets
+                },
+                Style::default().fg(ACCENT),
+            ),
+            Line::from(""),
+            Line::styled(
+                "Enter connects; Esc cancels. The password is never logged.",
+                Style::default().fg(Color::DarkGray),
+            ),
+        ])
+        .block(
+            Block::default()
+                .title(" Wi-Fi credential ")
+                .borders(Borders::ALL),
+        )
+        .wrap(Wrap { trim: false }),
         popup,
     );
 }

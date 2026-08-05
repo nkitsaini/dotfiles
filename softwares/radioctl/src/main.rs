@@ -7,6 +7,7 @@ use radioctl::{
     cli::{Cli, Command},
     config::Settings,
     logging,
+    runtime::Runtime,
     terminal::TerminalSession,
     tui,
 };
@@ -32,6 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
+    let mut runtime = Runtime::start(&settings).await;
     let mut terminal_session = TerminalSession::enter()?;
     let mut application = Application::new();
     let started = Instant::now();
@@ -53,7 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 match maybe_event {
                     Some(Ok(event)) => {
                         if let Some(intent) = application.handle_terminal_event(event) {
-                            handle_intent(&mut application, intent, elapsed_ms(started));
+                            handle_intent(&mut application, &runtime, intent, elapsed_ms(started));
                         }
                         dirty = true;
                     }
@@ -67,6 +69,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         dirty = true;
                     }
                     None => application.request_quit(),
+                }
+            }
+            event = runtime.next_event() => {
+                if let Some(event) = event {
+                    application.reducer.apply(event);
+                    dirty = true;
                 }
             }
             _ = animation.tick() => {
@@ -85,7 +93,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn handle_intent(application: &mut Application, intent: Intent, now_ms: u64) {
+fn handle_intent(application: &mut Application, runtime: &Runtime, intent: Intent, now_ms: u64) {
     match intent {
         Intent::Quit => application.request_quit(),
         Intent::OpenDiagnostics => application.report_runtime_error(
@@ -93,13 +101,7 @@ fn handle_intent(application: &mut Application, intent: Intent, now_ms: u64) {
             "Backend diagnostics will be connected in the backend implementation phase.",
             now_ms,
         ),
-        intent => {
-            tracing::debug!(
-                ?intent,
-                "backend intent queued before backend initialization"
-            );
-            application.report_backend_pending(intent, now_ms);
-        }
+        intent => runtime.dispatch(intent, &application.reducer.state, now_ms),
     }
 }
 

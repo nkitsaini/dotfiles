@@ -2,10 +2,15 @@ use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
 use ratatui::layout::Rect;
+use zeroize::Zeroizing;
 
-use crate::domain::{
-    ActivityEntry, ActivityLevel, AppEvent, BluetoothDeviceId, ConnectionState, DesiredState,
-    EntityId, ErrorCategory, OperationId, Reducer, UserFacingError, WifiNetworkId,
+use crate::{
+    backend::Secret,
+    domain::{
+        ActivityEntry, ActivityLevel, AppEvent, BluetoothDeviceId, ConnectionState, DesiredState,
+        EntityId, ErrorCategory, OperationId, Reducer, UserFacingError, WifiNetworkId,
+        WifiSecurity,
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,14 +25,16 @@ pub enum Overlay {
     Activity,
     Palette,
     Search,
+    Credential,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum Intent {
     Quit,
     SetConnection {
         target: EntityId,
         desired: DesiredState,
+        credential: Option<Secret>,
     },
     Cancel(OperationId),
     ScanWifi,
@@ -90,7 +97,18 @@ pub struct Application {
     pub palette_query: String,
     pub palette_selected: usize,
     pub list_hit_area: ListHitArea,
+    credential_target: Option<EntityId>,
+    credential: CredentialBuffer,
     quit: bool,
+}
+
+#[derive(Default)]
+struct CredentialBuffer(Zeroizing<String>);
+
+impl std::fmt::Debug for CredentialBuffer {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("CredentialBuffer([REDACTED])")
+    }
 }
 
 impl Default for Application {
@@ -116,6 +134,8 @@ impl Application {
             palette_query: String::new(),
             palette_selected: 0,
             list_hit_area: ListHitArea::default(),
+            credential_target: None,
+            credential: CredentialBuffer::default(),
             quit: false,
         }
     }
@@ -126,6 +146,10 @@ impl Application {
 
     pub fn request_quit(&mut self) {
         self.quit = true;
+    }
+
+    pub fn credential_length(&self) -> usize {
+        self.credential.0.chars().count()
     }
 
     pub fn tick(&mut self, now_ms: u64) -> bool {
@@ -243,6 +267,9 @@ impl Application {
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             return Some(Intent::Quit);
         }
+        if self.overlay == Some(Overlay::Credential) {
+            return self.handle_credential_key(key);
+        }
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('p') {
             self.overlay = Some(Overlay::Palette);
             self.palette_query.clear();
@@ -253,6 +280,7 @@ impl Application {
         match self.overlay {
             Some(Overlay::Palette) => return self.handle_palette_key(key),
             Some(Overlay::Search) => return self.handle_search_key(key),
+            Some(Overlay::Credential) => unreachable!("credential overlay handled above"),
             Some(Overlay::Help | Overlay::Activity) => {
                 if matches!(key.code, KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter) {
                     self.overlay = None;
@@ -382,6 +410,40 @@ impl Application {
         None
     }
 
+    fn handle_credential_key(&mut self, key: KeyEvent) -> Option<Intent> {
+        match key.code {
+            KeyCode::Esc => {
+                self.overlay = None;
+                self.credential_target = None;
+                self.credential.0.clear();
+                None
+            }
+            KeyCode::Backspace => {
+                self.credential.0.pop();
+                None
+            }
+            KeyCode::Enter if !self.credential.0.is_empty() => {
+                let target = self.credential_target.take()?;
+                let credential = std::mem::take(&mut self.credential.0);
+                self.overlay = None;
+                Some(Intent::SetConnection {
+                    target,
+                    desired: DesiredState::Connected,
+                    credential: Some(Secret::new(credential.to_string())),
+                })
+            }
+            KeyCode::Char(character)
+                if !key
+                    .modifiers
+                    .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
+            {
+                self.credential.0.push(character);
+                None
+            }
+            _ => None,
+        }
+    }
+
     fn run_palette_action(&mut self, action: PaletteAction) -> Option<Intent> {
         match action {
             PaletteAction::ToggleWifi => Some(Intent::ToggleWifiRadio),
@@ -401,7 +463,7 @@ impl Application {
         }
     }
 
-    fn connection_intent(&self) -> Option<Intent> {
+    fn connection_intent(&mut self) -> Option<Intent> {
         let target = match self.pane {
             Pane::Wifi => self.reducer.state.wifi.selected.clone().map(EntityId::Wifi),
             Pane::Bluetooth => self
@@ -426,6 +488,19 @@ impl Application {
             }
             _ => false,
         };
+        if !connected {
+            if let EntityId::Wifi(id) = &target {
+                let network = &self.reducer.state.wifi.networks[id];
+                if !network.saved
+                    && matches!(id.security, WifiSecurity::Personal | WifiSecurity::Wep)
+                {
+                    self.credential_target = Some(target);
+                    self.credential.0.clear();
+                    self.overlay = Some(Overlay::Credential);
+                    return None;
+                }
+            }
+        }
         Some(Intent::SetConnection {
             target,
             desired: if connected {
@@ -433,6 +508,7 @@ impl Application {
             } else {
                 DesiredState::Connected
             },
+            credential: None,
         })
     }
 
@@ -641,10 +717,10 @@ mod tests {
             app.filtered_palette_actions(),
             vec![PaletteAction::Diagnostics]
         );
-        assert_eq!(
+        assert!(matches!(
             app.handle_terminal_event(key(KeyCode::Enter)),
             Some(Intent::OpenDiagnostics)
-        );
+        ));
     }
 
     #[test]
@@ -669,6 +745,35 @@ mod tests {
         app.overlay = Some(Overlay::Palette);
         app.palette_query = "no action has this name".into();
         assert_eq!(app.filtered_palette_actions(), Vec::new());
-        assert_eq!(app.handle_terminal_event(key(KeyCode::Up)), None);
+        assert!(app.handle_terminal_event(key(KeyCode::Up)).is_none());
+    }
+
+    #[test]
+    fn new_secured_network_prompts_and_never_debug_prints_the_password() {
+        let mut app = application_with_network(ConnectionState::Disconnected);
+        let selected = app.reducer.state.wifi.selected.clone().unwrap();
+        app.reducer
+            .state
+            .wifi
+            .networks
+            .get_mut(&selected)
+            .unwrap()
+            .saved = false;
+
+        assert!(app.handle_terminal_event(key(KeyCode::Enter)).is_none());
+        assert_eq!(app.overlay, Some(Overlay::Credential));
+        for character in "not-for-logs".chars() {
+            app.handle_terminal_event(key(KeyCode::Char(character)));
+        }
+        let intent = app.handle_terminal_event(key(KeyCode::Enter));
+        let debug = format!("{intent:?}");
+        assert!(matches!(
+            intent,
+            Some(Intent::SetConnection {
+                credential: Some(_),
+                ..
+            })
+        ));
+        assert!(!debug.contains("not-for-logs"));
     }
 }

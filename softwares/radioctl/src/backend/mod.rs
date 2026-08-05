@@ -9,6 +9,10 @@ use crate::domain::{
     OperationId, OperationPhase, UserFacingError,
 };
 
+pub mod bluez;
+pub(crate) mod dbus;
+pub mod network_manager;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProbeStatus {
     Available,
@@ -29,6 +33,7 @@ pub struct ProbeResult {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BackendAction {
     Scan,
+    StopScan,
     Connect,
     Disconnect,
     SetPowered(bool),

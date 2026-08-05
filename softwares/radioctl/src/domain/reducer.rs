@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 
 use super::{
     ActivityEntry, ActivityLevel, AppState, BackendEvent, BackendPayload, BackendState,
-    BluetoothDevice, BluetoothDeviceId, BluetoothSnapshot, Operation, OperationId, OperationPhase,
-    UserFacingError, WifiNetwork, WifiNetworkId, WifiSnapshot,
+    BluetoothDevice, BluetoothDeviceId, BluetoothSnapshot, ErrorCategory, Operation, OperationId,
+    OperationPhase, UserFacingError, WifiNetwork, WifiNetworkId, WifiSnapshot,
 };
 
 const MISSING_SELECTION_RETENTION_MS: u64 = 30_000;
@@ -142,6 +142,7 @@ impl Reducer {
             }
             BackendPayload::Health { .. } => {}
         }
+        self.confirm_observed_operations(event.backend, event.observed_at_ms);
         ReduceOutcome::Changed
     }
 
@@ -164,10 +165,7 @@ impl Reducer {
         let incoming: BTreeMap<_, _> = snapshot
             .networks
             .into_iter()
-            .map(|mut network| {
-                network.present = true;
-                (network.id.clone(), network)
-            })
+            .map(|network| (network.id.clone(), network))
             .collect();
         let selected = self.state.wifi.selected.clone();
         let mut merged = incoming;
@@ -209,10 +207,7 @@ impl Reducer {
         let incoming: BTreeMap<_, _> = snapshot
             .devices
             .into_iter()
-            .map(|mut device| {
-                device.present = true;
-                (device.id.clone(), device)
-            })
+            .map(|device| (device.id.clone(), device))
             .collect();
         let selected = self.state.bluetooth.selected.clone();
         let mut merged = incoming;
@@ -343,6 +338,33 @@ impl Reducer {
     }
 
     fn expire_missing(&mut self, now_ms: u64) -> ReduceOutcome {
+        let timed_out = self
+            .state
+            .operations
+            .values()
+            .filter(|operation| operation.deadline_ms <= now_ms)
+            .map(|operation| operation.id)
+            .collect::<Vec<_>>();
+        let had_timeouts = !timed_out.is_empty();
+        for id in timed_out {
+            let Some(operation) = self.state.operations.get(&id).cloned() else {
+                continue;
+            };
+            self.finish_operation(
+                id,
+                Err(UserFacingError {
+                    category: ErrorCategory::Timeout,
+                    summary: format!("{} did not confirm the requested state", operation.backend),
+                    detail: "The daemon accepted the request but did not report the requested final state before the deadline".into(),
+                    recovery: vec!["The displayed state was reconciled from the daemon; retry if it is still needed".into(), "Open the activity journal for operation timing".into()],
+                    retryable: true,
+                    backend: Some(operation.backend),
+                    target: Some(operation.target),
+                    raw_code: Some("confirmation-timeout".into()),
+                }),
+                now_ms,
+            );
+        }
         let wifi_before = self.state.wifi.networks.len();
         let selected_wifi = self.state.wifi.selected.clone();
         self.state.wifi.networks.retain(|id, network| {
@@ -386,13 +408,91 @@ impl Reducer {
             self.state.bluetooth.selected = self.state.bluetooth.order.first().cloned();
         }
 
-        if wifi_before != self.state.wifi.networks.len()
+        if had_timeouts
+            || wifi_before != self.state.wifi.networks.len()
             || bt_before != self.state.bluetooth.devices.len()
         {
             ReduceOutcome::Changed
         } else {
             ReduceOutcome::Unchanged
         }
+    }
+
+    fn confirm_observed_operations(&mut self, backend: super::BackendKind, timestamp_ms: u64) {
+        let confirmed = self
+            .state
+            .operations
+            .values()
+            .filter(|operation| {
+                operation.backend == backend && desired_state_is_observed(&self.state, operation)
+            })
+            .map(|operation| operation.id)
+            .collect::<Vec<_>>();
+        for id in confirmed {
+            self.finish_operation(
+                id,
+                Ok("requested state confirmed by the radio service".into()),
+                timestamp_ms,
+            );
+        }
+    }
+}
+
+fn desired_state_is_observed(state: &AppState, operation: &Operation) -> bool {
+    use super::{ConnectionState, DesiredState, EntityId};
+
+    match (&operation.target, operation.desired) {
+        (EntityId::Wifi(id), DesiredState::Connected) => state
+            .wifi
+            .networks
+            .get(id)
+            .is_some_and(|network| network.state == ConnectionState::Connected),
+        (EntityId::Wifi(id), DesiredState::Disconnected) => state
+            .wifi
+            .networks
+            .get(id)
+            .is_none_or(|network| network.state == ConnectionState::Disconnected),
+        (EntityId::Bluetooth(id), DesiredState::Connected) => state
+            .bluetooth
+            .devices
+            .get(id)
+            .is_some_and(|device| device.state == ConnectionState::Connected),
+        (EntityId::Bluetooth(id), DesiredState::Disconnected) => state
+            .bluetooth
+            .devices
+            .get(id)
+            .is_none_or(|device| device.state == ConnectionState::Disconnected),
+        (EntityId::WifiInterface(id), DesiredState::Powered) => state
+            .wifi
+            .interfaces
+            .get(id)
+            .is_some_and(|interface| interface.powered),
+        (EntityId::WifiInterface(id), DesiredState::Unpowered) => state
+            .wifi
+            .interfaces
+            .get(id)
+            .is_some_and(|interface| !interface.powered),
+        (EntityId::BluetoothAdapter(id), DesiredState::Powered) => state
+            .bluetooth
+            .adapters
+            .get(id)
+            .is_some_and(|adapter| adapter.powered),
+        (EntityId::BluetoothAdapter(id), DesiredState::Unpowered) => state
+            .bluetooth
+            .adapters
+            .get(id)
+            .is_some_and(|adapter| !adapter.powered),
+        (EntityId::BluetoothAdapter(id), DesiredState::Scanning) => state
+            .bluetooth
+            .adapters
+            .get(id)
+            .is_some_and(|adapter| adapter.scanning),
+        (EntityId::BluetoothAdapter(id), DesiredState::Idle) => state
+            .bluetooth
+            .adapters
+            .get(id)
+            .is_some_and(|adapter| !adapter.scanning),
+        _ => false,
     }
 }
 
@@ -740,6 +840,76 @@ mod tests {
         assert_eq!(
             reducer.state.backends[&BackendKind::NetworkManager].epoch,
             2
+        );
+    }
+
+    #[test]
+    fn accepted_operation_finishes_only_after_backend_confirmation() {
+        let mut reducer = Reducer::default();
+        let target = EntityId::Wifi(wifi_id(b"home"));
+        reducer.apply(wifi_event(
+            1,
+            vec![wifi_network(b"home", ConnectionState::Disconnected, 10)],
+        ));
+        reducer.apply(AppEvent::OperationStarted(Operation {
+            id: OperationId(41),
+            backend: BackendKind::NetworkManager,
+            target: target.clone(),
+            desired: super::super::DesiredState::Connected,
+            phase: OperationPhase::Queued,
+            started_at_ms: 10,
+            deadline_ms: 1_000,
+            backend_epoch: 1,
+        }));
+        reducer.apply(AppEvent::OperationProgress {
+            id: OperationId(41),
+            phase: OperationPhase::AwaitingConfirmation("accepted".into()),
+            timestamp_ms: 11,
+        });
+        assert!(reducer.state.active_operation(&target).is_some());
+
+        reducer.apply(wifi_event(
+            2,
+            vec![wifi_network(b"home", ConnectionState::Connected, 20)],
+        ));
+        assert!(reducer.state.active_operation(&target).is_none());
+        assert!(reducer
+            .state
+            .activity
+            .back()
+            .unwrap()
+            .message
+            .contains("confirmed"));
+    }
+
+    #[test]
+    fn unconfirmed_operation_times_out_without_faking_target_state() {
+        let mut reducer = Reducer::default();
+        let target = EntityId::Wifi(wifi_id(b"home"));
+        reducer.apply(wifi_event(
+            1,
+            vec![wifi_network(b"home", ConnectionState::Disconnected, 10)],
+        ));
+        reducer.apply(AppEvent::OperationStarted(Operation {
+            id: OperationId(42),
+            backend: BackendKind::NetworkManager,
+            target: target.clone(),
+            desired: super::super::DesiredState::Connected,
+            phase: OperationPhase::Queued,
+            started_at_ms: 10,
+            deadline_ms: 20,
+            backend_epoch: 1,
+        }));
+        reducer.apply(AppEvent::Tick(20));
+
+        assert!(reducer.state.active_operation(&target).is_none());
+        assert_eq!(
+            reducer.state.wifi.networks[&wifi_id(b"home")].state,
+            ConnectionState::Disconnected
+        );
+        assert_eq!(
+            reducer.state.current_error.as_ref().unwrap().category,
+            ErrorCategory::Timeout
         );
     }
 
