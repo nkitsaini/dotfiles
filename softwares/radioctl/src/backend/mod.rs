@@ -10,8 +10,11 @@ use crate::domain::{
 };
 
 pub mod bluez;
+pub mod connman;
 pub(crate) mod dbus;
+pub mod iwd;
 pub mod network_manager;
+pub mod wpa_networkd;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProbeStatus {

@@ -6,13 +6,14 @@ use std::{
     },
 };
 
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, Mutex};
 
 use crate::{
     app::Intent,
     backend::{
-        bluez::BluezBackend, network_manager::NetworkManagerBackend, BackendAction, BackendCommand,
-        BackendDiagnostics, RadioBackend,
+        bluez::BluezBackend, connman::ConnManBackend, iwd::IwdBackend,
+        network_manager::NetworkManagerBackend, wpa_networkd::WpaNetworkdBackend, BackendAction,
+        BackendCommand, BackendDiagnostics, RadioBackend,
     },
     cli::BackendChoice,
     config::Settings,
@@ -27,6 +28,15 @@ pub struct Runtime {
     updates_tx: mpsc::Sender<AppEvent>,
     updates_rx: mpsc::Receiver<AppEvent>,
     next_operation: AtomicU64,
+    wifi_selection: Option<Arc<Mutex<WifiSelection>>>,
+    startup_diagnostics: Vec<BackendDiagnostics>,
+}
+
+#[derive(Default)]
+struct WifiSelection {
+    selected: Option<BackendKind>,
+    usable: BTreeMap<BackendKind, bool>,
+    latest: BTreeMap<BackendKind, BackendEvent>,
 }
 
 impl Runtime {
@@ -37,10 +47,30 @@ impl Runtime {
             updates_tx,
             updates_rx,
             next_operation: AtomicU64::new(1),
+            wifi_selection: (settings.backend == BackendChoice::Auto)
+                .then(|| Arc::new(Mutex::new(WifiSelection::default()))),
+            startup_diagnostics: Vec::new(),
         };
         let connection = match zbus::Connection::system().await {
             Ok(connection) => connection,
             Err(error) => {
+                let detail = format!("could not connect to the system D-Bus: {error}");
+                runtime.startup_diagnostics = [
+                    BackendKind::NetworkManager,
+                    BackendKind::Iwd,
+                    BackendKind::WpaNetworkd,
+                    BackendKind::ConnMan,
+                    BackendKind::Bluez,
+                ]
+                .into_iter()
+                .map(|backend| BackendDiagnostics {
+                    backend,
+                    owner: None,
+                    version: None,
+                    properties: BTreeMap::new(),
+                    warnings: vec![detail.clone()],
+                })
+                .collect();
                 runtime.queue_health(
                     BackendKind::NetworkManager,
                     BackendHealth::Unavailable,
@@ -56,27 +86,44 @@ impl Runtime {
         };
 
         match settings.backend {
-            BackendChoice::Auto | BackendChoice::NetworkManager => {
+            BackendChoice::Auto => {
+                let network_manager =
+                    NetworkManagerBackend::new(connection.clone(), settings.wifi_interface.clone())
+                        .await;
+                runtime.add_wifi_candidate(network_manager).await;
+                let connman =
+                    ConnManBackend::new(connection.clone(), settings.wifi_interface.clone()).await;
+                runtime.add_wifi_candidate(connman).await;
+                let iwd =
+                    IwdBackend::new(connection.clone(), settings.wifi_interface.clone()).await;
+                runtime.add_wifi_candidate(iwd).await;
+                let wpa =
+                    WpaNetworkdBackend::new(connection.clone(), settings.wifi_interface.clone())
+                        .await;
+                runtime.add_wifi_candidate(wpa).await;
+            }
+            BackendChoice::NetworkManager => {
                 let backend =
                     NetworkManagerBackend::new(connection.clone(), settings.wifi_interface.clone())
                         .await;
                 runtime.add_backend(backend).await;
             }
-            BackendChoice::Iwd => runtime.queue_health(
-                BackendKind::Iwd,
-                BackendHealth::Unavailable,
-                "the iwd backend has not been initialized".into(),
-            ),
-            BackendChoice::WpaNetworkd => runtime.queue_health(
-                BackendKind::WpaNetworkd,
-                BackendHealth::Unavailable,
-                "the wpa_supplicant + networkd backend has not been initialized".into(),
-            ),
-            BackendChoice::ConnMan => runtime.queue_health(
-                BackendKind::ConnMan,
-                BackendHealth::Unavailable,
-                "the ConnMan backend has not been initialized".into(),
-            ),
+            BackendChoice::Iwd => {
+                let backend =
+                    IwdBackend::new(connection.clone(), settings.wifi_interface.clone()).await;
+                runtime.add_backend(backend).await;
+            }
+            BackendChoice::WpaNetworkd => {
+                let backend =
+                    WpaNetworkdBackend::new(connection.clone(), settings.wifi_interface.clone())
+                        .await;
+                runtime.add_backend(backend).await;
+            }
+            BackendChoice::ConnMan => {
+                let backend =
+                    ConnManBackend::new(connection.clone(), settings.wifi_interface.clone()).await;
+                runtime.add_backend(backend).await;
+            }
         }
 
         let bluez = BluezBackend::new(connection, settings.bluetooth_adapter.clone()).await;
@@ -112,6 +159,87 @@ impl Runtime {
                 let _ = self.updates_tx.send(AppEvent::Backend(event)).await;
             }
             Err(error) => self.queue_health(kind, BackendHealth::Degraded, error.detail),
+        }
+    }
+
+    async fn add_wifi_candidate<B>(&mut self, backend: Arc<B>)
+    where
+        B: RadioBackend + 'static,
+    {
+        let backend: Arc<dyn RadioBackend> = backend;
+        let kind = backend.kind();
+        let probe = backend.probe().await;
+        let receiver = backend.subscribe();
+        self.forward_wifi_candidate(backend.clone(), receiver);
+        self.backends.insert(kind, backend.clone());
+
+        if probe.status == crate::backend::ProbeStatus::Available {
+            match backend.snapshot().await {
+                Ok(event) => self.process_wifi_candidate(event).await,
+                Err(error) => {
+                    self.process_wifi_candidate(health_event(
+                        kind,
+                        BackendHealth::Degraded,
+                        error.detail,
+                    ))
+                    .await;
+                }
+            }
+        } else {
+            self.process_wifi_candidate(health_event(
+                kind,
+                BackendHealth::Unavailable,
+                probe
+                    .detail
+                    .unwrap_or_else(|| format!("{kind} is not running")),
+            ))
+            .await;
+        }
+    }
+
+    fn forward_wifi_candidate(
+        &self,
+        backend: Arc<dyn RadioBackend>,
+        mut receiver: broadcast::Receiver<BackendEvent>,
+    ) {
+        let updates = self.updates_tx.clone();
+        let selection = self
+            .wifi_selection
+            .as_ref()
+            .expect("auto selection exists")
+            .clone();
+        tokio::spawn(async move {
+            loop {
+                let event = match receiver.recv().await {
+                    Ok(event) => event,
+                    Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                        tracing::warn!(backend = %backend.kind(), skipped, "candidate event stream lagged; forcing snapshot");
+                        match backend.snapshot().await {
+                            Ok(event) => event,
+                            Err(error) => {
+                                tracing::error!(backend = %backend.kind(), %error, "candidate recovery snapshot failed");
+                                continue;
+                            }
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Closed) => return,
+                };
+                let forward = update_wifi_selection(&selection, event).await;
+                for event in forward {
+                    if updates.send(AppEvent::Backend(event)).await.is_err() {
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
+    async fn process_wifi_candidate(&self, event: BackendEvent) {
+        let Some(selection) = &self.wifi_selection else {
+            return;
+        };
+        for event in update_wifi_selection(selection, event).await {
+            let _ = self.updates_tx.send(AppEvent::Backend(event)).await;
         }
     }
 
@@ -241,7 +369,8 @@ impl Runtime {
     }
 
     pub async fn diagnostics(&self) -> Vec<BackendDiagnostics> {
-        let mut diagnostics = Vec::with_capacity(self.backends.len());
+        let mut diagnostics = self.startup_diagnostics.clone();
+        diagnostics.reserve(self.backends.len());
         for backend in self.backends.values() {
             diagnostics.push(backend.diagnostics().await);
         }
@@ -389,6 +518,75 @@ fn unavailable_error(backend: BackendKind, target: EntityId) -> UserFacingError 
     }
 }
 
+async fn update_wifi_selection(
+    selection: &Mutex<WifiSelection>,
+    event: BackendEvent,
+) -> Vec<BackendEvent> {
+    let mut selection = selection.lock().await;
+    let kind = event.backend;
+    let is_health = matches!(event.payload, BackendPayload::Health { .. });
+    match &event.payload {
+        BackendPayload::WifiSnapshot(snapshot) => {
+            selection
+                .usable
+                .insert(kind, !snapshot.interfaces.is_empty());
+            selection.latest.insert(kind, event.clone());
+        }
+        BackendPayload::Health { health, .. } => match health {
+            BackendHealth::Unavailable | BackendHealth::Initializing => {
+                selection.usable.insert(kind, false);
+            }
+            BackendHealth::Ready => {
+                selection.usable.insert(kind, true);
+            }
+            BackendHealth::Degraded | BackendHealth::Reconnecting => {}
+        },
+        BackendPayload::BluetoothSnapshot(_) => return Vec::new(),
+    }
+
+    let previous = selection.selected;
+    selection.selected = wifi_priority()
+        .into_iter()
+        .find(|candidate| selection.usable.get(candidate).copied().unwrap_or(false));
+    let selected = selection.selected;
+    let switched = previous != selected;
+    let mut forward = Vec::with_capacity(2);
+    if is_health || selected == Some(kind) {
+        forward.push(event);
+    }
+    if switched && selected != Some(kind) {
+        if let Some(snapshot) = selected
+            .and_then(|kind| selection.latest.get(&kind))
+            .cloned()
+        {
+            forward.push(snapshot);
+        }
+    }
+    forward
+}
+
+fn wifi_priority() -> [BackendKind; 4] {
+    [
+        BackendKind::NetworkManager,
+        BackendKind::ConnMan,
+        BackendKind::Iwd,
+        BackendKind::WpaNetworkd,
+    ]
+}
+
+fn health_event(kind: BackendKind, health: BackendHealth, detail: String) -> BackendEvent {
+    BackendEvent {
+        backend: kind,
+        epoch: 1,
+        revision: 1,
+        observed_at_ms: crate::backend::dbus::monotonic_ms(),
+        payload: BackendPayload::Health {
+            health,
+            detail: Some(detail),
+        },
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -443,5 +641,57 @@ mod tests {
         .unwrap();
         assert_eq!(routed.0, BackendKind::Iwd);
         assert_eq!(routed.3, BackendAction::Connect);
+    }
+
+    fn candidate_snapshot(kind: BackendKind, revision: u64, usable: bool) -> BackendEvent {
+        BackendEvent {
+            backend: kind,
+            epoch: 1,
+            revision,
+            observed_at_ms: revision,
+            payload: BackendPayload::WifiSnapshot(crate::domain::WifiSnapshot {
+                interfaces: usable
+                    .then(|| WifiInterface {
+                        id: InterfaceId("wlan0".into()),
+                        backend: kind,
+                        powered: true,
+                        scanning: false,
+                        last_scan_ms: None,
+                        capabilities: BTreeMap::new(),
+                    })
+                    .into_iter()
+                    .collect(),
+                networks: Vec::new(),
+            }),
+        }
+    }
+
+    #[tokio::test]
+    async fn auto_selection_prefers_usable_manager_and_fails_over() {
+        let selection = Mutex::new(WifiSelection::default());
+        let iwd = candidate_snapshot(BackendKind::Iwd, 1, true);
+        assert_eq!(
+            update_wifi_selection(&selection, iwd.clone()).await,
+            vec![iwd.clone()]
+        );
+
+        let unusable_nm = candidate_snapshot(BackendKind::NetworkManager, 1, false);
+        assert!(update_wifi_selection(&selection, unusable_nm)
+            .await
+            .is_empty());
+
+        let usable_nm = candidate_snapshot(BackendKind::NetworkManager, 2, true);
+        assert_eq!(
+            update_wifi_selection(&selection, usable_nm.clone()).await,
+            vec![usable_nm]
+        );
+
+        let stopped_nm = health_event(
+            BackendKind::NetworkManager,
+            BackendHealth::Unavailable,
+            "stopped".into(),
+        );
+        let failover = update_wifi_selection(&selection, stopped_nm.clone()).await;
+        assert_eq!(failover, vec![stopped_nm, iwd]);
     }
 }

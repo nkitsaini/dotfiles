@@ -28,12 +28,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "starting radioctl"
     );
 
+    let mut runtime = Runtime::start(&settings).await;
     if let Some(Command::Diagnose { json }) = cli.command {
-        print_diagnostics_placeholder(json, &logging_guard.path);
+        print_diagnostics(&runtime, json, &logging_guard.path).await?;
         return Ok(());
     }
 
-    let mut runtime = Runtime::start(&settings).await;
     let mut terminal_session = TerminalSession::enter()?;
     let mut application = Application::new();
     let started = Instant::now();
@@ -41,6 +41,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut animation = time::interval(Duration::from_millis(100));
     animation.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut dirty = true;
+    let mut auto_scan_pending = settings.auto_scan;
 
     while !application.should_quit() {
         if dirty {
@@ -55,7 +56,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 match maybe_event {
                     Some(Ok(event)) => {
                         if let Some(intent) = application.handle_terminal_event(event) {
-                            handle_intent(&mut application, &runtime, intent, elapsed_ms(started));
+                            handle_intent(&mut application, &runtime, intent, elapsed_ms(started)).await;
                         }
                         dirty = true;
                     }
@@ -74,6 +75,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
             event = runtime.next_event() => {
                 if let Some(event) = event {
                     application.reducer.apply(event);
+                    if auto_scan_pending
+                        && application.reducer.state.wifi.selected_interface.is_some()
+                    {
+                        runtime.dispatch(
+                            Intent::ScanWifi,
+                            &application.reducer.state,
+                            elapsed_ms(started),
+                        );
+                        auto_scan_pending = false;
+                    }
                     dirty = true;
                 }
             }
@@ -93,14 +104,47 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn handle_intent(application: &mut Application, runtime: &Runtime, intent: Intent, now_ms: u64) {
+async fn handle_intent(
+    application: &mut Application,
+    runtime: &Runtime,
+    intent: Intent,
+    now_ms: u64,
+) {
     match intent {
         Intent::Quit => application.request_quit(),
-        Intent::OpenDiagnostics => application.report_runtime_error(
-            "Diagnostics are not available yet",
-            "Backend diagnostics will be connected in the backend implementation phase.",
-            now_ms,
-        ),
+        Intent::OpenDiagnostics => {
+            let lines = runtime
+                .diagnostics()
+                .await
+                .into_iter()
+                .flat_map(|backend| {
+                    let mut lines = vec![format!(
+                        "{}: {}{}",
+                        backend.backend,
+                        backend.owner.as_deref().unwrap_or("not running"),
+                        backend
+                            .version
+                            .as_ref()
+                            .map_or_else(String::new, |version| format!(" ({version})"))
+                    )];
+                    lines.extend(
+                        backend
+                            .properties
+                            .into_iter()
+                            .map(|(name, value)| format!("  {name}: {value}")),
+                    );
+                    lines.extend(
+                        backend
+                            .warnings
+                            .into_iter()
+                            .map(|warning| format!("  warning: {warning}")),
+                    );
+                    lines.push(String::new());
+                    lines
+                })
+                .collect();
+            application.show_diagnostics(lines);
+        }
         intent => runtime.dispatch(intent, &application.reducer.state, now_ms),
     }
 }
@@ -109,11 +153,52 @@ fn elapsed_ms(started: Instant) -> u64 {
     started.elapsed().as_millis().try_into().unwrap_or(u64::MAX)
 }
 
-fn print_diagnostics_placeholder(json: bool, log_path: &std::path::Path) {
+async fn print_diagnostics(
+    runtime: &Runtime,
+    json: bool,
+    log_path: &std::path::Path,
+) -> Result<(), Box<dyn Error>> {
+    let diagnostics = runtime.diagnostics().await;
     if json {
-        println!("{{\"status\":\"backend initialization pending\"}}");
+        let backends = diagnostics
+            .into_iter()
+            .map(|backend| {
+                serde_json::json!({
+                    "backend": backend.backend.to_string(),
+                    "available": backend.owner.is_some(),
+                    "owner": backend.owner,
+                    "version": backend.version,
+                    "properties": backend.properties,
+                    "warnings": backend.warnings,
+                })
+            })
+            .collect::<Vec<_>>();
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "log": log_path,
+                "backends": backends,
+            }))?
+        );
     } else {
-        println!("radioctl backend initialization pending");
         println!("log: {}", log_path.display());
+        for backend in diagnostics {
+            println!();
+            println!(
+                "{}: {}",
+                backend.backend,
+                backend.owner.as_deref().unwrap_or("not running")
+            );
+            if let Some(version) = backend.version {
+                println!("  version: {version}");
+            }
+            for (name, value) in backend.properties {
+                println!("  {name}: {value}");
+            }
+            for warning in backend.warnings {
+                println!("  warning: {warning}");
+            }
+        }
     }
+    Ok(())
 }

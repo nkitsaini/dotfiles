@@ -26,6 +26,7 @@ pub enum Overlay {
     Palette,
     Search,
     Credential,
+    Diagnostics,
 }
 
 #[derive(Debug)]
@@ -97,6 +98,7 @@ pub struct Application {
     pub palette_query: String,
     pub palette_selected: usize,
     pub list_hit_area: ListHitArea,
+    pub diagnostics: Vec<String>,
     credential_target: Option<EntityId>,
     credential: CredentialBuffer,
     quit: bool,
@@ -134,6 +136,7 @@ impl Application {
             palette_query: String::new(),
             palette_selected: 0,
             list_hit_area: ListHitArea::default(),
+            diagnostics: Vec::new(),
             credential_target: None,
             credential: CredentialBuffer::default(),
             quit: false,
@@ -150,6 +153,11 @@ impl Application {
 
     pub fn credential_length(&self) -> usize {
         self.credential.0.chars().count()
+    }
+
+    pub fn show_diagnostics(&mut self, lines: Vec<String>) {
+        self.diagnostics = lines;
+        self.overlay = Some(Overlay::Diagnostics);
     }
 
     pub fn tick(&mut self, now_ms: u64) -> bool {
@@ -281,7 +289,7 @@ impl Application {
             Some(Overlay::Palette) => return self.handle_palette_key(key),
             Some(Overlay::Search) => return self.handle_search_key(key),
             Some(Overlay::Credential) => unreachable!("credential overlay handled above"),
-            Some(Overlay::Help | Overlay::Activity) => {
+            Some(Overlay::Help | Overlay::Activity | Overlay::Diagnostics) => {
                 if matches!(key.code, KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter) {
                     self.overlay = None;
                 }

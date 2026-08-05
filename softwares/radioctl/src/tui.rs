@@ -60,6 +60,7 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut Application) {
         Some(Overlay::Palette) => draw_palette(frame, area, app),
         Some(Overlay::Search) => draw_search(frame, area, app),
         Some(Overlay::Credential) => draw_credential(frame, area, app),
+        Some(Overlay::Diagnostics) => draw_diagnostics(frame, area, app),
         None => {}
     }
 }
@@ -516,6 +517,26 @@ fn draw_credential(frame: &mut Frame<'_>, area: Rect, app: &Application) {
                 .borders(Borders::ALL),
         )
         .wrap(Wrap { trim: false }),
+        popup,
+    );
+}
+
+fn draw_diagnostics(frame: &mut Frame<'_>, area: Rect, app: &Application) {
+    let popup = centered_rect(84, 84, area);
+    frame.render_widget(Clear, popup);
+    let lines = app
+        .diagnostics
+        .iter()
+        .map(|line| Line::from(line.clone()))
+        .collect::<Vec<_>>();
+    frame.render_widget(
+        Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .title(" Diagnostics ")
+                    .borders(Borders::ALL),
+            )
+            .wrap(Wrap { trim: false }),
         popup,
     );
 }
