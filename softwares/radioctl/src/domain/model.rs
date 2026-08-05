@@ -291,6 +291,11 @@ pub enum DesiredState {
     Forgotten,
     AutoJoinEnabled,
     AutoJoinDisabled,
+    Paired,
+    Trusted,
+    Untrusted,
+    Blocked,
+    Unblocked,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

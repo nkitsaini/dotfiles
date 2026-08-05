@@ -500,6 +500,31 @@ fn desired_state_is_observed(state: &AppState, operation: &Operation) -> bool {
             .devices
             .get(id)
             .is_none_or(|device| !device.paired && !device.trusted),
+        (EntityId::Bluetooth(id), DesiredState::Paired) => state
+            .bluetooth
+            .devices
+            .get(id)
+            .is_some_and(|device| device.paired),
+        (EntityId::Bluetooth(id), DesiredState::Trusted) => state
+            .bluetooth
+            .devices
+            .get(id)
+            .is_some_and(|device| device.trusted),
+        (EntityId::Bluetooth(id), DesiredState::Untrusted) => state
+            .bluetooth
+            .devices
+            .get(id)
+            .is_some_and(|device| !device.trusted),
+        (EntityId::Bluetooth(id), DesiredState::Blocked) => state
+            .bluetooth
+            .devices
+            .get(id)
+            .is_some_and(|device| device.blocked),
+        (EntityId::Bluetooth(id), DesiredState::Unblocked) => state
+            .bluetooth
+            .devices
+            .get(id)
+            .is_some_and(|device| !device.blocked),
         (EntityId::WifiInterface(id), DesiredState::Powered) => state
             .wifi
             .interfaces
@@ -890,6 +915,32 @@ mod tests {
         saved.auto_join = true;
         saved.last_seen_ms = 20;
         reducer.apply(wifi_event(2, vec![saved]));
+        assert!(reducer.state.operations.is_empty());
+    }
+
+    #[test]
+    fn bluetooth_property_change_waits_for_observed_state() {
+        let mut reducer = Reducer::default();
+        let device = bluetooth_device("AA:BB:CC:DD:EE:FF", true, 10);
+        let id = device.id.clone();
+        reducer.apply(bluetooth_event(1, vec![device.clone()]));
+        reducer.apply(AppEvent::OperationStarted(Operation {
+            id: OperationId(93),
+            backend: BackendKind::Bluez,
+            target: EntityId::Bluetooth(id),
+            desired: super::super::DesiredState::Blocked,
+            phase: OperationPhase::AwaitingConfirmation("blocking".into()),
+            started_at_ms: 11,
+            deadline_ms: 1_000,
+            backend_epoch: 1,
+        }));
+
+        reducer.apply(bluetooth_event(2, vec![device.clone()]));
+        assert_eq!(reducer.state.operations.len(), 1);
+
+        let mut blocked = device;
+        blocked.blocked = true;
+        reducer.apply(bluetooth_event(3, vec![blocked]));
         assert!(reducer.state.operations.is_empty());
     }
 

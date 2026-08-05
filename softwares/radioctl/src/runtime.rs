@@ -565,6 +565,35 @@ fn route_intent(
                 None,
             ))
         }
+        Intent::PairBluetooth(id) => Some((
+            BackendKind::Bluez,
+            EntityId::Bluetooth(id),
+            DesiredState::Paired,
+            BackendAction::Pair,
+            None,
+        )),
+        Intent::SetBluetoothTrusted { id, trusted } => Some((
+            BackendKind::Bluez,
+            EntityId::Bluetooth(id),
+            if trusted {
+                DesiredState::Trusted
+            } else {
+                DesiredState::Untrusted
+            },
+            BackendAction::SetTrusted(trusted),
+            None,
+        )),
+        Intent::SetBluetoothBlocked { id, blocked } => Some((
+            BackendKind::Bluez,
+            EntityId::Bluetooth(id),
+            if blocked {
+                DesiredState::Blocked
+            } else {
+                DesiredState::Unblocked
+            },
+            BackendAction::SetBlocked(blocked),
+            None,
+        )),
         Intent::Quit
         | Intent::Cancel(_)
         | Intent::OpenDiagnostics
@@ -805,6 +834,37 @@ mod tests {
         let manual = route_intent(Intent::ToggleBluetoothDiscovery, &state).unwrap();
         assert_eq!(manual.2, DesiredState::Idle);
         assert_eq!(manual.3, BackendAction::StopScan);
+    }
+
+    #[test]
+    fn bluetooth_property_intents_route_to_bluez() {
+        let adapter = crate::domain::AdapterId("hci0".into());
+        let id = crate::domain::BluetoothDeviceId {
+            adapter,
+            address: crate::domain::HardwareAddress("01:23:45:67:89:AB".into()),
+        };
+        let state = AppState::default();
+
+        let paired = route_intent(Intent::PairBluetooth(id.clone()), &state).unwrap();
+        assert_eq!(paired.0, BackendKind::Bluez);
+        assert_eq!(paired.2, DesiredState::Paired);
+        assert_eq!(paired.3, BackendAction::Pair);
+
+        let trusted = route_intent(
+            Intent::SetBluetoothTrusted {
+                id: id.clone(),
+                trusted: false,
+            },
+            &state,
+        )
+        .unwrap();
+        assert_eq!(trusted.2, DesiredState::Untrusted);
+        assert_eq!(trusted.3, BackendAction::SetTrusted(false));
+
+        let blocked =
+            route_intent(Intent::SetBluetoothBlocked { id, blocked: true }, &state).unwrap();
+        assert_eq!(blocked.2, DesiredState::Blocked);
+        assert_eq!(blocked.3, BackendAction::SetBlocked(true));
     }
 
     fn candidate_snapshot(kind: BackendKind, revision: u64, usable: bool) -> BackendEvent {

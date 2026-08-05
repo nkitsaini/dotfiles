@@ -23,6 +23,9 @@ connection until the daemon reports the final state.
   subnet masks, interface, backend, and BSSID. Bluetooth details include its
   adapter and address, RSSI when BlueZ supplies it, pairing/trust/block state,
   service readiness, and battery level when available.
+- Bluetooth actions include pair, connect/disconnect, trust/untrust,
+  block/unblock, and confirmed forget. The right pane shows only actions the
+  selected adapter and device can currently perform.
 - `F2` or `Ctrl-R` reveals/hides a password while it is being entered. Closing
   a password or QR overlay immediately clears its credential material.
 - Focus follows the stable network/device identity even when connection state

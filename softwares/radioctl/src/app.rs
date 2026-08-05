@@ -52,6 +52,15 @@ pub enum Intent {
         id: WifiNetworkId,
         enabled: bool,
     },
+    PairBluetooth(BluetoothDeviceId),
+    SetBluetoothTrusted {
+        id: BluetoothDeviceId,
+        trusted: bool,
+    },
+    SetBluetoothBlocked {
+        id: BluetoothDeviceId,
+        blocked: bool,
+    },
     ShowWifiSecret {
         id: WifiNetworkId,
         qr: bool,
@@ -70,13 +79,16 @@ pub enum PaletteAction {
     ShowWifiPassword,
     ShowWifiQr,
     ForgetBluetooth,
+    PairBluetooth,
+    ToggleBluetoothTrust,
+    ToggleBluetoothBlock,
     Activity,
     Help,
     Quit,
 }
 
 impl PaletteAction {
-    pub const ALL: [Self; 13] = [
+    pub const ALL: [Self; 16] = [
         Self::ToggleWifi,
         Self::ScanWifi,
         Self::ToggleBluetooth,
@@ -87,6 +99,9 @@ impl PaletteAction {
         Self::ShowWifiPassword,
         Self::ShowWifiQr,
         Self::ForgetBluetooth,
+        Self::PairBluetooth,
+        Self::ToggleBluetoothTrust,
+        Self::ToggleBluetoothBlock,
         Self::Activity,
         Self::Help,
         Self::Quit,
@@ -104,6 +119,9 @@ impl PaletteAction {
             Self::ShowWifiPassword => "Show saved Wi-Fi password",
             Self::ShowWifiQr => "Show Wi-Fi QR code",
             Self::ForgetBluetooth => "Forget selected Bluetooth device",
+            Self::PairBluetooth => "Pair selected Bluetooth device",
+            Self::ToggleBluetoothTrust => "Toggle trust for selected Bluetooth device",
+            Self::ToggleBluetoothBlock => "Toggle block for selected Bluetooth device",
             Self::Activity => "Open activity journal",
             Self::Help => "Open keyboard help",
             Self::Quit => "Quit radioctl",
@@ -117,6 +135,9 @@ pub enum EntryAction {
     ToggleAutoJoin,
     ShowPassword,
     ShowQr,
+    Pair,
+    ToggleTrust,
+    ToggleBlock,
     Forget,
 }
 
@@ -321,6 +342,15 @@ impl Application {
                 }
             }
             Pane::Bluetooth => {
+                if self.palette_action_available(PaletteAction::PairBluetooth) {
+                    actions.push(EntryAction::Pair);
+                }
+                if self.palette_action_available(PaletteAction::ToggleBluetoothTrust) {
+                    actions.push(EntryAction::ToggleTrust);
+                }
+                if self.palette_action_available(PaletteAction::ToggleBluetoothBlock) {
+                    actions.push(EntryAction::ToggleBlock);
+                }
                 if self.palette_action_available(PaletteAction::ForgetBluetooth) {
                     actions.push(EntryAction::Forget);
                 }
@@ -363,6 +393,29 @@ impl Application {
             ),
             EntryAction::ShowPassword => "[p] Show saved password".into(),
             EntryAction::ShowQr => "[r] Show Wi-Fi QR code".into(),
+            EntryAction::Pair => "[p] Pair".into(),
+            EntryAction::ToggleTrust => format!(
+                "[t] {}",
+                if self
+                    .selected_bluetooth()
+                    .is_some_and(|device| device.trusted)
+                {
+                    "Untrust"
+                } else {
+                    "Trust"
+                }
+            ),
+            EntryAction::ToggleBlock => format!(
+                "[b] {}",
+                if self
+                    .selected_bluetooth()
+                    .is_some_and(|device| device.blocked)
+                {
+                    "Unblock"
+                } else {
+                    "Block"
+                }
+            ),
             EntryAction::Forget => "[f] Forget".into(),
         }
     }
@@ -532,6 +585,20 @@ impl Application {
                                 capability_supported(&adapter.capabilities, Capability::Forget)
                             })
                 }),
+            PaletteAction::PairBluetooth => self.selected_bluetooth().is_some_and(|device| {
+                !device.paired
+                    && !device.blocked
+                    && self.selected_bluetooth_capability(Capability::Pairing)
+            }),
+            PaletteAction::ToggleBluetoothTrust => {
+                self.selected_bluetooth().is_some_and(|device| {
+                    (device.paired || device.trusted)
+                        && self.selected_bluetooth_capability(Capability::Trust)
+                })
+            }
+            PaletteAction::ToggleBluetoothBlock => self
+                .selected_bluetooth()
+                .is_some_and(|_| self.selected_bluetooth_capability(Capability::Block)),
             _ => true,
         }
     }
@@ -553,6 +620,25 @@ impl Application {
             .as_ref()
             .and_then(|id| self.reducer.state.wifi.interfaces.get(id))
             .is_some_and(|interface| capability_supported(&interface.capabilities, capability))
+    }
+
+    fn selected_bluetooth(&self) -> Option<&crate::domain::BluetoothDevice> {
+        self.reducer
+            .state
+            .bluetooth
+            .selected
+            .as_ref()
+            .and_then(|id| self.reducer.state.bluetooth.devices.get(id))
+    }
+
+    fn selected_bluetooth_capability(&self, capability: Capability) -> bool {
+        self.reducer
+            .state
+            .bluetooth
+            .selected_adapter
+            .as_ref()
+            .and_then(|id| self.reducer.state.bluetooth.adapters.get(id))
+            .is_some_and(|adapter| capability_supported(&adapter.capabilities, capability))
     }
 
     pub fn set_list_hit_area(&mut self, area: Rect, first_visible_row: usize) {
@@ -706,6 +792,15 @@ impl Application {
             }
             KeyCode::Char('r') if self.entry_actions().contains(&EntryAction::ShowQr) => {
                 self.run_entry_action(EntryAction::ShowQr)
+            }
+            KeyCode::Char('p') if self.entry_actions().contains(&EntryAction::Pair) => {
+                self.run_entry_action(EntryAction::Pair)
+            }
+            KeyCode::Char('t') if self.entry_actions().contains(&EntryAction::ToggleTrust) => {
+                self.run_entry_action(EntryAction::ToggleTrust)
+            }
+            KeyCode::Char('b') if self.entry_actions().contains(&EntryAction::ToggleBlock) => {
+                self.run_entry_action(EntryAction::ToggleBlock)
             }
             KeyCode::Char('f') if self.entry_actions().contains(&EntryAction::Forget) => {
                 self.run_entry_action(EntryAction::Forget)
@@ -874,6 +969,27 @@ impl Application {
                 self.overlay = Some(Overlay::Confirm);
                 None
             }
+            PaletteAction::PairBluetooth => self
+                .reducer
+                .state
+                .bluetooth
+                .selected
+                .clone()
+                .map(Intent::PairBluetooth),
+            PaletteAction::ToggleBluetoothTrust => {
+                let device = self.selected_bluetooth()?;
+                Some(Intent::SetBluetoothTrusted {
+                    id: device.id.clone(),
+                    trusted: !device.trusted,
+                })
+            }
+            PaletteAction::ToggleBluetoothBlock => {
+                let device = self.selected_bluetooth()?;
+                Some(Intent::SetBluetoothBlocked {
+                    id: device.id.clone(),
+                    blocked: !device.blocked,
+                })
+            }
             PaletteAction::Activity => {
                 self.overlay = Some(Overlay::Activity);
                 None
@@ -910,6 +1026,27 @@ impl Application {
                 .selected
                 .clone()
                 .map(|id| Intent::ShowWifiSecret { id, qr: true }),
+            EntryAction::Pair => self
+                .reducer
+                .state
+                .bluetooth
+                .selected
+                .clone()
+                .map(Intent::PairBluetooth),
+            EntryAction::ToggleTrust => {
+                let device = self.selected_bluetooth()?;
+                Some(Intent::SetBluetoothTrusted {
+                    id: device.id.clone(),
+                    trusted: !device.trusted,
+                })
+            }
+            EntryAction::ToggleBlock => {
+                let device = self.selected_bluetooth()?;
+                Some(Intent::SetBluetoothBlocked {
+                    id: device.id.clone(),
+                    blocked: !device.blocked,
+                })
+            }
             EntryAction::Forget => {
                 let target = match self.pane {
                     Pane::Wifi => self.reducer.state.wifi.selected.clone().map(EntityId::Wifi),
@@ -1162,8 +1299,9 @@ mod tests {
 
     use super::*;
     use crate::domain::{
-        BackendEvent, BackendKind, BackendPayload, Connectivity, InterfaceId, IpAddressInfo, Ssid,
-        WifiInterface, WifiNetwork, WifiNetworkId, WifiSecurity, WifiSnapshot,
+        AdapterId, BackendEvent, BackendKind, BackendPayload, BluetoothAdapter, BluetoothDevice,
+        BluetoothSnapshot, Connectivity, HardwareAddress, InterfaceId, IpAddressInfo, Presence,
+        Ssid, WifiInterface, WifiNetwork, WifiNetworkId, WifiSecurity, WifiSnapshot,
     };
 
     fn key(code: KeyCode) -> Event {
@@ -1223,6 +1361,49 @@ mod tests {
         app
     }
 
+    fn application_with_bluetooth(paired: bool, trusted: bool, blocked: bool) -> Application {
+        let mut app = Application::new();
+        app.pane = Pane::Bluetooth;
+        let adapter = AdapterId("hci0".into());
+        let id = BluetoothDeviceId {
+            adapter: adapter.clone(),
+            address: HardwareAddress("01:23:45:67:89:AB".into()),
+        };
+        app.reducer.apply(AppEvent::Backend(BackendEvent {
+            backend: BackendKind::Bluez,
+            epoch: 1,
+            revision: 1,
+            observed_at_ms: 1,
+            payload: BackendPayload::BluetoothSnapshot(BluetoothSnapshot {
+                adapters: vec![BluetoothAdapter {
+                    id: adapter,
+                    powered: true,
+                    scanning: true,
+                    capabilities: std::collections::BTreeMap::from([
+                        (Capability::Pairing, CapabilityState::Supported),
+                        (Capability::Trust, CapabilityState::Supported),
+                        (Capability::Block, CapabilityState::Supported),
+                        (Capability::Forget, CapabilityState::Supported),
+                    ]),
+                }],
+                devices: vec![BluetoothDevice {
+                    id,
+                    name: "Headphones".into(),
+                    state: ConnectionState::Disconnected,
+                    paired,
+                    trusted,
+                    blocked,
+                    services_resolved: false,
+                    rssi: Some(-50),
+                    battery_percent: Some(75),
+                    presence: Presence::Present,
+                    last_seen_ms: 1,
+                }],
+            }),
+        }));
+        app
+    }
+
     #[test]
     fn enter_disconnects_an_already_connected_network() {
         let mut app = application_with_network(ConnectionState::Connected);
@@ -1234,6 +1415,35 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn bluetooth_shortcuts_expose_pair_trust_and_block_actions() {
+        let mut unpaired = application_with_bluetooth(false, false, false);
+        assert!(matches!(
+            unpaired.handle_terminal_event(key(KeyCode::Char('p'))),
+            Some(Intent::PairBluetooth(_))
+        ));
+
+        let mut paired = application_with_bluetooth(true, false, false);
+        assert!(matches!(
+            paired.handle_terminal_event(key(KeyCode::Char('t'))),
+            Some(Intent::SetBluetoothTrusted { trusted: true, .. })
+        ));
+        assert!(matches!(
+            paired.handle_terminal_event(key(KeyCode::Char('b'))),
+            Some(Intent::SetBluetoothBlocked { blocked: true, .. })
+        ));
+
+        let labels = paired
+            .entry_actions()
+            .into_iter()
+            .map(|action| paired.entry_action_label(action))
+            .collect::<Vec<_>>();
+        assert!(labels.iter().any(|label| label == "[t] Trust"));
+        assert!(labels.iter().any(|label| label == "[b] Block"));
+        assert!(labels.iter().any(|label| label == "[f] Forget"));
+        assert!(!labels.iter().any(|label| label == "[p] Pair"));
     }
 
     #[test]
