@@ -5,9 +5,13 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
-  outputs = { self, nixpkgs }:
+  outputs =
+    { self, nixpkgs }:
     let
-      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f (import nixpkgs { inherit system; }));
     in
     {
@@ -23,11 +27,6 @@
             rust-analyzer
           ];
 
-          buildInputs = with pkgs; [
-            dbus
-            udev
-          ];
-
           shellHook = ''
             export RUST_BACKTRACE=1
           '';
@@ -39,19 +38,31 @@
         default = pkgs.rustPlatform.buildRustPackage {
           pname = "radioctl";
           version = "0.1.0";
-          src = ./.;
+          # Keep local build artifacts and logs out of the Nix source closure.
+          src = pkgs.lib.fileset.toSource {
+            root = ./.;
+            fileset = pkgs.lib.fileset.unions [
+              ./Cargo.toml
+              ./Cargo.lock
+              ./src
+            ];
+          };
           cargoLock.lockFile = ./Cargo.lock;
-
-          doCheck = false;
-
-          nativeBuildInputs = [ pkgs.pkg-config ];
-          buildInputs = [ pkgs.dbus pkgs.udev ];
 
           meta = {
             description = "A high-quality TUI replacement for bluetoothctl and nmtui";
             mainProgram = "radioctl";
             license = with pkgs.lib.licenses; [ mit ];
           };
+        };
+      });
+
+      # Focused, local QEMU validation of real daemon ownership and the
+      # diagnostics path. This is intentionally not a CI workflow.
+      checks = forAllSystems (pkgs: {
+        daemon-integration = import ./tests/nixos.nix {
+          inherit pkgs;
+          package = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
       });
     };
