@@ -50,10 +50,13 @@ exits. Use `--no-auto-scan` or `--no-auto-discover` when power usage matters mor
 than immediate nearby-device visibility.
 
 The list separates observed state (`connected`, `getting IP`, and so on) from a
-pending request (`waiting→connected`). Saved Wi-Fi networks and paired or trusted
-Bluetooth devices remain visible as `out of range` and sort below devices that
-are currently present. Unsaved transient entries receive a short grace period,
-which prevents scan snapshots from making the list flicker.
+pending request (`waiting→connected`). Entries the daemon stops reporting stay
+visible briefly as `out of range` so a single snapshot gap cannot flicker the
+list, then drop once the grace period expires. Saved Wi-Fi profiles and paired
+Bluetooth devices that the daemon still reports as known but not currently
+reachable remain as `out of range` below present entries. When BlueZ or a Wi-Fi
+daemon re-keys the same name under a new identity, the predecessor is dropped
+immediately instead of being listed twice.
 
 BlueZ's RSSI property is optional. A remembered device without RSSI is shown as
 `range unknown` rather than incorrectly labelled out of range; starting

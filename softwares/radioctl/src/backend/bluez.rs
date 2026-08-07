@@ -120,12 +120,8 @@ impl BluezBackend {
             else {
                 continue;
             };
-            let address = string_property(properties, "Address").unwrap_or_else(|| {
-                path.rsplit('/')
-                    .next()
-                    .unwrap_or_default()
-                    .replace('_', ":")
-            });
+            let address = string_property(properties, "Address")
+                .unwrap_or_else(|| address_from_path(path.as_str()));
             let connected = bool_property(properties, "Connected").unwrap_or(false);
             let services_resolved = bool_property(properties, "ServicesResolved").unwrap_or(false);
             let name = string_property(properties, "Alias")
@@ -374,6 +370,19 @@ fn bluetooth_capabilities() -> CapabilityMap {
     .collect()
 }
 
+/// Device identity comes from the `Address` property. The object path is the
+/// fallback, and it has to produce the identical address: a device listed under
+/// two spellings of the same address would appear twice, and the duplicate
+/// would never match anything BlueZ reports later.
+fn address_from_path(path: &str) -> String {
+    path.rsplit('/')
+        .next()
+        .unwrap_or_default()
+        .trim_start_matches("dev_")
+        .replace('_', ":")
+        .to_uppercase()
+}
+
 fn bluez_presence(connected: bool, rssi: Option<i16>, discovering: bool) -> Presence {
     if connected || (discovering && rssi.is_some()) {
         Presence::Present
@@ -450,6 +459,14 @@ mod tests {
             CapabilityState::Supported
         );
         assert_eq!(capabilities[&Capability::Trust], CapabilityState::Supported);
+    }
+
+    #[test]
+    fn object_paths_resolve_to_the_same_address_bluez_reports() {
+        assert_eq!(
+            address_from_path("/org/bluez/hci0/dev_88_0E_85_9C_A7_BC"),
+            "88:0E:85:9C:A7:BC"
+        );
     }
 
     #[test]

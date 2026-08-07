@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
     ActivityEntry, ActivityLevel, AppState, BackendEvent, BackendPayload, BackendState,
@@ -42,9 +42,17 @@ pub enum ReduceOutcome {
     Unchanged,
 }
 
+/// Entries a daemon stops reporting are kept for a short grace period so a
+/// single snapshot gap cannot make the list flicker. The grace period is
+/// bounded for every entry, including saved networks and paired devices: every
+/// backend reports those for as long as they exist, so one that stops arriving
+/// has been removed, replaced, or re-keyed by the daemon. Keeping it until the
+/// process exits would leave a phantom row that no rescan can clear.
 #[derive(Debug, Default)]
 pub struct Reducer {
     pub state: AppState,
+    wifi_missing_since: BTreeMap<WifiNetworkId, u64>,
+    bluetooth_missing_since: BTreeMap<BluetoothDeviceId, u64>,
 }
 
 impl Reducer {
@@ -168,25 +176,47 @@ impl Reducer {
             .into_iter()
             .map(|network| (network.id.clone(), network))
             .collect();
+        let reported = incoming.keys().cloned().collect::<BTreeSet<_>>();
+        let reported_names = incoming
+            .keys()
+            .map(|id| (id.interface.clone(), id.ssid.clone()))
+            .collect::<BTreeSet<_>>();
         let selected = self.state.wifi.selected.clone();
         let mut merged = incoming;
 
         for (id, previous) in &self.state.wifi.networks {
+            if reported.contains(id) {
+                continue;
+            }
             let being_forgotten = self
                 .state
                 .active_operation(&super::EntityId::Wifi(id.clone()))
                 .is_some_and(|operation| operation.desired == super::DesiredState::Forgotten);
-            if !merged.contains_key(id)
-                && !being_forgotten
-                && self.state.wifi.interfaces.contains_key(&id.interface)
-                && (previous.saved
-                    || now_ms.saturating_sub(previous.last_seen_ms) <= MISSING_WIFI_RETENTION_MS)
+            // The same name under a different security type is the same network
+            // re-keyed by the daemon, not a second one that went out of range.
+            let superseded = reported_names.contains(&(id.interface.clone(), id.ssid.clone()));
+            let missing_since = self.wifi_missing_since.get(id).copied().unwrap_or(now_ms);
+            if being_forgotten
+                || superseded
+                || !self.state.wifi.interfaces.contains_key(&id.interface)
+                || now_ms.saturating_sub(missing_since) > MISSING_WIFI_RETENTION_MS
             {
-                let mut missing = previous.clone();
-                missing.present = false;
-                merged.insert(id.clone(), missing);
+                continue;
             }
+            let mut missing = previous.clone();
+            missing.present = false;
+            merged.insert(id.clone(), missing);
         }
+
+        let missing_since = merged
+            .keys()
+            .filter(|id| !reported.contains(*id))
+            .map(|id| {
+                let since = self.wifi_missing_since.get(id).copied().unwrap_or(now_ms);
+                (id.clone(), since)
+            })
+            .collect();
+        self.wifi_missing_since = missing_since;
 
         self.state.wifi.order = stable_wifi_order(&self.state.wifi.order, &merged);
         self.state.wifi.networks = merged;
@@ -222,27 +252,57 @@ impl Reducer {
                 (device.id.clone(), device)
             })
             .collect();
+        let reported = incoming.keys().cloned().collect::<BTreeSet<_>>();
+        let reported_names = incoming
+            .values()
+            .map(|device| (device.id.adapter.clone(), device.name.clone()))
+            .collect::<BTreeSet<_>>();
         let selected = self.state.bluetooth.selected.clone();
         let mut merged = incoming;
 
         for (id, previous) in &self.state.bluetooth.devices {
+            if reported.contains(id) {
+                continue;
+            }
             let being_forgotten = self
                 .state
                 .active_operation(&super::EntityId::Bluetooth(id.clone()))
                 .is_some_and(|operation| operation.desired == super::DesiredState::Forgotten);
-            if !merged.contains_key(id)
-                && !being_forgotten
-                && self.state.bluetooth.adapters.contains_key(&id.adapter)
-                && (previous.paired
-                    || previous.trusted
-                    || now_ms.saturating_sub(previous.last_seen_ms)
-                        <= MISSING_BLUETOOTH_RETENTION_MS)
+            // BlueZ re-creates a device object when its address changes, for
+            // example when a resolved identity replaces a random address. The
+            // replacement carries the same name, so keeping the old object
+            // would show the device twice, once permanently out of range.
+            let superseded = reported_names.contains(&(id.adapter.clone(), previous.name.clone()));
+            let missing_since = self
+                .bluetooth_missing_since
+                .get(id)
+                .copied()
+                .unwrap_or(now_ms);
+            if being_forgotten
+                || superseded
+                || !self.state.bluetooth.adapters.contains_key(&id.adapter)
+                || now_ms.saturating_sub(missing_since) > MISSING_BLUETOOTH_RETENTION_MS
             {
-                let mut missing = previous.clone();
-                missing.presence = super::Presence::OutOfRange;
-                merged.insert(id.clone(), missing);
+                continue;
             }
+            let mut missing = previous.clone();
+            missing.presence = super::Presence::OutOfRange;
+            merged.insert(id.clone(), missing);
         }
+
+        let missing_since = merged
+            .keys()
+            .filter(|id| !reported.contains(*id))
+            .map(|id| {
+                let since = self
+                    .bluetooth_missing_since
+                    .get(id)
+                    .copied()
+                    .unwrap_or(now_ms);
+                (id.clone(), since)
+            })
+            .collect();
+        self.bluetooth_missing_since = missing_since;
 
         self.state.bluetooth.order = stable_bluetooth_order(&self.state.bluetooth.order, &merged);
         self.state.bluetooth.devices = merged;
@@ -398,11 +458,10 @@ impl Reducer {
             );
         }
         let wifi_before = self.state.wifi.networks.len();
-        self.state.wifi.networks.retain(|_, network| {
-            network.present
-                || network.saved
-                || now_ms.saturating_sub(network.last_seen_ms) <= MISSING_WIFI_RETENTION_MS
-        });
+        for id in expired(&self.wifi_missing_since, now_ms, MISSING_WIFI_RETENTION_MS) {
+            self.state.wifi.networks.remove(&id);
+            self.wifi_missing_since.remove(&id);
+        }
         self.state
             .wifi
             .order
@@ -418,12 +477,14 @@ impl Reducer {
         }
 
         let bt_before = self.state.bluetooth.devices.len();
-        self.state.bluetooth.devices.retain(|_, device| {
-            device.presence != super::Presence::OutOfRange
-                || device.paired
-                || device.trusted
-                || now_ms.saturating_sub(device.last_seen_ms) <= MISSING_BLUETOOTH_RETENTION_MS
-        });
+        for id in expired(
+            &self.bluetooth_missing_since,
+            now_ms,
+            MISSING_BLUETOOTH_RETENTION_MS,
+        ) {
+            self.state.bluetooth.devices.remove(&id);
+            self.bluetooth_missing_since.remove(&id);
+        }
         self.state
             .bluetooth
             .order
@@ -569,6 +630,18 @@ fn desired_state_is_observed(state: &AppState, operation: &Operation) -> bool {
             .is_some_and(|adapter| !adapter.scanning),
         _ => false,
     }
+}
+
+fn expired<K: Clone + Ord>(
+    missing_since: &BTreeMap<K, u64>,
+    now_ms: u64,
+    retention_ms: u64,
+) -> Vec<K> {
+    missing_since
+        .iter()
+        .filter(|(_, since)| now_ms.saturating_sub(**since) > retention_ms)
+        .map(|(id, _)| id.clone())
+        .collect()
 }
 
 fn preserve_or_first<T: Clone + PartialEq>(selected: Option<T>, order: &[T]) -> Option<T> {
@@ -731,7 +804,7 @@ mod tests {
     fn bluetooth_device(address: &str, paired: bool, now: u64) -> BluetoothDevice {
         BluetoothDevice {
             id: bluetooth_id(address),
-            name: "Keyboard".into(),
+            name: format!("Keyboard {address}"),
             state: ConnectionState::Disconnected,
             paired,
             trusted: paired,
@@ -798,7 +871,7 @@ mod tests {
         assert!(!network.present);
         assert_eq!(reducer.state.wifi.selected, Some(wifi_id(b"unstable")));
 
-        reducer.apply(AppEvent::Tick(30_011));
+        reducer.apply(AppEvent::Tick(30_021));
         assert!(reducer.state.wifi.networks.is_empty());
         assert_eq!(reducer.state.wifi.selected, None);
     }
@@ -811,13 +884,18 @@ mod tests {
         reducer.apply(wifi_event(
             1,
             vec![
-                saved,
+                saved.clone(),
                 wifi_network(b"nearby", ConnectionState::Disconnected, 10),
             ],
         ));
+        saved.present = false;
+        saved.last_seen_ms = 20;
         reducer.apply(wifi_event(
             2,
-            vec![wifi_network(b"nearby", ConnectionState::Disconnected, 20)],
+            vec![
+                saved,
+                wifi_network(b"nearby", ConnectionState::Disconnected, 20),
+            ],
         ));
         reducer.apply(AppEvent::Tick(120_000));
 
@@ -826,6 +904,38 @@ mod tests {
             reducer.state.wifi.order,
             vec![wifi_id(b"nearby"), wifi_id(b"saved")]
         );
+    }
+
+    #[test]
+    fn saved_wifi_the_daemon_no_longer_reports_does_not_linger_forever() {
+        let mut reducer = Reducer::default();
+        let mut saved = wifi_network(b"saved", ConnectionState::Disconnected, 10);
+        saved.saved = true;
+        reducer.apply(wifi_event(1, vec![saved]));
+        reducer.apply(wifi_event(
+            2,
+            vec![wifi_network(b"nearby", ConnectionState::Disconnected, 20)],
+        ));
+        assert!(!reducer.state.wifi.networks[&wifi_id(b"saved")].present);
+
+        reducer.apply(AppEvent::Tick(60_000));
+        assert!(!reducer.state.wifi.networks.contains_key(&wifi_id(b"saved")));
+    }
+
+    #[test]
+    fn a_rekeyed_network_replaces_its_predecessor_instead_of_duplicating_it() {
+        let mut reducer = Reducer::default();
+        let mut saved = wifi_network(b"home", ConnectionState::Disconnected, 10);
+        saved.saved = true;
+        reducer.apply(wifi_event(1, vec![saved]));
+
+        let mut rekeyed = wifi_network(b"home", ConnectionState::Disconnected, 20);
+        rekeyed.id.security = WifiSecurity::Enterprise;
+        let rekeyed_id = rekeyed.id.clone();
+        reducer.apply(wifi_event(2, vec![rekeyed]));
+
+        assert_eq!(reducer.state.wifi.order, vec![rekeyed_id]);
+        assert!(reducer.state.wifi.networks[&reducer.state.wifi.order[0]].present);
     }
 
     #[test]
@@ -849,7 +959,7 @@ mod tests {
             .wifi
             .networks
             .contains_key(&wifi_id(b"transient")));
-        reducer.apply(AppEvent::Tick(30_011));
+        reducer.apply(AppEvent::Tick(30_021));
         assert!(!reducer
             .state
             .wifi
@@ -874,13 +984,36 @@ mod tests {
             2,
             vec![bluetooth_device("00:11:22:33:44:66", false, 20)],
         ));
-        reducer.apply(AppEvent::Tick(120_000));
+        reducer.apply(AppEvent::Tick(50_000));
 
         assert_eq!(
             reducer.state.bluetooth.devices[&paired_id].presence,
             Presence::OutOfRange
         );
-        assert_eq!(reducer.state.bluetooth.order, vec![nearby_id, paired_id]);
+        assert_eq!(
+            reducer.state.bluetooth.order,
+            vec![nearby_id, paired_id.clone()]
+        );
+
+        reducer.apply(AppEvent::Tick(120_000));
+        assert!(!reducer.state.bluetooth.devices.contains_key(&paired_id));
+    }
+
+    #[test]
+    fn a_device_that_returns_at_a_new_address_is_not_listed_twice() {
+        let mut reducer = Reducer::default();
+        let previous_id = bluetooth_id("7D:A9:2A:BA:04:FC");
+        let mut renamed = bluetooth_device("7D:A9:2A:BA:04:FC", true, 10);
+        renamed.name = "Headphones".into();
+        reducer.apply(bluetooth_event(1, vec![renamed]));
+
+        let resolved_id = bluetooth_id("88:0E:85:9C:A7:BC");
+        let mut resolved = bluetooth_device("88:0E:85:9C:A7:BC", true, 20);
+        resolved.name = "Headphones".into();
+        reducer.apply(bluetooth_event(2, vec![resolved]));
+
+        assert!(!reducer.state.bluetooth.devices.contains_key(&previous_id));
+        assert_eq!(reducer.state.bluetooth.order, vec![resolved_id]);
     }
 
     #[test]

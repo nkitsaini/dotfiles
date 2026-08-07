@@ -17,6 +17,8 @@ pub mod network_manager;
 pub(crate) mod system;
 pub mod wpa_networkd;
 
+pub use dbus::monotonic_ms;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProbeStatus {
     Available,

@@ -412,9 +412,21 @@ impl NetworkManagerBackend {
             .build()
             .await
             .map_err(|error| dbus_failure("inspect an access point", error))?;
-        let flags = proxy.flags().await.unwrap_or(0);
-        let wpa = proxy.wpa_flags().await.unwrap_or(0);
-        let rsn = proxy.rsn_flags().await.unwrap_or(0);
+        // Security is part of the network identity, so an unread flag cannot be
+        // treated as zero: that would key the network as open, split it from
+        // its saved profile, and leave the original key with nothing to match.
+        let flags = proxy
+            .flags()
+            .await
+            .map_err(|error| dbus_failure("read access point flags", error))?;
+        let wpa = proxy
+            .wpa_flags()
+            .await
+            .map_err(|error| dbus_failure("read access point WPA flags", error))?;
+        let rsn = proxy
+            .rsn_flags()
+            .await
+            .map_err(|error| dbus_failure("read access point RSN flags", error))?;
         Ok(AccessPointRecord {
             path,
             ssid: Ssid(

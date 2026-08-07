@@ -1,10 +1,10 @@
-use std::{error::Error, time::Instant};
+use std::error::Error;
 
 use clap::Parser;
 use futures_util::StreamExt;
 use radioctl::{
     app::{Application, Intent},
-    backend::Secret,
+    backend::{monotonic_ms, Secret},
     cli::{Cli, Command},
     config::Settings,
     discovery::DiscoveryCoordinator,
@@ -41,7 +41,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     terminal::install_panic_hook();
     let mut terminal_session = TerminalSession::enter()?;
     let mut application = Application::new();
-    let started = Instant::now();
     let mut input = crossterm::event::EventStream::new();
     let mut animation = time::interval(Duration::from_millis(100));
     animation.set_missed_tick_behavior(MissedTickBehavior::Skip);
@@ -62,7 +61,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             maybe_event = input.next() => {
                 match maybe_event {
                     Some(Ok(event)) => {
-                        let now_ms = elapsed_ms(started);
+                        let now_ms = monotonic_ms();
                         if let Some(intent) = application.handle_terminal_event(event) {
                             if let Some(intent) = discovery.prepare_user_intent(
                                 intent,
@@ -93,7 +92,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         application.report_runtime_error(
                             "Terminal input failed",
                             error.to_string(),
-                            elapsed_ms(started),
+                            monotonic_ms(),
                         );
                         dirty = true;
                     }
@@ -102,7 +101,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             event = runtime.next_event() => {
                 if let Some(event) = event {
-                    let now_ms = elapsed_ms(started);
+                    let now_ms = monotonic_ms();
                     discovery.observe_event(&event, now_ms);
                     application.reducer.apply(event);
                     reconcile_discovery(
@@ -115,10 +114,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
             _ = animation.tick(), if application.needs_animation() => {
-                dirty = application.tick(elapsed_ms(started));
+                dirty = application.tick(monotonic_ms());
             }
             _ = housekeeping.tick() => {
-                let now_ms = elapsed_ms(started);
+                let now_ms = monotonic_ms();
                 dirty |= application.tick(now_ms);
                 reconcile_discovery(
                     &mut application,
@@ -239,10 +238,6 @@ async fn handle_intent(
         }
         intent => runtime.dispatch(intent, &application.reducer.state, now_ms),
     }
-}
-
-fn elapsed_ms(started: Instant) -> u64 {
-    started.elapsed().as_millis().try_into().unwrap_or(u64::MAX)
 }
 
 async fn print_diagnostics(
