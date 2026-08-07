@@ -1,0 +1,7 @@
+/target
+/result
+/result-mantis-android
+/dist
+/web/node_modules
+/web/.svelte-kit
+/web/build

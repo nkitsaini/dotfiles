@@ -1,0 +1,59 @@
+name: Mantis
+
+on:
+  push:
+    branches: [main]
+    tags: ['mantis-v*']
+    paths:
+      - 'softwares/mantis/**'
+      - 'devices/mantis/bootstrap.sh'
+      - '.github/workflows/mantis.yml'
+  pull_request:
+    paths:
+      - 'softwares/mantis/**'
+      - 'devices/mantis/bootstrap.sh'
+      - '.github/workflows/mantis.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v17
+      - name: Build and test native package with Nix
+        run: nix build ./softwares/mantis#checks.x86_64-linux.default --accept-flake-config --print-build-logs
+      - name: Build frontend with Nix
+        run: nix build ./softwares/mantis#checks.x86_64-linux.frontend --accept-flake-config --print-build-logs
+      - name: Build Android ARM64 release with Nix
+        run: nix build ./softwares/mantis#packages.x86_64-linux.android-aarch64 --accept-flake-config --print-build-logs --out-link result-android
+      - name: Package release artifact
+        run: |
+          mkdir -p dist/stage
+          cp result-android/bin/mantis dist/stage/mantis
+          tar -C dist/stage -czf dist/mantis-aarch64-linux-android.tar.gz mantis
+          cd dist
+          sha256sum mantis-aarch64-linux-android.tar.gz > mantis-aarch64-linux-android.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mantis-aarch64-linux-android
+          path: dist/mantis-aarch64-linux-android.tar.gz*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/mantis-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: mantis-aarch64-linux-android
+          path: dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/mantis-aarch64-linux-android.tar.gz*
+          generate_release_notes: true
