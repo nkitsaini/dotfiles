@@ -695,10 +695,8 @@ fn bluetooth_section(device: &BluetoothDevice) -> u8 {
         _ => match (device.presence, device.paired || device.trusted) {
             (super::Presence::Present, true) => 2,
             (super::Presence::Present, false) => 3,
-            (super::Presence::Unknown, true) => 4,
-            (super::Presence::Unknown, false) => 5,
-            (super::Presence::OutOfRange, true) => 6,
-            (super::Presence::OutOfRange, false) => 7,
+            (super::Presence::Unknown | super::Presence::OutOfRange, true) => 4,
+            (super::Presence::Unknown | super::Presence::OutOfRange, false) => 5,
         },
     }
 }
@@ -1014,6 +1012,49 @@ mod tests {
 
         assert!(!reducer.state.bluetooth.devices.contains_key(&previous_id));
         assert_eq!(reducer.state.bluetooth.order, vec![resolved_id]);
+    }
+
+    #[test]
+    fn bluetooth_order_prefers_connectable_then_remembered_devices() {
+        let mut reducer = Reducer::default();
+        let remembered_nearby = bluetooth_id("00:11:22:33:44:01");
+        let new_nearby = bluetooth_id("00:11:22:33:44:02");
+        let remembered_out_of_range = bluetooth_id("00:11:22:33:44:03");
+        let new_unknown = bluetooth_id("00:11:22:33:44:04");
+        let new_out_of_range = bluetooth_id("00:11:22:33:44:05");
+
+        reducer.apply(bluetooth_event(
+            1,
+            vec![
+                bluetooth_device("00:11:22:33:44:01", true, 10),
+                bluetooth_device("00:11:22:33:44:03", true, 10),
+            ],
+        ));
+
+        let mut unknown = bluetooth_device("00:11:22:33:44:04", false, 20);
+        unknown.presence = Presence::Unknown;
+        let mut out_of_range = bluetooth_device("00:11:22:33:44:05", false, 20);
+        out_of_range.presence = Presence::OutOfRange;
+        reducer.apply(bluetooth_event(
+            2,
+            vec![
+                bluetooth_device("00:11:22:33:44:01", true, 20),
+                bluetooth_device("00:11:22:33:44:02", false, 20),
+                unknown,
+                out_of_range,
+            ],
+        ));
+
+        assert_eq!(
+            reducer.state.bluetooth.order,
+            vec![
+                remembered_nearby,
+                new_nearby,
+                remembered_out_of_range,
+                new_unknown,
+                new_out_of_range,
+            ]
+        );
     }
 
     #[test]

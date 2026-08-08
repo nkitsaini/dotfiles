@@ -1,7 +1,10 @@
+use std::{collections::BTreeMap, fs, path::PathBuf};
+
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
 use ratatui::layout::Rect;
+use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
 use crate::{
@@ -157,6 +160,7 @@ pub struct Application {
     pub pane: Pane,
     pub overlay: Option<Overlay>,
     pub search: String,
+    pub show_out_of_range: bool,
     pub palette_query: String,
     pub palette_selected: usize,
     pub list_hit_area: ListHitArea,
@@ -170,6 +174,16 @@ pub struct Application {
     confirmation_target: Option<EntityId>,
     wifi_share: Option<WifiShare>,
     quit: bool,
+    connection_history: ConnectionHistory,
+    connection_history_path: Option<PathBuf>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+struct ConnectionHistory {
+    sequence: u64,
+    wifi: BTreeMap<String, u64>,
+    bluetooth: BTreeMap<String, u64>,
 }
 
 #[derive(Default)]
@@ -201,6 +215,18 @@ impl Default for Application {
 
 impl Application {
     pub fn new() -> Self {
+        Self::with_connection_history(None, ConnectionHistory::default())
+    }
+
+    pub fn with_persistent_connection_history(path: PathBuf) -> Self {
+        let history = ConnectionHistory::load(&path);
+        Self::with_connection_history(Some(path), history)
+    }
+
+    fn with_connection_history(
+        connection_history_path: Option<PathBuf>,
+        connection_history: ConnectionHistory,
+    ) -> Self {
         let mut reducer = Reducer::default();
         reducer.state.push_activity(ActivityEntry {
             timestamp_ms: 0,
@@ -213,6 +239,7 @@ impl Application {
             pane: Pane::Wifi,
             overlay: None,
             search: String::new(),
+            show_out_of_range: false,
             palette_query: String::new(),
             palette_selected: 0,
             list_hit_area: ListHitArea::default(),
@@ -226,6 +253,8 @@ impl Application {
             confirmation_target: None,
             wifi_share: None,
             quit: false,
+            connection_history,
+            connection_history_path,
         }
     }
 
@@ -427,6 +456,9 @@ impl Application {
     pub fn tick(&mut self, now_ms: u64) -> bool {
         let changed =
             self.reducer.apply(AppEvent::Tick(now_ms)) == crate::domain::ReduceOutcome::Changed;
+        if changed {
+            self.ensure_visible_selection();
+        }
         changed || self.needs_animation()
     }
 
@@ -458,39 +490,117 @@ impl Application {
         }
     }
 
+    pub fn apply_event(&mut self, event: AppEvent) -> crate::domain::ReduceOutcome {
+        let previous_wifi = self
+            .reducer
+            .state
+            .wifi
+            .networks
+            .iter()
+            .map(|(id, network)| (id.clone(), network.state))
+            .collect::<BTreeMap<_, _>>();
+        let previous_bluetooth = self
+            .reducer
+            .state
+            .bluetooth
+            .devices
+            .iter()
+            .map(|(id, device)| (id.clone(), device.state))
+            .collect::<BTreeMap<_, _>>();
+
+        let outcome = self.reducer.apply(event);
+        let mut history_changed = false;
+        for (id, network) in &self.reducer.state.wifi.networks {
+            let newly_connected = match previous_wifi.get(id) {
+                Some(previous) => *previous != ConnectionState::Connected,
+                None => self.connection_history.wifi_recency(id) == 0,
+            };
+            if network.state == ConnectionState::Connected && newly_connected {
+                self.connection_history.record_wifi(id);
+                history_changed = true;
+            }
+        }
+        for (id, device) in &self.reducer.state.bluetooth.devices {
+            let newly_connected = match previous_bluetooth.get(id) {
+                Some(previous) => *previous != ConnectionState::Connected,
+                None => self.connection_history.bluetooth_recency(id) == 0,
+            };
+            if device.state == ConnectionState::Connected && newly_connected {
+                self.connection_history.record_bluetooth(id);
+                history_changed = true;
+            }
+        }
+        if history_changed {
+            self.save_connection_history();
+        }
+        self.ensure_visible_selection();
+        outcome
+    }
+
     pub fn visible_wifi_ids(&self) -> Vec<WifiNetworkId> {
-        let query = self.search.to_lowercase();
-        self.reducer
+        let mut ids = self
+            .reducer
             .state
             .wifi
             .order
             .iter()
             .filter(|id| {
-                query.is_empty()
-                    || self.reducer.state.wifi.networks[*id]
-                        .display_name
-                        .to_lowercase()
-                        .contains(&query)
+                let network = &self.reducer.state.wifi.networks[*id];
+                (self.show_out_of_range || network.present)
+                    && fuzzy_match(&network.display_name, &self.search)
             })
             .cloned()
-            .collect()
+            .collect::<Vec<_>>();
+        ids.sort_by(|left, right| {
+            let left_network = &self.reducer.state.wifi.networks[left];
+            let right_network = &self.reducer.state.wifi.networks[right];
+            connection_section(left_network.state, left_network.present)
+                .cmp(&connection_section(
+                    right_network.state,
+                    right_network.present,
+                ))
+                .then_with(|| {
+                    self.connection_history
+                        .wifi_recency(right)
+                        .cmp(&self.connection_history.wifi_recency(left))
+                })
+        });
+        ids
     }
 
     pub fn visible_bluetooth_ids(&self) -> Vec<BluetoothDeviceId> {
-        let query = self.search.to_lowercase();
-        self.reducer
+        let mut ids = self
+            .reducer
             .state
             .bluetooth
             .order
             .iter()
             .filter(|id| {
                 let device = &self.reducer.state.bluetooth.devices[*id];
-                query.is_empty()
-                    || device.name.to_lowercase().contains(&query)
-                    || id.address.0.to_lowercase().contains(&query)
+                (self.show_out_of_range || device.presence != crate::domain::Presence::OutOfRange)
+                    && (fuzzy_match(&device.name, &self.search)
+                        || fuzzy_match(&id.address.0, &self.search))
             })
             .cloned()
-            .collect()
+            .collect::<Vec<_>>();
+        ids.sort_by(|left, right| {
+            let left_device = &self.reducer.state.bluetooth.devices[left];
+            let right_device = &self.reducer.state.bluetooth.devices[right];
+            connection_section(
+                left_device.state,
+                left_device.presence == crate::domain::Presence::Present,
+            )
+            .cmp(&connection_section(
+                right_device.state,
+                right_device.presence == crate::domain::Presence::Present,
+            ))
+            .then_with(|| {
+                self.connection_history
+                    .bluetooth_recency(right)
+                    .cmp(&self.connection_history.bluetooth_recency(left))
+            })
+        });
+        ids
     }
 
     pub fn filtered_palette_actions(&self) -> Vec<PaletteAction> {
@@ -769,6 +879,11 @@ impl Application {
             }
             KeyCode::Char('/') => {
                 self.overlay = Some(Overlay::Search);
+                None
+            }
+            KeyCode::Char('o') => {
+                self.show_out_of_range = !self.show_out_of_range;
+                self.ensure_visible_selection();
                 None
             }
             KeyCode::Down | KeyCode::Char('j') => {
@@ -1231,6 +1346,96 @@ impl Application {
             _ => None,
         }
     }
+
+    fn save_connection_history(&self) {
+        let Some(path) = &self.connection_history_path else {
+            return;
+        };
+        let Some(parent) = path.parent() else {
+            return;
+        };
+        if let Err(error) = fs::create_dir_all(parent) {
+            tracing::warn!(%error, path = %parent.display(), "could not create state directory");
+            return;
+        }
+        let contents = match serde_json::to_vec_pretty(&self.connection_history) {
+            Ok(contents) => contents,
+            Err(error) => {
+                tracing::warn!(%error, "could not serialize connection history");
+                return;
+            }
+        };
+        let temporary = path.with_extension("json.tmp");
+        if let Err(error) =
+            fs::write(&temporary, contents).and_then(|_| fs::rename(&temporary, path))
+        {
+            tracing::warn!(%error, path = %path.display(), "could not save connection history");
+        }
+    }
+}
+
+impl ConnectionHistory {
+    fn load(path: &std::path::Path) -> Self {
+        match fs::read_to_string(path) {
+            Ok(contents) => serde_json::from_str(&contents).unwrap_or_else(|error| {
+                tracing::warn!(%error, path = %path.display(), "ignoring invalid connection history");
+                Self::default()
+            }),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Self::default(),
+            Err(error) => {
+                tracing::warn!(%error, path = %path.display(), "could not read connection history");
+                Self::default()
+            }
+        }
+    }
+
+    fn record_wifi(&mut self, id: &WifiNetworkId) {
+        self.sequence = self.sequence.saturating_add(1);
+        self.wifi.insert(wifi_history_key(id), self.sequence);
+    }
+
+    fn record_bluetooth(&mut self, id: &BluetoothDeviceId) {
+        self.sequence = self.sequence.saturating_add(1);
+        self.bluetooth
+            .insert(bluetooth_history_key(id), self.sequence);
+    }
+
+    fn wifi_recency(&self, id: &WifiNetworkId) -> u64 {
+        self.wifi.get(&wifi_history_key(id)).copied().unwrap_or(0)
+    }
+
+    fn bluetooth_recency(&self, id: &BluetoothDeviceId) -> u64 {
+        self.bluetooth
+            .get(&bluetooth_history_key(id))
+            .copied()
+            .unwrap_or(0)
+    }
+}
+
+fn connection_section(state: ConnectionState, in_range: bool) -> u8 {
+    match state {
+        ConnectionState::Connected => 0,
+        ConnectionState::Associating
+        | ConnectionState::Authenticating
+        | ConnectionState::ObtainingAddress
+        | ConnectionState::Disconnecting => 1,
+        _ if in_range => 2,
+        _ => 3,
+    }
+}
+
+fn wifi_history_key(id: &WifiNetworkId) -> String {
+    let ssid = id
+        .ssid
+        .0
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    format!("{}:{:?}:{ssid}", id.interface.0, id.security)
+}
+
+fn bluetooth_history_key(id: &BluetoothDeviceId) -> String {
+    id.address.0.to_lowercase()
 }
 
 fn capability_supported(
@@ -1238,6 +1443,24 @@ fn capability_supported(
     capability: Capability,
 ) -> bool {
     capabilities.get(&capability) == Some(&CapabilityState::Supported)
+}
+
+fn fuzzy_match(candidate: &str, query: &str) -> bool {
+    let mut query = query.chars().flat_map(char::to_lowercase);
+    let Some(mut expected) = query.next() else {
+        return true;
+    };
+
+    for character in candidate.chars().flat_map(char::to_lowercase) {
+        if character == expected {
+            let Some(next) = query.next() else {
+                return true;
+            };
+            expected = next;
+        }
+    }
+
+    false
 }
 
 fn wifi_qr_payload(id: &WifiNetworkId, password: &str) -> Result<Zeroizing<String>, String> {
@@ -1476,6 +1699,132 @@ mod tests {
         app.overlay = Some(Overlay::Search);
         app.handle_terminal_event(key(KeyCode::Char('x')));
         assert_eq!(app.reducer.state.wifi.selected, None);
+    }
+
+    #[test]
+    fn slash_search_filters_bluetooth_devices_by_name_and_address() {
+        let mut app = application_with_bluetooth(false, false, false);
+        let selected = app.reducer.state.bluetooth.selected.clone();
+
+        app.handle_terminal_event(key(KeyCode::Char('/')));
+        assert_eq!(app.overlay, Some(Overlay::Search));
+        for character in "HPH".chars() {
+            app.handle_terminal_event(key(KeyCode::Char(character)));
+        }
+        assert_eq!(
+            app.visible_bluetooth_ids(),
+            selected.clone().into_iter().collect::<Vec<_>>()
+        );
+
+        app.search.clear();
+        for character in "456789".chars() {
+            app.handle_terminal_event(key(KeyCode::Char(character)));
+        }
+        assert_eq!(
+            app.visible_bluetooth_ids(),
+            selected.into_iter().collect::<Vec<_>>()
+        );
+
+        app.handle_terminal_event(key(KeyCode::Char('x')));
+        assert!(app.visible_bluetooth_ids().is_empty());
+        assert_eq!(app.reducer.state.bluetooth.selected, None);
+    }
+
+    #[test]
+    fn fuzzy_search_is_case_insensitive_and_requires_ordered_characters() {
+        assert!(fuzzy_match("Living Room Speaker", "LRSP"));
+        assert!(fuzzy_match("Headphones", "hPh"));
+        assert!(!fuzzy_match("Headphones", "phonehead"));
+        assert!(fuzzy_match("anything", ""));
+    }
+
+    #[test]
+    fn out_of_range_items_are_hidden_by_default_and_o_reveals_them() {
+        let mut wifi = application_with_network(ConnectionState::Disconnected);
+        wifi.reducer
+            .state
+            .wifi
+            .networks
+            .values_mut()
+            .next()
+            .unwrap()
+            .present = false;
+        assert!(wifi.visible_wifi_ids().is_empty());
+        wifi.handle_terminal_event(key(KeyCode::Char('o')));
+        assert_eq!(wifi.visible_wifi_ids().len(), 1);
+
+        let mut bluetooth = application_with_bluetooth(true, true, false);
+        bluetooth
+            .reducer
+            .state
+            .bluetooth
+            .devices
+            .values_mut()
+            .next()
+            .unwrap()
+            .presence = Presence::OutOfRange;
+        assert!(bluetooth.visible_bluetooth_ids().is_empty());
+        bluetooth.handle_terminal_event(key(KeyCode::Char('o')));
+        assert_eq!(bluetooth.visible_bluetooth_ids().len(), 1);
+    }
+
+    #[test]
+    fn persisted_connection_recency_orders_items_after_restart() {
+        let directory = std::env::temp_dir().join(format!("radioctl-{}", uuid::Uuid::new_v4()));
+        let path = directory.join("connection-history.json");
+        let mut first_run = Application::with_persistent_connection_history(path.clone());
+        let recent = WifiNetworkId {
+            interface: InterfaceId("wlan0".into()),
+            ssid: Ssid(b"recent".to_vec()),
+            security: WifiSecurity::Personal,
+        };
+        first_run.connection_history.record_wifi(&recent);
+        first_run.save_connection_history();
+
+        let mut restarted = application_with_network(ConnectionState::Disconnected);
+        restarted.connection_history = ConnectionHistory::load(&path);
+        let older = restarted.reducer.state.wifi.order[0].clone();
+        let mut recent_network = restarted.reducer.state.wifi.networks[&older].clone();
+        recent_network.id = recent.clone();
+        recent_network.display_name = "recent".into();
+        restarted
+            .reducer
+            .state
+            .wifi
+            .networks
+            .insert(recent.clone(), recent_network);
+        restarted.reducer.state.wifi.order = vec![older.clone(), recent.clone()];
+
+        assert_eq!(restarted.visible_wifi_ids(), vec![recent, older]);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn connection_recency_advances_only_on_an_observed_transition() {
+        let mut app = application_with_network(ConnectionState::Disconnected);
+        let id = app.reducer.state.wifi.order[0].clone();
+        let interface = app.reducer.state.wifi.interfaces[&id.interface].clone();
+        let mut network = app.reducer.state.wifi.networks[&id].clone();
+        network.state = ConnectionState::Connected;
+
+        for revision in [2, 3] {
+            app.apply_event(AppEvent::Backend(BackendEvent {
+                backend: BackendKind::NetworkManager,
+                epoch: 1,
+                revision,
+                observed_at_ms: revision,
+                payload: BackendPayload::WifiSnapshot(WifiSnapshot {
+                    interfaces: vec![interface.clone()],
+                    networks: vec![network.clone()],
+                }),
+            }));
+            let recency = app.connection_history.wifi_recency(&id);
+            if revision == 2 {
+                assert!(recency > 0);
+            } else {
+                assert_eq!(recency, 1);
+            }
+        }
     }
 
     #[test]

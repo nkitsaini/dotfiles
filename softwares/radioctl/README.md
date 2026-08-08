@@ -11,9 +11,15 @@ connection until the daemon reports the final state.
   disconnects. During a pending connection, `Enter` reverses the request.
 - `j`/`k` or the arrow keys move, `g`/`G` select the first/last row, and `Tab`
   changes radio panes.
-- `s` scans or toggles Bluetooth discovery, `/` filters, `Ctrl-P` opens the
-  capability-aware command palette, `l` opens the activity journal, and `e`
-  explains the current error and its recovery steps.
+- `s` scans or toggles Bluetooth discovery, `/` starts an inline fuzzy search
+  for Wi-Fi networks or Bluetooth devices without case sensitivity, `Ctrl-P`
+  opens the capability-aware command palette, `l` opens the activity journal,
+  and `e` explains the current error and its recovery steps.
+- Out-of-range Wi-Fi networks and Bluetooth devices are hidden by default; `o`
+  reveals or hides them in either pane.
+- Successful connection order is retained across launches in
+  `$XDG_STATE_HOME/radioctl/connection-history.json` (falling back to
+  `~/.local/state/radioctl/connection-history.json`).
 - The command palette can toggle auto-join, forget saved Wi-Fi profiles or
   Bluetooth pairings, reveal a retrievable saved password, and render a local
   Wi-Fi QR code. Forget actions require confirmation.

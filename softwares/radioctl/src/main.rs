@@ -6,7 +6,7 @@ use radioctl::{
     app::{Application, Intent},
     backend::{monotonic_ms, Secret},
     cli::{Cli, Command},
-    config::Settings,
+    config::{self, Settings},
     discovery::DiscoveryCoordinator,
     domain::OperationId,
     logging,
@@ -40,7 +40,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     terminal::install_panic_hook();
     let mut terminal_session = TerminalSession::enter()?;
-    let mut application = Application::new();
+    let mut application = Application::with_persistent_connection_history(
+        config::state_directory().join("connection-history.json"),
+    );
     let mut input = crossterm::event::EventStream::new();
     let mut animation = time::interval(Duration::from_millis(100));
     animation.set_missed_tick_behavior(MissedTickBehavior::Skip);
@@ -103,7 +105,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 if let Some(event) = event {
                     let now_ms = monotonic_ms();
                     discovery.observe_event(&event, now_ms);
-                    application.reducer.apply(event);
+                    application.apply_event(event);
                     reconcile_discovery(
                         &mut application,
                         &runtime,

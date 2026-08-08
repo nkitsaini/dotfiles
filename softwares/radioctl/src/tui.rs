@@ -71,7 +71,7 @@ pub fn draw(frame: &mut Frame<'_>, app: &mut Application) {
         Some(Overlay::Help) => draw_help(frame, area),
         Some(Overlay::Activity) => draw_activity(frame, area, app),
         Some(Overlay::Palette) => draw_palette(frame, area, app),
-        Some(Overlay::Search) => draw_search(frame, area, app),
+        Some(Overlay::Search) => {}
         Some(Overlay::Credential) => draw_credential(frame, area, app),
         Some(Overlay::Diagnostics) => draw_diagnostics(frame, area, app),
         Some(Overlay::Error) => draw_error(frame, area, app),
@@ -290,6 +290,7 @@ fn render_table<const COLUMNS: usize>(
 
 fn wifi_row(network: &WifiNetwork, operation: Option<&Operation>) -> Row<'static> {
     let (status, status_style) = status_label(network.state, operation);
+    let out_of_range = !network.present;
     let range = if network.present {
         "in range"
     } else {
@@ -297,38 +298,68 @@ fn wifi_row(network: &WifiNetwork, operation: Option<&Operation>) -> Row<'static
     };
     let saved = if network.saved { "known" } else { "" };
     Row::new(vec![
-        Cell::from(Span::styled(status, status_style)),
+        Cell::from(Span::styled(
+            status,
+            unavailable_cell_style(status_style, out_of_range),
+        )),
         Cell::from(Span::styled(
             network.display_name.clone(),
-            Style::default().add_modifier(Modifier::BOLD),
+            unavailable_cell_style(Style::default().add_modifier(Modifier::BOLD), out_of_range),
         )),
         Cell::from(Span::styled(
             format!("{}%", network.signal),
-            signal_style(network.signal),
+            unavailable_cell_style(signal_style(network.signal), out_of_range),
         )),
-        Cell::from(Span::styled(saved, secondary_style())),
-        Cell::from(Span::styled(range, secondary_style())),
+        Cell::from(Span::styled(
+            saved,
+            unavailable_cell_style(secondary_style(), out_of_range),
+        )),
+        Cell::from(Span::styled(
+            range,
+            unavailable_cell_style(secondary_style(), out_of_range),
+        )),
     ])
 }
 
 fn bluetooth_row(device: &BluetoothDevice, operation: Option<&Operation>) -> Row<'static> {
     let (status, status_style) = status_label(device.state, operation);
     let paired = if device.paired { "yes" } else { "" };
+    let out_of_range = device.presence == crate::domain::Presence::OutOfRange;
     let presence = match device.presence {
         crate::domain::Presence::Present => "in range",
         crate::domain::Presence::Unknown => "unknown",
         crate::domain::Presence::OutOfRange => "out of range",
     };
     Row::new(vec![
-        Cell::from(Span::styled(status, status_style)),
+        Cell::from(Span::styled(
+            status,
+            unavailable_cell_style(status_style, out_of_range),
+        )),
         Cell::from(Span::styled(
             device.name.clone(),
-            Style::default().add_modifier(Modifier::BOLD),
+            unavailable_cell_style(Style::default().add_modifier(Modifier::BOLD), out_of_range),
         )),
-        Cell::from(Span::styled(device.id.address.0.clone(), secondary_style())),
-        Cell::from(Span::styled(paired, secondary_style())),
-        Cell::from(Span::styled(presence, secondary_style())),
+        Cell::from(Span::styled(
+            device.id.address.0.clone(),
+            unavailable_cell_style(secondary_style(), out_of_range),
+        )),
+        Cell::from(Span::styled(
+            paired,
+            unavailable_cell_style(secondary_style(), out_of_range),
+        )),
+        Cell::from(Span::styled(
+            presence,
+            unavailable_cell_style(secondary_style(), out_of_range),
+        )),
     ])
+}
+
+fn unavailable_cell_style(style: Style, out_of_range: bool) -> Style {
+    if out_of_range {
+        style.fg(Color::DarkGray).add_modifier(Modifier::DIM)
+    } else {
+        style
+    }
 }
 
 fn status_label(state: ConnectionState, operation: Option<&Operation>) -> (String, Style) {
@@ -572,14 +603,34 @@ fn activity_style(level: ActivityLevel) -> Style {
 }
 
 fn draw_footer(frame: &mut Frame<'_>, area: Rect, app: &Application) {
+    if app.overlay == Some(Overlay::Search) {
+        let target = match app.pane {
+            Pane::Wifi => "Search Wi-Fi networks",
+            Pane::Bluetooth => "Search Bluetooth devices",
+        };
+        frame.render_widget(
+            Paragraph::new(Line::from(vec![
+                Span::styled(format!("{target}: "), secondary_style()),
+                Span::raw(format!("/{}█", app.search)),
+            ])),
+            area,
+        );
+        return;
+    }
+
     let search = if app.search.is_empty() {
         String::new()
     } else {
         format!("  filter: {}", app.search)
     };
+    let range_toggle = if app.show_out_of_range {
+        "o hide out-of-range"
+    } else {
+        "o show out-of-range"
+    };
     frame.render_widget(
         Paragraph::new(format!(
-            "Enter connect/disconnect  s scan  / search  Ctrl-P actions  l activity  e error  ? help  q quit{search}"
+            "Enter connect/disconnect  s scan  {range_toggle}  / search  Ctrl-P actions  l activity  ? help  q quit{search}"
         ))
         .style(secondary_style()),
         area,
@@ -599,6 +650,7 @@ fn draw_help(frame: &mut Frame<'_>, area: Rect) {
             Line::from("Actions"),
             Line::from("  Enter           connect or disconnect"),
             Line::from("  s               scan/discover"),
+            Line::from("  o               show/hide out-of-range items"),
             Line::from("  a/p/r/f         auto-join / password / QR / forget"),
             Line::from("  p/t/b           pair / trust / block (Bluetooth)"),
             Line::from("  Ctrl-P          command palette"),
@@ -672,17 +724,6 @@ fn draw_palette(frame: &mut Frame<'_>, area: Rect, app: &Application) {
             .highlight_style(selection_style()),
         inner[1],
         &mut state,
-    );
-}
-
-fn draw_search(frame: &mut Frame<'_>, area: Rect, app: &Application) {
-    let popup = centered_rect(60, 15, area);
-    frame.render_widget(Clear, popup);
-    frame.render_widget(
-        Paragraph::new(format!("/{}", app.search))
-            .block(Block::default().title(" Filter ").borders(Borders::ALL))
-            .alignment(Alignment::Left),
-        popup,
     );
 }
 
@@ -1005,6 +1046,18 @@ mod tests {
     }
 
     #[test]
+    fn bluetooth_search_uses_an_inline_device_specific_prompt() {
+        let mut app = Application::new();
+        app.pane = Pane::Bluetooth;
+        app.overlay = Some(Overlay::Search);
+
+        let screen = render(100, 30, &mut app);
+        let footer = screen.lines().last().unwrap();
+        assert!(footer.contains("Search Bluetooth devices: /"));
+        assert!(!screen.contains(" Filter "));
+    }
+
+    #[test]
     fn error_details_include_recovery_steps() {
         let mut app = Application::new();
         app.report_runtime_error("No service", "The system bus is unavailable", 1);
@@ -1022,5 +1075,19 @@ mod tests {
         assert!(selected.add_modifier.contains(Modifier::REVERSED));
         assert_eq!(selected.bg, None);
         assert_eq!(secondary_style().fg, None);
+    }
+
+    #[test]
+    fn out_of_range_bluetooth_style_is_greyed_out() {
+        let base = Style::default()
+            .fg(Color::Green)
+            .add_modifier(Modifier::BOLD);
+
+        let greyed = unavailable_cell_style(base, true);
+
+        assert_eq!(greyed.fg, Some(Color::DarkGray));
+        assert!(greyed.add_modifier.contains(Modifier::DIM));
+        assert!(greyed.add_modifier.contains(Modifier::BOLD));
+        assert_eq!(unavailable_cell_style(base, false), base);
     }
 }
