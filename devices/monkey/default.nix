@@ -54,6 +54,10 @@
     # Matches the "Personal" container case-insensitively (unless multiple
     # containers differ only by case; see kit_containers.sys.mjs).
     kit.firefox.defaultContainer = "personal";
+    kit.programs.capture = {
+      enable = true;
+      sessionsDirectory = "/home/${username}/code/notes/sessions";
+    };
 
     kit.services = {
       notes-sync.enable = true;

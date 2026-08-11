@@ -46,6 +46,10 @@
     # a second empty container named "Work" also exists - don't rename this
     # to it (matching is exact-first, see kit_containers.sys.mjs).
     kit.firefox.defaultContainer = "work";
+    kit.programs.capture = {
+      enable = true;
+      sessionsDirectory = "${homeDirectory}/workspace/notes/sessions";
+    };
 
     kit.rebuild = {
       enable = true;

@@ -5,10 +5,6 @@
   ...
 }:
 {
-  # TODO: use config.home-files to reference files inside current home-manager generation instead of path from home-directory. Currently config.home-files gives infinite recursion.
-  home.sessionVariables = {
-    EDITOR = "hx";
-  };
   programs.helix =
     let
       comment_binding = '':pipe ${pkgs.python312}/bin/python3 ${./commenter.py} --start-token="/*" --end-token="*/"'';

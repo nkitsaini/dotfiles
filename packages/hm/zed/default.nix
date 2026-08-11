@@ -4,6 +4,10 @@
   ...
 }:
 {
+  # Zed's CLI spells this `--new` (not `--new-window`). Keep the process
+  # attached until the opened file is closed so terminal callers can resume.
+  home.sessionVariables.EDITOR = "zed --new --wait";
+
   programs.zed-editor = {
     enable = true;
     package = null; # Installed through the nixGL-aware package setup below.
@@ -15,6 +19,10 @@
     userSettings = {
       cli_default_open_behavior = "new_window";
       project_panel.dock = "left";
+      # Only affects workspaces Zed has no remembered panel state for (every
+      # `capture` session is a fresh directory). Existing projects still
+      # restore whatever dock layout they were last closed with.
+      project_panel.starts_open = false;
       outline_panel.dock = "left";
       collaboration_panel.dock = "left";
 
