@@ -19,6 +19,52 @@ pub enum DiscoveryAttempt {
     BluetoothStop { adapter: AdapterId, epoch: u64 },
 }
 
+/// How radioctl keeps its BlueZ discovery session. `FollowFocus` is the default
+/// and pauses discovery whenever the terminal loses focus so it does not keep
+/// the shared 2.4 GHz radio busy in the background.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DiscoveryMode {
+    #[default]
+    FollowFocus,
+    AlwaysOn,
+    AlwaysOff,
+}
+
+impl DiscoveryMode {
+    /// Cycle order for the `d` shortcut: auto → always on → always off → auto.
+    fn next(self) -> Self {
+        match self {
+            Self::FollowFocus => Self::AlwaysOn,
+            Self::AlwaysOn => Self::AlwaysOff,
+            Self::AlwaysOff => Self::FollowFocus,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::FollowFocus => "auto (follows focus)",
+            Self::AlwaysOn => "always on",
+            Self::AlwaysOff => "always off",
+        }
+    }
+
+    pub fn short_label(self) -> &'static str {
+        match self {
+            Self::FollowFocus => "auto",
+            Self::AlwaysOn => "on",
+            Self::AlwaysOff => "off",
+        }
+    }
+
+    fn wants_discovery(self, focused: bool) -> bool {
+        match self {
+            Self::FollowFocus => focused,
+            Self::AlwaysOn => true,
+            Self::AlwaysOff => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct PendingAttempt {
     operation: OperationId,
@@ -34,7 +80,8 @@ struct OwnedBluetoothSession {
 #[derive(Debug)]
 pub struct DiscoveryCoordinator {
     wifi_automatic: bool,
-    bluetooth_desired: bool,
+    discovery_mode: DiscoveryMode,
+    terminal_focused: bool,
     wifi_pending: Option<PendingAttempt>,
     bluetooth_pending: Option<PendingAttempt>,
     bluetooth_owned: Option<OwnedBluetoothSession>,
@@ -51,7 +98,12 @@ impl DiscoveryCoordinator {
     pub fn new(wifi_automatic: bool, bluetooth_automatic: bool) -> Self {
         Self {
             wifi_automatic,
-            bluetooth_desired: bluetooth_automatic,
+            discovery_mode: if bluetooth_automatic {
+                DiscoveryMode::FollowFocus
+            } else {
+                DiscoveryMode::AlwaysOff
+            },
+            terminal_focused: true,
             wifi_pending: None,
             bluetooth_pending: None,
             bluetooth_owned: None,
@@ -65,6 +117,56 @@ impl DiscoveryCoordinator {
         }
     }
 
+    pub fn discovery_mode(&self) -> DiscoveryMode {
+        self.discovery_mode
+    }
+
+    pub fn terminal_focused(&self) -> bool {
+        self.terminal_focused
+    }
+
+    /// Pause or resume discovery around terminal focus without changing the
+    /// user's chosen discovery mode. In `FollowFocus` an unfocused session
+    /// releases radioctl's BlueZ discovery so 2.4 GHz Wi-Fi is not kept busy in
+    /// the background; `AlwaysOn`/`AlwaysOff` ignore focus.
+    pub fn set_terminal_focused(&mut self, focused: bool, now_ms: u64) {
+        if self.terminal_focused == focused {
+            return;
+        }
+        self.terminal_focused = focused;
+        self.bluetooth_retry_after_ms = now_ms;
+    }
+
+    fn bluetooth_active(&self) -> bool {
+        self.discovery_mode.wants_discovery(self.terminal_focused)
+    }
+
+    fn owns_current_session(&self, state: &AppState) -> bool {
+        bluetooth_identity(state).is_some_and(|(adapter, epoch)| {
+            self.bluetooth_owned
+                .as_ref()
+                .is_some_and(|owned| owned.adapter == adapter && owned.epoch == epoch)
+        })
+    }
+
+    /// Converge radioctl's discovery session to the current mode immediately
+    /// after the user changed it, so the shortcut feels responsive. The
+    /// background reconcile loop still handles retries and readiness changes.
+    fn converge_bluetooth(&mut self, state: &AppState, now_ms: u64) -> Option<Intent> {
+        self.bluetooth_retry_after_ms = now_ms;
+        if self.bluetooth_pending.is_some() {
+            return None;
+        }
+        if self.bluetooth_active() {
+            (!self.owns_current_session(state) && bluetooth_ready(state))
+                .then_some(Intent::StartBluetoothDiscovery)
+        } else {
+            self.bluetooth_owned
+                .is_some()
+                .then_some(Intent::StopBluetoothDiscovery)
+        }
+    }
+
     pub fn prepare_user_intent(
         &mut self,
         intent: Intent,
@@ -74,19 +176,20 @@ impl DiscoveryCoordinator {
         match intent {
             Intent::ScanWifi if self.wifi_pending.is_some() => None,
             Intent::ScanWifi => Some(Intent::ScanWifi),
+            Intent::CycleBluetoothDiscoveryMode => {
+                self.discovery_mode = self.discovery_mode.next();
+                self.converge_bluetooth(state, now_ms)
+            }
             Intent::ToggleBluetoothDiscovery => {
-                self.bluetooth_desired = !self.bluetooth_desired;
-                self.bluetooth_retry_after_ms = now_ms;
-                if self.bluetooth_pending.is_some() {
-                    return None;
-                }
-                if self.bluetooth_desired {
-                    bluetooth_ready(state).then_some(Intent::StartBluetoothDiscovery)
+                // A direct on/off toggle (e.g. `s` in the Bluetooth pane) picks
+                // the explicit mode matching the requested state rather than
+                // leaving discovery tied to focus.
+                self.discovery_mode = if self.bluetooth_active() {
+                    DiscoveryMode::AlwaysOff
                 } else {
-                    self.bluetooth_owned
-                        .is_some()
-                        .then_some(Intent::StopBluetoothDiscovery)
-                }
+                    DiscoveryMode::AlwaysOn
+                };
+                self.converge_bluetooth(state, now_ms)
             }
             intent => Some(intent),
         }
@@ -242,13 +345,8 @@ impl DiscoveryCoordinator {
         }
 
         if self.bluetooth_pending.is_none() && now_ms >= self.bluetooth_retry_after_ms {
-            if self.bluetooth_desired {
-                let owns_current = bluetooth_identity(state).is_some_and(|(adapter, epoch)| {
-                    self.bluetooth_owned
-                        .as_ref()
-                        .is_some_and(|owned| owned.adapter == adapter && owned.epoch == epoch)
-                });
-                if !owns_current && bluetooth_ready(state) {
+            if self.bluetooth_active() {
+                if !self.owns_current_session(state) && bluetooth_ready(state) {
                     intents.push(Intent::EnsureBluetoothDiscovery);
                 }
             } else if self.bluetooth_owned.is_some() {
@@ -642,6 +740,114 @@ mod tests {
         assert!(matches!(
             coordinator.reconcile(&state, Pane::Wifi, 1).as_slice(),
             [Intent::AutomaticWifiScan]
+        ));
+    }
+
+    #[test]
+    fn focus_loss_releases_discovery_without_clearing_user_preference() {
+        let mut coordinator = DiscoveryCoordinator::new(false, true);
+        let state = ready_state();
+        let start = coordinator.attempt_for(&Intent::EnsureBluetoothDiscovery, &state);
+        coordinator.record_attempt(start, Some(OperationId(21)), 0);
+        coordinator.observe_event(
+            &AppEvent::OperationSucceeded {
+                id: OperationId(21),
+                message: "started".into(),
+                timestamp_ms: 1,
+            },
+            1,
+        );
+
+        coordinator.set_terminal_focused(false, 2);
+        assert_eq!(coordinator.discovery_mode(), DiscoveryMode::FollowFocus);
+        assert!(!coordinator.terminal_focused());
+        assert!(matches!(
+            coordinator.reconcile(&state, Pane::Bluetooth, 2).as_slice(),
+            [Intent::ReleaseBluetoothDiscovery]
+        ));
+
+        let stop = coordinator.attempt_for(&Intent::ReleaseBluetoothDiscovery, &state);
+        coordinator.record_attempt(stop, Some(OperationId(22)), 2);
+        coordinator.observe_event(
+            &AppEvent::OperationSucceeded {
+                id: OperationId(22),
+                message: "stopped".into(),
+                timestamp_ms: 3,
+            },
+            3,
+        );
+
+        coordinator.set_terminal_focused(true, 4);
+        assert!(matches!(
+            coordinator.reconcile(&state, Pane::Bluetooth, 4).as_slice(),
+            [Intent::EnsureBluetoothDiscovery]
+        ));
+    }
+
+    #[test]
+    fn manual_discovery_off_stays_off_across_focus_changes() {
+        let mut coordinator = DiscoveryCoordinator::new(false, true);
+        let state = ready_state();
+        assert!(matches!(
+            coordinator.prepare_user_intent(Intent::ToggleBluetoothDiscovery, &state, 1),
+            None | Some(Intent::StopBluetoothDiscovery)
+        ));
+        assert_eq!(coordinator.discovery_mode(), DiscoveryMode::AlwaysOff);
+
+        coordinator.set_terminal_focused(false, 2);
+        coordinator.set_terminal_focused(true, 3);
+        assert!(coordinator.reconcile(&state, Pane::Bluetooth, 3).is_empty());
+    }
+
+    #[test]
+    fn always_on_discovery_ignores_focus_changes() {
+        let mut coordinator = DiscoveryCoordinator::new(false, false);
+        let state = ready_state();
+        coordinator.set_terminal_focused(false, 1);
+        // Toggling from AlwaysOff selects AlwaysOn, which starts discovery even
+        // though the terminal is not focused.
+        assert!(matches!(
+            coordinator.prepare_user_intent(Intent::ToggleBluetoothDiscovery, &state, 2),
+            Some(Intent::StartBluetoothDiscovery)
+        ));
+        assert_eq!(coordinator.discovery_mode(), DiscoveryMode::AlwaysOn);
+    }
+
+    #[test]
+    fn cycle_walks_auto_on_off_and_pauses_on_focus_loss_in_auto() {
+        let mut coordinator = DiscoveryCoordinator::new(false, true);
+        let state = ready_state();
+        // Default is FollowFocus (auto). Cycle: auto -> on -> off -> auto.
+        assert_eq!(coordinator.discovery_mode(), DiscoveryMode::FollowFocus);
+
+        coordinator.prepare_user_intent(Intent::CycleBluetoothDiscoveryMode, &state, 1);
+        assert_eq!(coordinator.discovery_mode(), DiscoveryMode::AlwaysOn);
+
+        coordinator.prepare_user_intent(Intent::CycleBluetoothDiscoveryMode, &state, 2);
+        assert_eq!(coordinator.discovery_mode(), DiscoveryMode::AlwaysOff);
+
+        coordinator.prepare_user_intent(Intent::CycleBluetoothDiscoveryMode, &state, 3);
+        assert_eq!(coordinator.discovery_mode(), DiscoveryMode::FollowFocus);
+
+        // In auto mode, discovery starts while focused and releases on blur.
+        assert!(matches!(
+            coordinator.reconcile(&state, Pane::Bluetooth, 4).as_slice(),
+            [Intent::EnsureBluetoothDiscovery]
+        ));
+        let start = coordinator.attempt_for(&Intent::EnsureBluetoothDiscovery, &state);
+        coordinator.record_attempt(start, Some(OperationId(31)), 4);
+        coordinator.observe_event(
+            &AppEvent::OperationSucceeded {
+                id: OperationId(31),
+                message: "started".into(),
+                timestamp_ms: 5,
+            },
+            5,
+        );
+        coordinator.set_terminal_focused(false, 6);
+        assert!(matches!(
+            coordinator.reconcile(&state, Pane::Bluetooth, 6).as_slice(),
+            [Intent::ReleaseBluetoothDiscovery]
         ));
     }
 }

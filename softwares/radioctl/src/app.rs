@@ -9,6 +9,7 @@ use zeroize::Zeroizing;
 
 use crate::{
     backend::Secret,
+    discovery::DiscoveryMode,
     domain::{
         ActivityEntry, ActivityLevel, AppEvent, BluetoothDeviceId, Capability, CapabilityState,
         ConnectionState, DesiredState, EntityId, ErrorCategory, OperationId, Reducer,
@@ -47,6 +48,7 @@ pub enum Intent {
     ScanWifi,
     AutomaticWifiScan,
     ToggleBluetoothDiscovery,
+    CycleBluetoothDiscoveryMode,
     StartBluetoothDiscovery,
     EnsureBluetoothDiscovery,
     StopBluetoothDiscovery,
@@ -119,7 +121,7 @@ impl PaletteAction {
             Self::ToggleWifi => "Toggle Wi-Fi radio",
             Self::ScanWifi => "Scan for Wi-Fi networks",
             Self::ToggleBluetooth => "Toggle Bluetooth radio",
-            Self::DiscoverBluetooth => "Discover Bluetooth devices",
+            Self::DiscoverBluetooth => "Toggle Bluetooth discovery",
             Self::Diagnostics => "Open diagnostics",
             Self::ToggleAutoJoin => "Toggle auto-join for selected Wi-Fi network",
             Self::ForgetWifi => "Forget selected Wi-Fi network",
@@ -166,6 +168,7 @@ pub struct Application {
     pub list_hit_area: ListHitArea,
     pub diagnostics: Vec<String>,
     pub detail_action_hit_areas: Vec<(Rect, EntryAction)>,
+    discovery_mode: DiscoveryMode,
     wifi_list_offset: usize,
     bluetooth_list_offset: usize,
     credential_target: Option<EntityId>,
@@ -245,6 +248,7 @@ impl Application {
             list_hit_area: ListHitArea::default(),
             diagnostics: Vec::new(),
             detail_action_hit_areas: Vec::new(),
+            discovery_mode: DiscoveryMode::default(),
             wifi_list_offset: 0,
             bluetooth_list_offset: 0,
             credential_target: None,
@@ -480,12 +484,30 @@ impl Application {
                 .any(|adapter| adapter.scanning)
     }
 
+    pub fn bluetooth_discovering(&self) -> bool {
+        self.reducer
+            .state
+            .bluetooth
+            .selected_adapter
+            .as_ref()
+            .and_then(|id| self.reducer.state.bluetooth.adapters.get(id))
+            .is_some_and(|adapter| adapter.scanning)
+    }
+
+    pub fn discovery_mode(&self) -> DiscoveryMode {
+        self.discovery_mode
+    }
+
+    pub fn set_discovery_mode(&mut self, mode: DiscoveryMode) {
+        self.discovery_mode = mode;
+    }
+
     pub fn handle_terminal_event(&mut self, event: Event) -> Option<Intent> {
         match event {
             Event::Key(key) if key.kind != KeyEventKind::Release => self.handle_key(key),
             Event::Mouse(mouse) if self.overlay.is_none() => self.handle_mouse(mouse),
             Event::Mouse(_) => None,
-            Event::Resize(_, _) => None,
+            Event::Resize(_, _) | Event::FocusGained | Event::FocusLost => None,
             _ => None,
         }
     }
@@ -928,6 +950,7 @@ impl Application {
                 Pane::Wifi => Intent::ScanWifi,
                 Pane::Bluetooth => Intent::ToggleBluetoothDiscovery,
             }),
+            KeyCode::Char('d') => Some(Intent::CycleBluetoothDiscoveryMode),
             _ => None,
         }
     }

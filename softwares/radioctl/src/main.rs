@@ -64,19 +64,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 match maybe_event {
                     Some(Ok(event)) => {
                         let now_ms = monotonic_ms();
-                        if let Some(intent) = application.handle_terminal_event(event) {
-                            if let Some(intent) = discovery.prepare_user_intent(
-                                intent,
-                                &application.reducer.state,
-                                now_ms,
-                            ) {
-                                dispatch_intent(
-                                    &mut application,
-                                    &runtime,
-                                    &mut discovery,
-                                    intent,
-                                    now_ms,
-                                ).await;
+                        match &event {
+                            crossterm::event::Event::FocusLost => {
+                                discovery.set_terminal_focused(false, now_ms);
+                            }
+                            crossterm::event::Event::FocusGained => {
+                                discovery.set_terminal_focused(true, now_ms);
+                            }
+                            _ => {
+                                if let Some(intent) = application.handle_terminal_event(event) {
+                                    if let Some(intent) = discovery.prepare_user_intent(
+                                        intent,
+                                        &application.reducer.state,
+                                        now_ms,
+                                    ) {
+                                        dispatch_intent(
+                                            &mut application,
+                                            &runtime,
+                                            &mut discovery,
+                                            intent,
+                                            now_ms,
+                                        ).await;
+                                    }
+                                }
                             }
                         }
                         if !application.should_quit() {
@@ -152,6 +162,7 @@ async fn reconcile_discovery(
     for intent in intents {
         dispatch_intent(application, runtime, discovery, intent, now_ms).await;
     }
+    application.set_discovery_mode(discovery.discovery_mode());
 }
 
 async fn dispatch_intent(

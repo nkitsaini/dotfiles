@@ -11,10 +11,15 @@ connection until the daemon reports the final state.
   disconnects. During a pending connection, `Enter` reverses the request.
 - `j`/`k` or the arrow keys move, `g`/`G` select the first/last row, and `Tab`
   changes radio panes.
-- `s` scans or toggles Bluetooth discovery, `/` starts an inline fuzzy search
-  for Wi-Fi networks or Bluetooth devices without case sensitivity, `Ctrl-P`
-  opens the capability-aware command palette, `l` opens the activity journal,
-  and `e` explains the current error and its recovery steps.
+- `s` scans Wi-Fi or toggles Bluetooth discovery on/off, `d` cycles the
+  Bluetooth discovery mode (auto → always on → always off), `/` starts an
+  inline fuzzy search for Wi-Fi networks or Bluetooth devices without case
+  sensitivity, `Ctrl-P` opens the capability-aware command palette, `l` opens
+  the activity journal, and `e` explains the current error and its recovery
+  steps.
+- While discovery is active the footer shows the current mode and a warning
+  reminds you that Bluetooth discovery shares the 2.4 GHz band and can add
+  latency to 2.4 GHz Wi-Fi.
 - Out-of-range Wi-Fi networks and Bluetooth devices are hidden by default; `o`
   reveals or hides them in either pane.
 - Successful connection order is retained across launches in
@@ -54,6 +59,18 @@ broad BlueZ filter improves RSSI updates while suppressing duplicate
 advertisement payloads. The session is released automatically when radioctl
 exits. Use `--no-auto-scan` or `--no-auto-discover` when power usage matters more
 than immediate nearby-device visibility.
+
+The `d` shortcut selects one of three discovery modes:
+
+| Mode | Behavior |
+| --- | --- |
+| auto (default) | Discovers only while the radioctl terminal is focused, and releases the session when it loses focus. Because Bluetooth discovery shares the 2.4 GHz band, this keeps background 2.4 GHz Wi-Fi latency low when you are not actively looking at the device list. |
+| always on | Keeps discovery active regardless of terminal focus. |
+| always off | Never keeps a discovery session. |
+
+`--no-auto-discover` starts in "always off"; otherwise radioctl starts in "auto".
+Focus tracking uses terminal focus reporting, so it requires a terminal that
+emits focus events.
 
 The list separates observed state (`connected`, `getting IP`, and so on) from a
 pending request (`waiting→connected`). Entries the daemon stops reporting stay

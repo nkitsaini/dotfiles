@@ -613,6 +613,7 @@ fn route_intent(
         Intent::Quit
         | Intent::Cancel(_)
         | Intent::OpenDiagnostics
+        | Intent::CycleBluetoothDiscoveryMode
         | Intent::ShowWifiSecret { .. } => None,
     }
 }

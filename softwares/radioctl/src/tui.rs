@@ -585,6 +585,23 @@ fn draw_notification(frame: &mut Frame<'_>, area: Rect, app: &Application) {
             .wrap(Wrap { trim: true }),
             area,
         );
+    } else if app.bluetooth_discovering() {
+        frame.render_widget(
+            Paragraph::new(Line::from(vec![
+                Span::styled(
+                    "⚠ Bluetooth discovery on",
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " — may add latency to 2.4 GHz Wi-Fi; press d to change mode",
+                    Style::default().fg(Color::Yellow),
+                ),
+            ]))
+            .wrap(Wrap { trim: true }),
+            area,
+        );
     } else if let Some(activity) = app.reducer.state.activity.back() {
         frame.render_widget(
             Paragraph::new(activity.message.clone()).style(activity_style(activity.level)),
@@ -630,7 +647,8 @@ fn draw_footer(frame: &mut Frame<'_>, area: Rect, app: &Application) {
     };
     frame.render_widget(
         Paragraph::new(format!(
-            "Enter connect/disconnect  s scan  {range_toggle}  / search  Ctrl-P actions  l activity  ? help  q quit{search}"
+            "Enter connect/disconnect  s scan  d discovery:{}  {range_toggle}  / search  Ctrl-P actions  l activity  ? help  q quit{search}",
+            app.discovery_mode().short_label()
         ))
         .style(secondary_style()),
         area,
@@ -649,7 +667,8 @@ fn draw_help(frame: &mut Frame<'_>, area: Rect) {
             Line::from(""),
             Line::from("Actions"),
             Line::from("  Enter           connect or disconnect"),
-            Line::from("  s               scan/discover"),
+            Line::from("  s               scan / toggle discovery on-off"),
+            Line::from("  d               discovery mode: auto / on / off"),
             Line::from("  o               show/hide out-of-range items"),
             Line::from("  a/p/r/f         auto-join / password / QR / forget"),
             Line::from("  p/t/b           pair / trust / block (Bluetooth)"),
