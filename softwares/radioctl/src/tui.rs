@@ -104,18 +104,27 @@ fn draw_header(frame: &mut Frame<'_>, area: Rect, app: &Application) {
             }),
         )
     };
-    frame.render_widget(
-        Paragraph::new(Line::from(vec![
-            Span::styled("radioctl", Style::default().add_modifier(Modifier::BOLD)),
-            Span::raw("  "),
-            backend_text,
-            Span::styled(
-                format!("  {} events", app.reducer.state.activity.len()),
-                secondary_style(),
-            ),
-        ])),
-        area,
-    );
+    let mut spans = vec![
+        Span::styled("radioctl", Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw("  "),
+        backend_text,
+        Span::styled(
+            format!("  {} events", app.reducer.state.activity.len()),
+            secondary_style(),
+        ),
+    ];
+    // Sticky, low-noise indicator: an active BlueZ discovery shares the 2.4 GHz
+    // band with Wi-Fi. It lives in the header chrome so it never competes with
+    // transient notifications for the notification strip.
+    if app.bluetooth_discovering() {
+        spans.push(Span::styled(
+            "  ⚠ BT discovery · 2.4 GHz",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
+    frame.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
 fn draw_tabs(frame: &mut Frame<'_>, area: Rect, app: &Application) {
@@ -582,23 +591,6 @@ fn draw_notification(frame: &mut Frame<'_>, area: Rect, app: &Application) {
                 Span::styled("  e details · Esc dismisses", secondary_style()),
             ]))
             .block(Block::default().borders(Borders::TOP))
-            .wrap(Wrap { trim: true }),
-            area,
-        );
-    } else if app.bluetooth_discovering() {
-        frame.render_widget(
-            Paragraph::new(Line::from(vec![
-                Span::styled(
-                    "⚠ Bluetooth discovery on",
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    " — may add latency to 2.4 GHz Wi-Fi; press d to change mode",
-                    Style::default().fg(Color::Yellow),
-                ),
-            ]))
             .wrap(Wrap { trim: true }),
             area,
         );

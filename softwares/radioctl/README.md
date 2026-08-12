@@ -17,9 +17,11 @@ connection until the daemon reports the final state.
   sensitivity, `Ctrl-P` opens the capability-aware command palette, `l` opens
   the activity journal, and `e` explains the current error and its recovery
   steps.
-- While discovery is active the footer shows the current mode and a warning
-  reminds you that Bluetooth discovery shares the 2.4 GHz band and can add
-  latency to 2.4 GHz Wi-Fi.
+- While discovery is active the footer shows the current mode and the header
+  displays a compact `⚠ BT discovery · 2.4 GHz` indicator, a reminder that
+  Bluetooth discovery shares the 2.4 GHz band and can add latency to 2.4 GHz
+  Wi-Fi. The indicator lives in the header chrome so it never hides transient
+  notifications.
 - Out-of-range Wi-Fi networks and Bluetooth devices are hidden by default; `o`
   reveals or hides them in either pane.
 - Successful connection order is retained across launches in
