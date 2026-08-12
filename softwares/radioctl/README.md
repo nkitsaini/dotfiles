@@ -18,7 +18,7 @@ connection until the daemon reports the final state.
   the activity journal, and `e` explains the current error and its recovery
   steps.
 - While discovery is active the footer shows the current mode and the header
-  displays a compact `⚠ BT discovery · 2.4 GHz` indicator, a reminder that
+  displays a compact `⚠ BT discovery may slow 2.4 GHz Wi-Fi` indicator because
   Bluetooth discovery shares the 2.4 GHz band and can add latency to 2.4 GHz
   Wi-Fi. The indicator lives in the header chrome so it never hides transient
   notifications.

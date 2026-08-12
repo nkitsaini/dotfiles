@@ -118,7 +118,7 @@ fn draw_header(frame: &mut Frame<'_>, area: Rect, app: &Application) {
     // transient notifications for the notification strip.
     if app.bluetooth_discovering() {
         spans.push(Span::styled(
-            "  ⚠ BT discovery · 2.4 GHz",
+            "  ⚠ BT discovery may slow 2.4 GHz Wi-Fi",
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
