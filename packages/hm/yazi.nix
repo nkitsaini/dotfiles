@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+{ lib, pkgs, ... }: {
   home.packages = with pkgs; [
 
     # For yazi
@@ -11,19 +11,35 @@
   programs.yazi.shellWrapperName = "yy";
   programs.yazi.settings = {
     opener = {
-      video = [{ run = ''mpv -d "$1"''; }];
-      audio = [{ run = ''mpv -d "$1"''; }];
+      system = [
+        {
+          run = "${lib.getExe' pkgs.glib "gio"} open %s";
+          orphan = true;
+          desc = "Open with default application";
+          for = "unix";
+        }
+      ];
     };
     open = {
-      rules = [
+      prepend_rules = [
         {
           mime = "video/*";
-          use = "video";
+          use = "system";
         }
 
         {
           mime = "audio/*";
-          use = "audio";
+          use = "system";
+        }
+
+        {
+          mime = "image/*";
+          use = "system";
+        }
+
+        {
+          mime = "application/pdf";
+          use = "system";
         }
       ];
     };

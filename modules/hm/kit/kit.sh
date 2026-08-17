@@ -7,6 +7,7 @@ Usage:
   kit rebuild [--dry-run] [extra rebuild args...]
   kit config status [name]
   kit config diff [--all] [name]
+  kit mount [list|android|disk|unmount|power-off] ...
   kit unfreeze <file>...
   kit help
 
@@ -106,6 +107,14 @@ case "$command" in
       exit 1
     fi
     exec "$KIT_MUTABLE_CONFIG_BIN" "$@"
+    ;;
+  mount|mnt)
+    shift
+    if [[ -z "${KIT_MOUNT_BIN:-}" ]]; then
+      printf 'kit mount: mount helper is unavailable in this build\n' >&2
+      exit 1
+    fi
+    exec "$KIT_MOUNT_BIN" "$@"
     ;;
   unfreeze)
     shift

@@ -1,5 +1,10 @@
 # This is a nixos package (not home-manager)
-{ username, pkgs, ... }:
+{
+  username,
+  pkgs,
+  lib,
+  ...
+}:
 let
   start_desktop_script = pkgs.writeScriptBin "start_desktop" ''
     #!${pkgs.dash}/bin/dash
@@ -43,5 +48,13 @@ in
   programs.sway.enable = true;
   programs.sway.package = null;
 
-  home-manager.users.${username} = import ../../hm/sway;
+  home-manager.users.${username} = {
+    imports = [ ../../hm/sway ];
+
+    # The NixOS module starts/unlocks the daemon through greetd PAM and exposes
+    # its D-Bus activation files. A second graphical-session daemon from Home
+    # Manager only races that instance and produces duplicate service entries.
+    # Keep setup-medium's service enabled for standalone Home Manager hosts.
+    services.gnome-keyring.enable = lib.mkForce false;
+  };
 }

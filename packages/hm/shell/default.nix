@@ -142,6 +142,7 @@
       j = "z"; # jump
       ll = "${pkgs.eza}/bin/eza -lahgF";
       l = "${pkgs.eza}/bin/eza -F";
+      o = "${lib.getExe (pkgs.callPackage ../open-file-picker/package.nix { })}";
 
       tp = "${pkgs.trashy}/bin/trash put";
       rm = "echo 'use `tp` or `rmforce`'";

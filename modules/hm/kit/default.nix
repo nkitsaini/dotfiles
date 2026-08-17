@@ -26,6 +26,19 @@ let
     '';
   };
 
+  mountBin = pkgs.writeShellApplication {
+    name = "kit-mount";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.findutils
+      pkgs.gawk
+      pkgs.glib
+      pkgs.python3
+      pkgs.udisks
+    ];
+    text = builtins.readFile ./mount.sh;
+  };
+
   flakeRef = "${cfg.flake}#${cfg.attribute}";
 
   rebuildPrint =
@@ -54,6 +67,7 @@ let
     runtimeInputs = [ pkgs.coreutils ];
     text = ''
       export KIT_MUTABLE_CONFIG_BIN=${lib.escapeShellArg (lib.getExe mutableConfigBin)}
+      export KIT_MOUNT_BIN=${lib.escapeShellArg (lib.getExe mountBin)}
       ${lib.optionalString cfg.enable ''
         export KIT_REBUILD_BIN=${lib.escapeShellArg (lib.getExe rebuildBin)}
         export KIT_REBUILD_PRINT=${lib.escapeShellArg rebuildPrint}
@@ -106,6 +120,7 @@ in
       # Keep the mutable-config helper on PATH so activation and `kit config`
       # share one closure; users should prefer `kit config ...`.
       mutableConfigBin
+      mountBin
     ];
 
     xdg.configFile."fish/completions/kit.fish".source = ./completions.fish;

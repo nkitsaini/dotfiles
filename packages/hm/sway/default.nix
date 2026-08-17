@@ -1,6 +1,7 @@
 # This is a nixos package (not home-manager)
 {
   pkgs,
+  lib,
   config,
   inputs,
   nixGLCommandPrefix ? "",
@@ -26,6 +27,12 @@ let
     exec ${pkgs.ghostty}/bin/ghostty +new-window "$@"
   '';
   terminal_cmd = "${terminal_launcher}/bin/ghostty-launch";
+
+  open_file_picker = pkgs.callPackage ../open-file-picker/package.nix { };
+  # A dedicated Ghostty instance gives Sway a stable app_id for the floating
+  # rule. `+new-window --class=...` treats the class as the D-Bus destination
+  # of an existing instance, so it cannot create a differently-classed window.
+  open_file_picker_cmd = "${pkgs.ghostty}/bin/ghostty --class=org.kit.open_file_picker -e ${lib.getExe open_file_picker}";
 
   sway_display_control = pkgs.writeShellApplication {
     name = "sway-display-control";
@@ -186,6 +193,7 @@ in
     gtklock
     swayidle
     sway_display_control
+    open_file_picker
     xwayland
     grim
     slurp
@@ -512,6 +520,7 @@ in
 
       "${modifier}+Return" = "exec ${terminal}";
       "${modifier}+d" = "exec ${menu}"; # run rofi with nixGL so all program opened inherit it
+      "${modifier}+p" = "exec ${open_file_picker_cmd}";
 
       "${modifier}+Shift+c" = "reload";
       "${modifier}+Shift+r" = "restart";
@@ -595,6 +604,20 @@ in
     window = {
       titlebar = false;
       border = 2;
+      commands = [
+        {
+          criteria.app_id = "^org.kit.open_file_picker$";
+          command = "floating enable";
+        }
+        {
+          criteria.app_id = "^org.kit.open_file_picker$";
+          command = "resize set width 1200 px height 760 px";
+        }
+        {
+          criteria.app_id = "^org.kit.open_file_picker$";
+          command = "move position center";
+        }
+      ];
     };
 
     bars = [ ];
@@ -644,6 +667,26 @@ in
       Restart = "on-failure";
       RestartSec = 1;
     };
+  };
+
+  # Keep the picker's normal and hidden/git-ignored indexes warm. Picker
+  # launches read these files immediately and refresh stale data in the
+  # background; the timer also keeps them useful before the first launch.
+  systemd.user.services.open-file-picker-index = {
+    Unit.Description = "Refresh the fuzzy file picker index";
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${lib.getExe open_file_picker} --refresh-index";
+    };
+  };
+
+  systemd.user.timers.open-file-picker-index = {
+    Unit.Description = "Periodically refresh the fuzzy file picker index";
+    Timer = {
+      OnBootSec = "15s";
+      OnUnitActiveSec = "15m";
+    };
+    Install.WantedBy = [ "timers.target" ];
   };
 
   # wallpaper: theme-aware daemon (swaybg + a gsettings color-scheme watcher).

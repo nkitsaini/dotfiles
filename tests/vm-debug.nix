@@ -158,6 +158,13 @@ pkgs.testers.runNixOSTest {
     boot()
     sh("graphical-session", "systemctl --user list-units --no-pager 2>&1 | grep -iE 'graphical|sway|bar|notif' || true")
 
+    # Full NixOS owns keyring startup and password handoff. Home Manager must
+    # not install a competing graphical-session unit in this mode.
+    machine.succeed("grep -q pam_gnome_keyring.so /etc/pam.d/greetd")
+    machine.succeed("grep -q pam_gnome_keyring.so /etc/pam.d/gtklock")
+    machine.succeed("test -e /run/current-system/sw/share/dbus-1/services/org.freedesktop.secrets.service")
+    kit("test ! -e ~/.config/systemd/user/gnome-keyring.service")
+
     # Interactive control loop: with VM_INTERACTIVE=1 (running the driver binary
     # directly, outside the nix sandbox) read python snippets from a host FIFO
     # and exec them against the *same live VM* - no rebuild, no reboot. `nix

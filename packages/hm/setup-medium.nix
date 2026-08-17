@@ -51,6 +51,16 @@
 
   services.gnome-keyring.enable = true;
 
+  # Sway has no desktop shell to request mounts when removable media appears.
+  # Let this small UDisks client provide plug-and-use block-device automounting;
+  # Android/MTP remains handled by the GVfs backend enabled on NixOS hosts.
+  services.udiskie = {
+    enable = true;
+    automount = true;
+    notify = true;
+    tray = "auto";
+  };
+
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages =

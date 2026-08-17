@@ -43,6 +43,8 @@ let
 
 in
 {
+  imports = [ ../gnome-keyring.nix ];
+
   # Ideally, I should mix this with home-manager config.
   # But don't want to figure out user stuff
   security.polkit.enable = true;
@@ -62,8 +64,6 @@ in
   ######### non-sway-knob end
 
   services.dbus.enable = true;
-  services.gnome.gnome-keyring.enable = true;
-
   environment.systemPackages = with pkgs; [
     dbus # make dbus-update-activation-environment available in the path
     dbus-sway-environment
