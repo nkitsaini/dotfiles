@@ -36,11 +36,11 @@ The package manager for `package.json` is picked from the `packageManager`
 field if present, otherwise the lockfile (`bun.lock` > `pnpm-lock.yaml` >
 `yarn.lock` > `package-lock.json`), defaulting to bun.
 
-Manifests are discovered by walking up from the current directory (nearest
-one wins, per runner). All parsing and execution semantics stay in the
-underlying tools — karo only routes; it never re-implements a runner. The
-chosen tool replaces the karo process via `exec`, so exit codes, signals and
-TTY behavior are the real tool's.
+Manifests are discovered by walking up from the current directory until the
+git repo root or mount root (nearest one wins, per runner). All parsing and
+execution semantics stay in the underlying tools — karo only routes; it never
+re-implements a runner. The chosen tool replaces the karo process via `exec`,
+so exit codes, signals and TTY behavior are the real tool's.
 
 ## Design notes
 
@@ -58,9 +58,10 @@ installed by the nix package into the standard vendor directories
 (`share/fish/vendor_completions.d`, `share/bash-completion/completions`,
 `share/zsh/site-functions`), which nix profiles / home-manager shells pick up
 automatically. Task names are produced at completion time by
-`karo --complete-tasks`, which emits `name<TAB>description` lines. Every task
-is available as `runner:name`, so a prefix such as `karo bun:` completes all
-bun scripts; unambiguous tasks are also available by their shorter names.
+`karo --complete-tasks`, which emits `name<TAB>description` lines. Unambiguous
+tasks complete flat (e.g. `build`); when multiple runners share a name, the
+qualified forms are offered instead (e.g. `bun:build`, `just:build`). Type a
+runner prefix such as `bun:` to narrow to that runner's tasks.
 Only the first argument is completed; everything after the task name is
 forwarded to the task verbatim.
 

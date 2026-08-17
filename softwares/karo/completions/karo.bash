@@ -20,7 +20,7 @@ _karo() {
     fi
 
     local IFS=$'\n'
-    COMPREPLY=( $(compgen -W "$(karo --complete-tasks 2>/dev/null | cut -f1)" -- "$cur") )
+    COMPREPLY=( $(compgen -W "$(karo --complete-tasks "$cur" 2>/dev/null | cut -f1)" -- "$cur") )
 
     if declare -F __ltrim_colon_completions >/dev/null 2>&1; then
         __ltrim_colon_completions "$cur"

@@ -15,7 +15,7 @@ _karo() {
         else
             tasks+=("$name")
         fi
-    done < <(command karo --complete-tasks 2>/dev/null)
+    done < <(command karo --complete-tasks "$words[2]" 2>/dev/null)
 
     _describe -t tasks 'task' tasks
 

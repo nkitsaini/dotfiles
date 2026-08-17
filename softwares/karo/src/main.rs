@@ -10,6 +10,7 @@ use std::collections::BTreeSet;
 use std::env;
 use std::fs;
 use std::io::IsTerminal;
+use std::os::unix::fs::MetadataExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{exit, Command, Stdio};
@@ -59,7 +60,10 @@ fn main() {
         None | Some("--list") | Some("-l") => list_all(&cwd),
         Some("--help") | Some("-h") => print_help(),
         Some("--version") | Some("-V") => println!("karo {VERSION}"),
-        Some("--complete-tasks") => complete_tasks(&cwd),
+        Some("--complete-tasks") => {
+            let prefix = args.get(1).map(String::as_str);
+            complete_tasks(&cwd, prefix);
+        }
         Some(name) => run_task(&cwd, name, &args[1..]),
     }
 }
@@ -70,7 +74,8 @@ fn print_help() {
 karo {VERSION} — one front-end for every task runner
 
 Usage:
-  karo                    list tasks from all runners found here (walking up)
+  karo                    list tasks from all runners found here (walking up to
+                          git root or mount root)
   karo <task> [args...]   run a task by delegating to the owning runner
   karo <runner>:<task>    disambiguate when multiple runners define the task
   karo -l | --list        same as bare `karo`
@@ -91,7 +96,10 @@ Examples:
   karo dev --port 3000  # extra args are forwarded to the task
 
 Internal:
-  karo --complete-tasks   print `name<TAB>description` lines for shell completion"
+  karo --complete-tasks [prefix]
+                          print `name<TAB>description` lines for shell completion;
+                          unambiguous tasks are flat, duplicated ones are qualified;
+                          with a `runner:` prefix only that runner's tasks are shown"
     );
 }
 
@@ -99,15 +107,45 @@ Internal:
 // Discovery
 // ---------------------------------------------------------------------------
 
+/// Directories to search when discovering runners: `cwd` and each parent up to
+/// (and including) the git repo root or mount root, whichever comes first.
+fn search_dirs(cwd: &Path) -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    for dir in cwd.ancestors() {
+        dirs.push(dir.to_path_buf());
+        if is_git_root(dir) || is_mount_point(dir) {
+            break;
+        }
+    }
+    dirs
+}
+
+fn is_git_root(dir: &Path) -> bool {
+    dir.join(".git").exists()
+}
+
+fn is_mount_point(dir: &Path) -> bool {
+    let Ok(meta) = fs::metadata(dir) else {
+        return false;
+    };
+    let Some(parent) = dir.parent() else {
+        return true;
+    };
+    let Ok(parent_meta) = fs::metadata(parent) else {
+        return false;
+    };
+    meta.dev() != parent_meta.dev()
+}
+
 fn discover(cwd: &Path) -> Vec<Runner> {
     let mut runners = Vec::new();
     let mut seen: BTreeSet<u8> = BTreeSet::new();
-    for dir in cwd.ancestors() {
+    for dir in search_dirs(cwd) {
         for (i, kind) in ALL_KINDS.iter().enumerate() {
             if seen.contains(&(i as u8)) {
                 continue;
             }
-            if let Some(r) = detect(*kind, dir) {
+            if let Some(r) = detect(*kind, &dir) {
                 seen.insert(i as u8);
                 runners.push(r);
             }
@@ -670,11 +708,22 @@ fn die(msg: &str) -> ! {
     exit(1)
 }
 
-/// Prints `name<TAB>description` lines for shell completion scripts. Every
-/// task is emitted in its qualified `runner:name` form so users can complete
-/// from a runner prefix. Unambiguous tasks are also emitted in their shorter
-/// unqualified form. Never fails: completion must stay silent on errors.
-fn complete_tasks(cwd: &Path) -> ! {
+/// How a task appears in default (unprefixed) shell completion.
+fn default_completion_name(runner_id: &str, task_name: &str, name_counts: &std::collections::HashMap<&str, usize>) -> String {
+    if name_counts.get(task_name).copied().unwrap_or(0) == 1 {
+        task_name.to_string()
+    } else {
+        format!("{runner_id}:{task_name}")
+    }
+}
+
+/// Prints `name<TAB>description` lines for shell completion scripts.
+///
+/// Without a `runner:` prefix, each task is emitted once: unambiguous names
+/// stay flat (e.g. `dev`) while duplicated ones are qualified per runner
+/// (e.g. `bun:build`, `just:build`). With a prefix such as `bun:` or `bun:bu`,
+/// only matching qualified tasks from that runner are emitted.
+fn complete_tasks(cwd: &Path, prefix: Option<&str>) -> ! {
     let runners = discover(cwd);
     let per: Vec<(&Runner, Vec<TaskEntry>)> = runners
         .iter()
@@ -688,26 +737,37 @@ fn complete_tasks(cwd: &Path) -> ! {
         }
     }
 
-    for (r, tasks) in &per {
-        for t in tasks {
-            let desc: String = t
-                .desc
-                .chars()
-                .map(|c| if c == '\t' || c == '\n' { ' ' } else { c })
-                .collect();
+    let print = |name: &str, desc: &str| {
+        let desc: String = desc
+            .chars()
+            .map(|c| if c == '\t' || c == '\n' { ' ' } else { c })
+            .collect();
+        if desc.is_empty() {
+            println!("{name}");
+        } else {
+            println!("{name}\t{desc}");
+        }
+    };
 
-            let print = |name: &str| {
-                if desc.is_empty() {
-                    println!("{name}");
-                } else {
-                    println!("{name}\t{desc}");
+    let emit_default = |r: &Runner, t: &TaskEntry| {
+        let name = default_completion_name(&r.id, &t.name, &counts);
+        print(&name, &t.desc);
+    };
+
+    if let Some(pfx) = prefix.filter(|p| p.contains(':')) {
+        let (runner_id, task_prefix) = pfx.split_once(':').unwrap_or((pfx, ""));
+        if let Some((r, tasks)) = per.iter().find(|(r, _)| r.id == runner_id) {
+            for t in tasks {
+                if task_prefix.is_empty() || t.name.starts_with(task_prefix) {
+                    print(&format!("{}:{}", r.id, t.name), &t.desc);
                 }
-            };
-
-            if counts[t.name.as_str()] == 1 {
-                print(&t.name);
             }
-            print(&format!("{}:{}", r.id, t.name));
+        }
+    } else {
+        for (r, tasks) in &per {
+            for t in tasks {
+                emit_default(r, t);
+            }
         }
     }
     exit(0)
@@ -872,5 +932,46 @@ clean:
         assert_eq!(pm_from_field("pnpm@9.1.0"), Some("pnpm"));
         assert_eq!(pm_from_field("bun@1.2.0"), Some("bun"));
         assert_eq!(pm_from_field("something@1.0"), None);
+    }
+
+    #[test]
+    fn default_completion_name_is_per_task() {
+        let counts = [("build", 2usize), ("dev", 1), ("test", 1)]
+            .into_iter()
+            .collect::<std::collections::HashMap<_, _>>();
+
+        assert_eq!(default_completion_name("bun", "build", &counts), "bun:build");
+        assert_eq!(default_completion_name("just", "build", &counts), "just:build");
+        assert_eq!(default_completion_name("bun", "dev", &counts), "dev");
+        assert_eq!(default_completion_name("just", "test", &counts), "test");
+    }
+
+    #[test]
+    fn search_dirs_stops_at_git_root() {
+        let base = std::env::temp_dir().join(format!("karo-search-dirs-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        fs::create_dir_all(base.join("repo/sub/deep")).unwrap();
+        fs::create_dir(base.join("repo/.git")).unwrap();
+        fs::create_dir_all(base.join("outside")).unwrap();
+
+        let dirs = search_dirs(&base.join("repo/sub/deep"));
+        assert_eq!(dirs.len(), 3);
+        assert!(dirs[0].ends_with("deep"));
+        assert!(dirs[1].ends_with("sub"));
+        assert!(dirs[2].ends_with("repo"));
+        assert!(!dirs.iter().any(|d| d.ends_with("outside")));
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn is_git_root_detects_dot_git_file_or_dir() {
+        let base = std::env::temp_dir().join(format!("karo-git-root-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        fs::create_dir(&base).unwrap();
+        assert!(!is_git_root(&base));
+        fs::write(base.join(".git"), "gitdir: /tmp/worktree.git\n").unwrap();
+        assert!(is_git_root(&base));
+        let _ = fs::remove_dir_all(&base);
     }
 }

@@ -78,7 +78,7 @@
 
               tasks="$(karo --complete-tasks)"
               printf '%s\n' "$tasks" | grep -Fx $'build\tvite build'
-              printf '%s\n' "$tasks" | grep -Fx $'bun:build\tvite build'
+              ! printf '%s\n' "$tasks" | grep -q 'bun:build'
 
               qualified="$(fish --no-config -c 'complete -C "karo bun:"')"
               test "$qualified" = $'bun:build\tvite build\nbun:dev\tvite dev'
