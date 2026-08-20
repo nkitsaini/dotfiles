@@ -171,7 +171,20 @@
   nixpkgs.config.allowUnfree = lib.mkDefault true;
 
   security.protectKernelImage = true;
-  services.earlyoom.enable = true;
+
+  # systemd-oomd kills cgroups under memory pressure instead of waiting for
+  # the kernel OOM killer (which often takes the wrong process and can freeze
+  # the machine first). Replaces earlyoom so two userspace OOM daemons don't
+  # fight. User + system slices: apps and services get killed before the
+  # session itself. Root slice stays off so PID 1 / the whole machine isn't
+  # a kill target.
+  services.earlyoom.enable = false;
+  systemd.oomd = {
+    enable = true;
+    enableUserSlices = true;
+    enableSystemSlice = true;
+  };
+
   users.mutableUsers = false;
 
   # For ddcutil
@@ -186,6 +199,27 @@
 
     "net.ipv4.tcp_congestion_control" = "bbr";
     "net.core.default_qdisc" = "fq";
+
+    # Magic SysRq: 1 = all commands (bitmask 244 is REISUB-only if you want
+    # a tighter mask). Kernel talks to you even when userspace is wedged.
+    #
+    # Common ops (hold Alt, pulse SysRq, tap the letter; ~1s between letters):
+    #   h  help          r  unraw (take kbd back from X/Wayland)
+    #   e  SIGTERM all   i  SIGKILL all
+    #   s  sync disks    u  remount filesystems read-only
+    #   b  reboot        o  poweroff
+    #   f  manual OOM    k  SAK (kill programs on this console)
+    # Safe reboot sequence: R E I S U B
+    #
+    # ThinkPad E14 (monkey): SysRq is Fn+S ("Send system request" in the
+    # Lenovo manual), not PrtSc. Chord:
+    #   1. Hold Left Alt
+    #   2. Tap Fn+S (SysRq), release Fn and S, keep Alt down
+    #   3. Tap the command letter (r/e/i/s/u/b/...)
+    # Repeat 2–3 for each letter in REISUB. If the chord is ignored, try
+    # Alt+PrtSc+letter (some E14 gens map SysRq there instead).
+    # From a working shell: echo <letter> | sudo tee /proc/sysrq-trigger
+    "kernel.sysrq" = 1;
   };
   boot.kernelModules = [ "tcp_bbr" ];
 

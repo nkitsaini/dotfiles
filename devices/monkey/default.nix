@@ -70,6 +70,9 @@
     rules = [
       "-a exit,always -F path=/home/kit -F perm=wa -F key=home-watch" # Record file write/attribute changes
       "-a always,exit -S execve -F key=process_execution" # Record process create/delete
+      # Who recreates ~/.nix-profile / standalone HM generations (kit rebuild
+      # uses /etc/profiles/per-user and does not write this dir).
+      "-w /home/kit/.local/state/nix/profiles -p wa -k nix-user-profile"
     ];
   };
   security.auditd = {

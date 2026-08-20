@@ -15,6 +15,14 @@
   type Notice = { id: number; kind: 'success'|'error'; message: string };
   type FsEntry = { name:string; path:string; directory:boolean; size?:number };
   type Commit = { hash:string; short_hash:string; author:string; timestamp:string; subject:string };
+  type BackupConfig = {
+    repository: string; has_password: boolean; hostname: string; paths: string[]; excludes: string[];
+    prune_opts: string[]; extra_options: string[]; status: string; last_attempt?: string;
+    last_success?: string; last_error?: string;
+  };
+  type ResticSnapshot = {
+    id: string; short_id: string; time: string; paths: string[]; hostname: string; tags?: string[];
+  };
 
   let repos: Repo[] = [];
   let credentials: Credential[] = [];
@@ -22,7 +30,15 @@
   let loading = true;
   let unauthorized = false;
   let error = '';
-  let view: 'repos'|'credentials'|'files'|'logs' = 'repos';
+  let view: 'repos'|'credentials'|'backup'|'files'|'logs' = 'repos';
+  let backupConfig: BackupConfig | null = null;
+  let backupSnapshots: ResticSnapshot[] = [];
+  let backupLoading = false;
+  let backupRunning = false;
+  let backupPathsText = '';
+  let backupExcludesText = '';
+  let backupPasswordInput = '';
+
   let showRepoForm = false;
   let showCredentialForm = false;
   let conflictRepo: Repo | null = null;
@@ -234,8 +250,92 @@
   async function finishMerge() { if(!conflictRepo)return; try { await api(`/api/repos/${conflictRepo.id}/merge/continue`,{method:'POST',body:'{}'}); conflictRepo=null; await load(); } catch(e) { actionFailed('Finishing merge',e); } }
   async function abortMerge() { if(!conflictRepo||!confirm('Abort this merge and restore the pre-merge state?'))return; try { await api(`/api/repos/${conflictRepo.id}/merge/abort`,{method:'POST',body:'{}'}); conflictRepo=null; await load(); } catch(e) { actionFailed('Aborting merge',e); } }
 
+  async function loadBackup() {
+    backupLoading = true;
+    try {
+      backupConfig = await api('/api/backup/config');
+      if (backupConfig) {
+        backupPathsText = backupConfig.paths.join('\n');
+        backupExcludesText = backupConfig.excludes.join('\n');
+      }
+      backupSnapshots = await api('/api/backup/snapshots').catch(() => []);
+    } catch (e) {
+      actionFailed('Loading backup config', e);
+    } finally {
+      backupLoading = false;
+    }
+  }
+
+  async function saveBackupConfig() {
+    if (!backupConfig) return;
+    try {
+      const paths = backupPathsText.split('\n').map(s => s.trim()).filter(Boolean);
+      const excludes = backupExcludesText.split('\n').map(s => s.trim()).filter(Boolean);
+      const payload: any = {
+        repository: backupConfig.repository,
+        hostname: backupConfig.hostname || 'mantis',
+        paths,
+        excludes,
+      };
+      if (backupPasswordInput) {
+        payload.password = backupPasswordInput;
+      }
+      backupConfig = await api('/api/backup/config', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      backupPasswordInput = '';
+      notify('success', 'Backup configuration saved.');
+    } catch (e) {
+      actionFailed('Saving backup configuration', e);
+    }
+  }
+
+  async function triggerBackup() {
+    backupRunning = true;
+    try {
+      await api('/api/backup/trigger', { method: 'POST', body: '{}' });
+      notify('success', 'Restic backup started in background.');
+      setTimeout(loadBackup, 1500);
+    } catch (e) {
+      actionFailed('Triggering backup', e);
+    } finally {
+      backupRunning = false;
+    }
+  }
+
+  async function initBackupRepo() {
+    try {
+      const res = await api('/api/backup/init', { method: 'POST', body: '{}' });
+      notify('success', res.message || 'Repository initialized.');
+      await loadBackup();
+    } catch (e) {
+      actionFailed('Initializing restic repository', e);
+    }
+  }
+
+  async function pruneBackup() {
+    try {
+      await api('/api/backup/prune', { method: 'POST', body: '{}' });
+      notify('success', 'Prune completed.');
+      await loadBackup();
+    } catch (e) {
+      actionFailed('Pruning snapshots', e);
+    }
+  }
+
+  async function checkBackupRepo() {
+    try {
+      await api('/api/backup/check', { method: 'POST', body: '{}' });
+      notify('success', 'Restic check verified repository integrity.');
+    } catch (e) {
+      actionFailed('Checking repository', e);
+    }
+  }
+
   function relative(value?:string) { if(!value)return 'Never'; const normalized=/Z$|[+-]\d\d:\d\d$/.test(value)?value:value+'Z'; const ms=Date.now()-new Date(normalized).getTime(); const minutes=Math.max(0,Math.floor(ms/60000)); return minutes<1?'Just now':minutes<60?`${minutes}m ago`:minutes<1440?`${Math.floor(minutes/60)}h ago`:`${Math.floor(minutes/1440)}d ago`; }
   function statusLabel(status:string) { return status.replace('_',' '); }
+
 
   onMount(() => {
     loadBackendBuild();
@@ -269,6 +369,7 @@
       <nav class="tabs" aria-label="Sections">
         <button class:active={view==='repos'} onclick={()=>view='repos'}>Repositories <b>{repos.length}</b></button>
         <button class:active={view==='credentials'} onclick={()=>view='credentials'}>Credentials <b>{credentials.length}</b></button>
+        <button class:active={view==='backup'} onclick={()=>{view='backup';loadBackup()}}>Backup</button>
         <button class:active={view==='files'} onclick={openFiles}>Files</button>
         <button class:active={view==='logs'} onclick={()=>view='logs'}>Activity</button>
       </nav>
@@ -297,6 +398,98 @@
         <div class="section-heading"><div><h2>Credentials</h2><p>Dedicated SSH keys and HTTPS tokens</p></div><button class="secondary" onclick={()=>showCredentialForm=true}>＋ Add credential</button></div>
         <div class="credential-list">{#each credentials as item}<article><span class="credential-icon">{item.kind==='ssh'?'⌘':'◈'}</span><div><h3>{item.name}</h3><p>{item.kind.toUpperCase()} · {item.username||'dedicated key'}</p></div>{#if item.kind==='ssh'}<button class="credential-action" onclick={()=>copyPublicKey(item.id)}>Copy public key</button><button class="credential-action" onclick={()=>trustHost(item.id)}>Trust host</button><button class="credential-action" disabled={testingCredential===item.id} onclick={()=>testGithub(item)}>{testingCredential===item.id?'Testing…':'Test GitHub auth'}</button>{/if}<button class="more" onclick={()=>removeCredential(item.id)}>×</button></article>{/each}</div>
         {#if credentials.length===0}<section class="empty"><h2>No credentials</h2><p>Repositories can still use your existing Git and SSH configuration.</p></section>{/if}
+      {:else if view==='backup'}
+        <div class="section-heading">
+          <div><h2>Restic Backup</h2><p>Direct encrypted device backups for Termux storage</p></div>
+          <div class="file-actions">
+            <button class="secondary" onclick={initBackupRepo}>Init repository</button>
+            <button class="secondary" onclick={checkBackupRepo}>Check</button>
+            <button class="secondary" onclick={pruneBackup}>Prune</button>
+            <button class="primary" disabled={backupRunning || backupConfig?.status==='backing_up'} onclick={triggerBackup}>
+              {backupRunning || backupConfig?.status==='backing_up' ? 'Backing up…' : 'Backup now'}
+            </button>
+          </div>
+        </div>
+
+        {#if backupConfig}
+          <div class="repo-grid" style="margin-bottom: 24px;">
+            <article class="repo-card">
+              <div class="repo-top">
+                <span class="status-dot {backupConfig.status}"></span>
+                <div>
+                  <h3>Status</h3>
+                  <p>Host: {backupConfig.hostname || 'mantis'}</p>
+                </div>
+                <span class="badge {backupConfig.status}">{statusLabel(backupConfig.status)}</span>
+              </div>
+              <dl>
+                <div>
+                  <dt>LAST BACKUP</dt>
+                  <dd>{relative(backupConfig.last_success)}</dd>
+                </div>
+                <div>
+                  <dt>SNAPSHOTS</dt>
+                  <dd>{backupSnapshots.length}</dd>
+                </div>
+              </dl>
+              <div class="path" title={backupConfig.repository}>⌂ {backupConfig.repository || 'No repository configured'}</div>
+              {#if backupConfig.last_error}
+                <div class="repo-error" style="margin-top: 10px;"><strong>LAST BACKUP ERROR</strong><p>{backupConfig.last_error}</p></div>
+              {/if}
+            </article>
+            
+            <article class="repo-card">
+              <div class="repo-top"><div><h3>Configuration</h3><p>Settings stored securely in Mantis</p></div></div>
+              <form onsubmit={(e)=>{e.preventDefault();saveBackupConfig()}} style="margin-top: 12px; display: grid; gap: 10px;">
+                <label style="font-size: 11px; color: var(--muted); margin: 0;">
+                  Repository URL
+                  <input style="margin-top: 4px; width: 100%; border: 1px solid var(--line); background: #0f120e; color: #eaf1e6; border-radius: 8px; padding: 8px 10px; font-size: 12px;" bind:value={backupConfig.repository} placeholder="sftp:box-interactive:/home/backups/mantis/restic" />
+                </label>
+                <div class="form-row">
+                  <label style="font-size: 11px; color: var(--muted); margin: 0;">
+                    Password
+                    <input type="password" style="margin-top: 4px; width: 100%; border: 1px solid var(--line); background: #0f120e; color: #eaf1e6; border-radius: 8px; padding: 8px 10px; font-size: 12px;" bind:value={backupPasswordInput} placeholder={backupConfig.has_password ? "(password set)" : "Enter password"} />
+                  </label>
+                  <label style="font-size: 11px; color: var(--muted); margin: 0;">
+                    Hostname
+                    <input style="margin-top: 4px; width: 100%; border: 1px solid var(--line); background: #0f120e; color: #eaf1e6; border-radius: 8px; padding: 8px 10px; font-size: 12px;" bind:value={backupConfig.hostname} placeholder="mantis" />
+                  </label>
+                </div>
+                <label style="font-size: 11px; color: var(--muted); margin: 0;">
+                  Backup Paths (one per line)
+                  <textarea rows="3" style="margin-top: 4px; width: 100%; border: 1px solid var(--line); background: #0f120e; color: #eaf1e6; border-radius: 8px; padding: 8px 10px; font: 11px ui-monospace,monospace;" bind:value={backupPathsText}></textarea>
+                </label>
+                <label style="font-size: 11px; color: var(--muted); margin: 0;">
+                  Exclude Patterns (one per line)
+                  <textarea rows="2" style="margin-top: 4px; width: 100%; border: 1px solid var(--line); background: #0f120e; color: #eaf1e6; border-radius: 8px; padding: 8px 10px; font: 11px ui-monospace,monospace;" bind:value={backupExcludesText}></textarea>
+                </label>
+                <button type="submit" class="primary" style="margin-top: 4px;">Save Settings</button>
+              </form>
+            </article>
+          </div>
+
+          <div class="section-heading" style="margin-top: 24px;">
+            <div><h2>Recent Snapshots</h2><p>{backupSnapshots.length} snapshot{backupSnapshots.length===1?'':'s'} in repository</p></div>
+            <button class="secondary" onclick={loadBackup}>↻ Refresh</button>
+          </div>
+
+          {#if backupSnapshots.length === 0}
+            <div class="loading">No snapshots found in repository.</div>
+          {:else}
+            <div class="file-list" style="border: 1px solid var(--line); border-radius: 12px; background: #10130f;">
+              {#each backupSnapshots as snap}
+                <div class="file-row" style="grid-template-columns: 85px 180px 90px 1fr; font-size: 12px;">
+                  <code style="color: var(--green);">{snap.short_id || snap.id.slice(0, 8)}</code>
+                  <span>{new Date(snap.time).toLocaleString()}</span>
+                  <small style="text-align: left;">{snap.hostname}</small>
+                  <span style="color: var(--muted); font: 11px ui-monospace,monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{snap.paths.join(', ')}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        {:else}
+          <div class="loading">Loading backup configuration…</div>
+        {/if}
       {:else if view==='files'}
         <div class="section-heading"><div><h2>Files</h2><p>Browse files available to Termux</p></div><div class="file-actions"><button class="secondary" onclick={createFileFolder}>＋ New folder</button><button class="primary" disabled={uploading} onclick={()=>uploadInput.click()}>{uploading?'Uploading…':'↑ Upload'}</button><input class="hidden-upload" bind:this={uploadInput} type="file" multiple onchange={uploadFiles}/></div></div>
         <div class="file-browser">

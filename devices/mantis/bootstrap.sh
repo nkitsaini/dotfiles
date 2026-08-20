@@ -16,7 +16,8 @@ fi
 apt update -y
 
 echo "==> Installing packages"
-pkg install -y openssh termux-services git curl ca-certificates termux-api
+pkg install -y openssh termux-services git curl ca-certificates termux-api restic
+
 
 TERMUX_API_APK="$(/system/bin/pm path com.termux.api 2>/dev/null || true)"
 if [ -z "$TERMUX_API_APK" ]; then
@@ -145,6 +146,12 @@ printf '%s\n' \
 chmod 700 "$HOME/.termux/tasker/mantis-sync"
 printf '%s\n' \
     '#!/data/data/com.termux/files/usr/bin/sh' \
+    'set -eu' \
+    'exec curl --fail --silent --show-error -X POST -H "Content-Type: application/json" -H "X-Mantis-Trigger: 1" -d "{}" http://127.0.0.1:47831/api/public/backup' \
+    > "$HOME/.termux/tasker/mantis-backup"
+chmod 700 "$HOME/.termux/tasker/mantis-backup"
+printf '%s\n' \
+    '#!/data/data/com.termux/files/usr/bin/sh' \
     '. /data/data/com.termux/files/usr/etc/profile.d/start-services.sh' \
     > "$HOME/.termux/boot/start-services"
 chmod 700 "$HOME/.termux/boot/start-services"
@@ -180,4 +187,6 @@ echo "Mantis is ready. Open this one-time login URL:"
 "$MANTIS_BIN" auth-link
 echo
 echo "Tasker executable: ~/.termux/tasker/mantis-sync (argument: 'all' or a repository ID/name)."
+echo "Tasker backup:     ~/.termux/tasker/mantis-backup (triggers restic backup)."
 echo "Install and open Termux:API, Termux:Tasker, and Termux:Boot from the same source/signing family as Termux."
+

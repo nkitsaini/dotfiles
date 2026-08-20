@@ -39,7 +39,7 @@
       packages = forAllSystems (pkgs:
         let
           # wl-clipboard/xclip are Linux-only; macOS has `pbcopy` built in.
-          clipboardTools = pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.wl-clipboard pkgs.xclip ];
+          clipboardTools = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.wl-clipboard pkgs.xclip ];
         in
         {
           default = pkgs.rustPlatform.buildRustPackage {

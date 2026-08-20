@@ -1,6 +1,5 @@
 { config, pkgs, ... }: {
   home.stateVersion = "23.11";
-  nixpkgs.config.allowUnfree = true;
   home.username = "root";
   home.homeDirectory = "/root";
   programs.home-manager.enable = true;

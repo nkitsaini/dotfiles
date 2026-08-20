@@ -1,5 +1,6 @@
 mod api;
 mod auth;
+mod backup;
 mod cli;
 mod db;
 mod git;
@@ -46,6 +47,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Command::Repo { command } => cli::run_repo_command(&db, command),
+        Command::Backup { command } => cli::run_backup_command(&db, &logger, command),
         Command::AuthLink { base_url } => {
             let token = auth::create_claim_token(&db)?;
             println!("{base_url}/auth/claim?token={token}");

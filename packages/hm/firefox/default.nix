@@ -60,7 +60,7 @@ let
         'lazy.URILoadingHelper.guessUserContextId(aURI)) ||' \
         "lazy.URILoadingHelper.guessUserContextId(aURI)) || (guessUserContextIdEnabled && $(kitResolve null)) ||"
 
-      grep -rlZF 'reserved="true"' "$unpack" | xargs -0 -r perl -i -pne 's/reserved="true"/               /g'
+      grep -rlZF 'reserved="true"' "$unpack" | xargs -0 -r ${pkgs.perl}/bin/perl -i -pne 's/reserved="true"/               /g'
 
       rm "$omni"
       (cd "$unpack" && ${pkgs.zip}/bin/zip -qr9XD "$omni" -- *)

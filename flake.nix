@@ -35,7 +35,6 @@ rec {
     volume_control_rs = {
       url = "path:softwares/volume_control";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.utils.follows = "flake-utils";
     };
 
     markdown_lsp = {
@@ -73,6 +72,32 @@ rec {
           cli-helpers = pyPrev.cli-helpers.overridePythonAttrs { doCheck = false; };
         });
       };
+
+      # nixGL's overlay still reads `pkgs.system` and `xorg.libX*`, both of which
+      # now warn. Reimplement the overlay with the current names; the wrappers
+      # themselves are unchanged.
+      nixglOverlay =
+        final: _prev:
+        let
+          isIntelX86Linux = final.stdenv.hostPlatform.isx86_64 && final.stdenv.hostPlatform.isLinux;
+        in
+        {
+          nixgl = import "${inputs.nixgl}" {
+            # `// { xorg = ... }` is ignored by callPackage; extend the set so
+            # nixGL's xorg.libX* lookups resolve to the new top-level names.
+            pkgs = final.extend (
+              _self: _super: {
+                xorg = {
+                  libX11 = final.libx11;
+                  libxcb = final.libxcb;
+                  libxshmfence = final.libxshmfence;
+                };
+              }
+            );
+            enable32bits = isIntelX86Linux;
+            enableIntelX86Extensions = isIntelX86Linux;
+          };
+        };
 
       mkSystem =
         {
@@ -122,7 +147,7 @@ rec {
         system = system;
         overlays = [
           inputs.nur.overlays.default
-          inputs.nixgl.overlay
+          nixglOverlay
           cliHelpersOverlay
         ];
         config = {

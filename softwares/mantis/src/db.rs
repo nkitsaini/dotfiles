@@ -1,4 +1,7 @@
-use crate::model::{CreateCredential, CreateRepository, Credential, Repository};
+use crate::model::{
+    BackupConfig, CreateCredential, CreateRepository, Credential, Repository,
+    UpdateBackupConfig,
+};
 use anyhow::{Context, Result};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 use std::{
@@ -6,6 +9,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use uuid::Uuid;
+
 
 #[derive(Clone)]
 pub struct Database(Arc<Mutex<Connection>>);
@@ -211,6 +215,109 @@ impl Database {
         )?;
         Ok(())
     }
+
+    pub fn get_backup_config_raw(&self) -> Result<(BackupConfig, String)> {
+        let connection = self.0.lock().unwrap();
+        let (repo, pwd, host, paths_json, excludes_json, prune_json, extra_json, status, last_attempt, last_success, last_error): (
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        ) = connection.query_row(
+            "SELECT repository, password, hostname, paths, excludes, prune_opts, extra_options, status, last_attempt, last_success, last_error FROM backup_config WHERE id=1",
+            [],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                    row.get(7)?,
+                    row.get(8)?,
+                    row.get(9)?,
+                    row.get(10)?,
+                ))
+            },
+        )?;
+        let has_password = !pwd.is_empty();
+        let config = BackupConfig {
+            repository: repo,
+            password: None,
+            has_password,
+            hostname: host,
+            paths: serde_json::from_str(&paths_json).unwrap_or_default(),
+            excludes: serde_json::from_str(&excludes_json).unwrap_or_default(),
+            prune_opts: serde_json::from_str(&prune_json).unwrap_or_default(),
+            extra_options: serde_json::from_str(&extra_json).unwrap_or_default(),
+            status,
+            last_attempt,
+            last_success,
+            last_error,
+        };
+        Ok((config, pwd))
+    }
+
+    pub fn get_backup_config(&self) -> Result<BackupConfig> {
+        let (config, _) = self.get_backup_config_raw()?;
+        Ok(config)
+    }
+
+    pub fn update_backup_config(&self, input: UpdateBackupConfig) -> Result<BackupConfig> {
+        let (current, cur_pwd) = self.get_backup_config_raw()?;
+        let repository = input.repository.unwrap_or(current.repository);
+        let password = input.password.unwrap_or(cur_pwd);
+        let hostname = input.hostname.unwrap_or(current.hostname);
+        let paths = input.paths.unwrap_or(current.paths);
+        let excludes = input.excludes.unwrap_or(current.excludes);
+        let prune_opts = input.prune_opts.unwrap_or(current.prune_opts);
+        let extra_options = input.extra_options.unwrap_or(current.extra_options);
+
+        let paths_json = serde_json::to_string(&paths)?;
+        let excludes_json = serde_json::to_string(&excludes)?;
+        let prune_json = serde_json::to_string(&prune_opts)?;
+        let extra_json = serde_json::to_string(&extra_options)?;
+
+        self.0.lock().unwrap().execute(
+            "UPDATE backup_config SET repository=?1, password=?2, hostname=?3, paths=?4, excludes=?5, prune_opts=?6, extra_options=?7 WHERE id=1",
+            params![repository, password, hostname, paths_json, excludes_json, prune_json, extra_json],
+        )?;
+
+        self.get_backup_config()
+    }
+
+    pub fn set_backup_started(&self) -> Result<()> {
+        self.0.lock().unwrap().execute(
+            "UPDATE backup_config SET status='backing_up', last_attempt=datetime('now'), last_error=NULL WHERE id=1",
+            [],
+        )?;
+        Ok(())
+    }
+
+    pub fn set_backup_success(&self) -> Result<()> {
+        self.0.lock().unwrap().execute(
+            "UPDATE backup_config SET status='idle', last_success=datetime('now'), last_error=NULL WHERE id=1",
+            [],
+        )?;
+        Ok(())
+    }
+
+    pub fn set_backup_failure(&self, error: &str) -> Result<()> {
+        self.0.lock().unwrap().execute(
+            "UPDATE backup_config SET status='failed', last_error=?1 WHERE id=1",
+            params![error],
+        )?;
+        Ok(())
+    }
 }
 
 fn discover_git_dir(worktree: &Path) -> Result<std::path::PathBuf> {
@@ -285,4 +392,20 @@ CREATE TABLE IF NOT EXISTS credentials(
 );
 CREATE TABLE IF NOT EXISTS claims(token_hash TEXT PRIMARY KEY,expires_at TEXT NOT NULL,used_at TEXT);
 CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,expires_at TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,revoked_at TEXT);
+CREATE TABLE IF NOT EXISTS backup_config(
+ id INTEGER PRIMARY KEY CHECK(id = 1),
+ repository TEXT NOT NULL DEFAULT '',
+ password TEXT NOT NULL DEFAULT '',
+ hostname TEXT NOT NULL DEFAULT 'mantis',
+ paths TEXT NOT NULL DEFAULT '["/sdcard/Download","/sdcard/Documents","/sdcard/DCIM","/sdcard/Pictures","/sdcard/Audiobooks","/sdcard/Recordings","/sdcard/Tasker","/sdcard/backups"]',
+ excludes TEXT NOT NULL DEFAULT '["*/.cache","*/Cache","*.tmp"]',
+ prune_opts TEXT NOT NULL DEFAULT '["--keep-daily","7","--keep-weekly","4","--keep-monthly","6"]',
+ extra_options TEXT NOT NULL DEFAULT '[]',
+ status TEXT NOT NULL DEFAULT 'idle',
+ last_attempt TEXT,
+ last_success TEXT,
+ last_error TEXT
+);
+INSERT OR IGNORE INTO backup_config(id, repository, password, hostname) VALUES(1, '', '', 'mantis');
 "#;
+

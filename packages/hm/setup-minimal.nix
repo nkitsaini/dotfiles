@@ -39,7 +39,6 @@
   # release notes.
   home.stateVersion = "23.11"; # Please read the comment before changing.
 
-  nixpkgs.config.allowUnfree = true;
   nix.gc = {
     automatic = true;
     options = "--delete-older-than 30d";
@@ -55,17 +54,17 @@
   programs.feh.enable = true;
 
   # Stores configs I don't want to be in Nix
-  programs.ssh.matchBlocks."*" = {
-    forwardAgent = false;
-    addKeysToAgent = "no";
-    compression = false;
-    serverAliveInterval = 0;
-    serverAliveCountMax = 3;
-    hashKnownHosts = false;
-    userKnownHostsFile = "~/.ssh/known_hosts";
-    controlMaster = "no";
-    controlPath = "~/.ssh/master-%r@%n:%p";
-    controlPersist = "no";
+  programs.ssh.settings."*" = {
+    ForwardAgent = false;
+    AddKeysToAgent = "no";
+    Compression = false;
+    ServerAliveInterval = 0;
+    ServerAliveCountMax = 3;
+    HashKnownHosts = false;
+    UserKnownHostsFile = "~/.ssh/known_hosts";
+    ControlMaster = "no";
+    ControlPath = "~/.ssh/master-%r@%n:%p";
+    ControlPersist = "no";
   };
   programs.ssh.includes = [ "${config.home.homeDirectory}/.ssh/user_config" ];
 
@@ -362,7 +361,7 @@
       jc # convert common command outputs to json
 
       # MTP
-      jmtpfs
+      simple-mtpfs
 
       # From old fish history
       acpi

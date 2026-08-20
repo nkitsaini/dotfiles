@@ -1,9 +1,12 @@
 use crate::{
-    auth,
+    auth, backup,
     db::Database,
     git,
     logging::Logger,
-    model::{CreateCredential, CreateRepository, Repository},
+    model::{
+        BackupConfig, CreateCredential, CreateRepository, Repository, ResticSnapshot,
+        UpdateBackupConfig,
+    },
     paths::AppPaths,
 };
 use anyhow::{Context, Result};
@@ -29,7 +32,7 @@ use std::{
 };
 use tokio_stream::{StreamExt, wrappers::BroadcastStream};
 
-const BUILD_ID: &str = "20260806.7";
+const BUILD_ID: &str = "20260820.1";
 
 #[derive(Clone)]
 struct AppState {
@@ -38,7 +41,9 @@ struct AppState {
     paths: AppPaths,
     // Value is true when one additional run is pending behind the active run.
     syncs: Arc<Mutex<HashMap<String, bool>>>,
+    backup_running: Arc<Mutex<bool>>,
 }
+
 
 #[derive(RustEmbed)]
 #[folder = "web/build"]
@@ -65,6 +70,7 @@ pub async fn serve(db: Database, logger: Logger, paths: AppPaths, bind: String) 
         logger: logger.clone(),
         paths,
         syncs: Arc::new(Mutex::new(HashMap::new())),
+        backup_running: Arc::new(Mutex::new(false)),
     };
     for repo in state.db.list_repositories()? {
         if let Err(error) = git::trust_worktree_ownership(&repo.worktree) {
@@ -84,6 +90,13 @@ pub async fn serve(db: Database, logger: Logger, paths: AppPaths, bind: String) 
         .route("/api/public/sync-all", post(public_sync_all))
         .route("/api/public/sync", post(public_sync_named))
         .route("/api/public/repos/{id}/sync", post(public_sync_repo))
+        .route("/api/public/backup", post(public_backup))
+        .route("/api/backup/config", get(get_backup_config).put(update_backup_config))
+        .route("/api/backup/trigger", post(trigger_backup))
+        .route("/api/backup/init", post(init_backup))
+        .route("/api/backup/prune", post(prune_backup))
+        .route("/api/backup/check", post(check_backup))
+        .route("/api/backup/snapshots", get(get_backup_snapshots))
         .route("/api/repos", get(list_repos).post(create_repo))
         .route("/api/repos/{id}", get(get_repo).delete(remove_repo))
         .route("/api/repos/{id}/sync", post(sync_repo))
@@ -1134,6 +1147,108 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         (self.status, Json(json!({"error":self.message}))).into_response()
     }
+}
+
+async fn get_backup_config(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Json<BackupConfig>> {
+    require_auth(&state, &headers)?;
+    Ok(Json(
+        state.db.get_backup_config().map_err(ApiError::internal)?,
+    ))
+}
+
+async fn update_backup_config(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(input): Json<UpdateBackupConfig>,
+) -> ApiResult<Json<BackupConfig>> {
+    require_auth(&state, &headers)?;
+    Ok(Json(
+        state
+            .db
+            .update_backup_config(input)
+            .map_err(ApiError::bad_request)?,
+    ))
+}
+
+async fn init_backup(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Json<Value>> {
+    require_auth(&state, &headers)?;
+    let msg = backup::init_repository(&state.db, &state.logger).map_err(ApiError::internal)?;
+    Ok(Json(json!({ "status": "ok", "message": msg })))
+}
+
+async fn trigger_backup(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Json<Value>> {
+    require_auth(&state, &headers)?;
+    spawn_backup(state);
+    Ok(Json(json!({ "status": "started", "message": "Backup started in background." })))
+}
+
+async fn public_backup(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Json<Value>> {
+    require_public_trigger(&headers)?;
+    spawn_backup(state);
+    Ok(Json(json!({ "status": "accepted", "message": "Backup triggered via public API." })))
+}
+
+fn spawn_backup(state: AppState) {
+    let mut running = state.backup_running.lock().unwrap();
+    if *running {
+        state
+            .logger
+            .log("info", "Backup is already running, skipping trigger.", None);
+        return;
+    }
+    *running = true;
+    drop(running);
+
+    tokio::spawn(async move {
+        let res = backup::run_backup(&state.db, &state.logger);
+        let mut r = state.backup_running.lock().unwrap();
+        *r = false;
+        if let Err(e) = res {
+            state
+                .logger
+                .log("error", &format!("Background backup failed: {e:#}"), None);
+        }
+    });
+}
+
+async fn prune_backup(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Json<Value>> {
+    require_auth(&state, &headers)?;
+    let res = backup::run_prune(&state.db, &state.logger).map_err(ApiError::internal)?;
+    Ok(Json(json!({ "status": "ok", "summary": res })))
+}
+
+async fn check_backup(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Json<Value>> {
+    require_auth(&state, &headers)?;
+    let res = backup::run_check(&state.db, &state.logger).map_err(ApiError::internal)?;
+    Ok(Json(json!({ "status": "ok", "summary": res })))
+}
+
+async fn get_backup_snapshots(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Json<Vec<ResticSnapshot>>> {
+    require_auth(&state, &headers)?;
+    Ok(Json(
+        backup::list_snapshots(&state.db).map_err(ApiError::internal)?,
+    ))
 }
 
 #[cfg(test)]

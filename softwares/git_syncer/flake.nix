@@ -3,7 +3,8 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    systems.url = "github:nix-systems/default";
+    # Linux-only: bun2nix/treefmt otherwise evals x86_64-darwin, dropped in nixpkgs 26.11.
+    systems.url = "github:nix-systems/default-linux";
 
     bun2nix.url = "github:nix-community/bun2nix?tag=2.0.1";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";

@@ -13,26 +13,30 @@ companion app once and grant Tasker its “Run commands in Termux” permission.
 
 Run `./bootstrap.sh`, then open the one-time Mantis URL printed at the end.
 
-## Triggering a sync from Tasker
+## Triggering a sync or backup from Tasker
 
 1. In Tasker, create or open a task and add an action.
 2. Choose **Plugin → Termux:Tasker**, then tap its configuration pencil.
-3. Select `mantis-sync` from `~/.termux/tasker/`.
-4. Set the argument to `all` to sync every enabled repository, or to a Mantis
-   repository ID/name to sync only that repository.
-5. Save the action and run the task. A successful action means the local daemon
-   accepted the request; synchronization continues in the background.
+3. Select `mantis-sync` or `mantis-backup` from `~/.termux/tasker/`.
+4. For `mantis-sync`, set the argument to `all` or a repository ID/name.
+5. Save the action and run the task. The local daemon accepts the request and runs the job in the background.
 
-The equivalent command in Termux is:
+The equivalent commands in Termux are:
 
 ```console
+# Repository sync
 ~/.termux/tasker/mantis-sync all
-~/.termux/tasker/mantis-sync termux_notes
+
+# Restic device backup
+~/.termux/tasker/mantis-backup
 ```
 
-The wrapper is needed because Termux:Tasker launches approved executables from
-`~/.termux/tasker`. It forwards to the daemon's localhost trigger API, so Tasker
-and web requests share the same debounce queue.
+## Restic Backup
+
+Mantis includes direct support for managing and triggering Restic backups on Android.
+- Open the Mantis Web UI and navigate to the **Backup** tab.
+- Configure repository URL (e.g. `sftp:box-interactive:/home/backups/mantis/restic`), password, hostname (default `mantis`), and backup paths (`/sdcard/Download`, `/sdcard/DCIM`, etc.).
+- Use the Web UI or CLI (`mantis backup trigger`, `mantis backup snapshots`) to manage backups.
 
 To test a locally built binary without publishing a release, copy it to the
 phone and point bootstrap at it:
@@ -51,3 +55,4 @@ atomically, configures the services and Tasker wrapper, runs the health check,
 and restores the previous executable if startup fails.
 
 The application source and independent Nix build live in `softwares/mantis`.
+

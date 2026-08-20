@@ -98,3 +98,64 @@ pub struct RecentCommit {
     pub timestamp: String,
     pub subject: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BackupConfig {
+    pub repository: String,
+    #[allow(dead_code)]
+    #[serde(skip_serializing)]
+    pub password: Option<String>,
+    pub has_password: bool,
+    pub hostname: String,
+    pub paths: Vec<String>,
+    pub excludes: Vec<String>,
+    pub prune_opts: Vec<String>,
+    pub extra_options: Vec<String>,
+    pub status: String,
+    pub last_attempt: Option<String>,
+    pub last_success: Option<String>,
+    pub last_error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateBackupConfig {
+    #[serde(default)]
+    pub repository: Option<String>,
+    #[serde(default)]
+    pub password: Option<String>,
+    #[serde(default)]
+    pub hostname: Option<String>,
+    #[serde(default)]
+    pub paths: Option<Vec<String>>,
+    #[serde(default)]
+    pub excludes: Option<Vec<String>>,
+    #[serde(default)]
+    pub prune_opts: Option<Vec<String>>,
+    #[serde(default)]
+    pub extra_options: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResticSnapshot {
+    pub id: String,
+    pub short_id: String,
+    pub time: String,
+    #[serde(default)]
+    pub tree: Option<String>,
+    #[serde(default)]
+    pub paths: Vec<String>,
+    #[serde(default)]
+    pub hostname: String,
+    #[serde(default)]
+    pub username: Option<String>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BackupResult {
+    pub status: String,
+    pub message: Option<String>,
+    pub summary: Option<String>,
+}
+
