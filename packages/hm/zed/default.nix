@@ -68,7 +68,7 @@
         # zed does not provide a way to define custom lsp: https://github.com/zed-industries/zed/discussions/24092
         # override an unused one
         vtsls.binary = {
-          path = "markdown-lsp";
+          path = "sanemark";
           arguments = [ ];
         };
       };

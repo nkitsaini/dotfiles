@@ -37,18 +37,18 @@ rec {
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    markdown_lsp = {
-      url = "path:softwares/markdown_lsp";
+    sanemark = {
+      url = "github:nkitsaini/sanemark";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    radioctl = {
-      url = "path:softwares/radioctl";
+    airman = {
+      url = "github:nkitsaini/airman";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     karo = {
-      url = "path:softwares/karo";
+      url = "github:nkitsaini/karo";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

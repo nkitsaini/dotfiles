@@ -144,13 +144,13 @@
       kdePackages.konsole
       gparted
 
-      # Markdown language server (built from ./softwares/markdown_lsp).
-      inputs.markdown_lsp.packages.${pkgs.stdenv.hostPlatform.system}.default
+      # Markdown language server (built from github.com/nkitsaini/sanemark).
+      inputs.sanemark.packages.${pkgs.stdenv.hostPlatform.system}.default
 
-      # radioctl TUI (built from ./softwares/radioctl).
-      inputs.radioctl.packages.${pkgs.stdenv.hostPlatform.system}.default
+      # airman TUI (built from github.com/nkitsaini/airman).
+      inputs.airman.packages.${pkgs.stdenv.hostPlatform.system}.default
 
-      # karo: one front-end for every task runner (built from ./softwares/karo).
+      # karo: one front-end for every task runner (built from github.com/nkitsaini/karo).
       inputs.karo.packages.${pkgs.stdenv.hostPlatform.system}.default
     ]
     ++ (

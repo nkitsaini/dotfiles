@@ -1,5 +1,25 @@
 {
   "nodes": {
+    "airman": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787238803,
+        "narHash": "sha256-ieh5GxFLH5KgmWRQQV2lfFtpbTHtaYeVdwuAvdCL/Xo=",
+        "owner": "nkitsaini",
+        "repo": "airman",
+        "rev": "f61113de709391308b8139e977c7e5eee9fd14e3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nkitsaini",
+        "repo": "airman",
+        "type": "github"
+      }
+    },
     "bun2nix": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -170,14 +190,18 @@
         ]
       },
       "locked": {
-        "path": "softwares/karo",
-        "type": "path"
+        "lastModified": 1787239476,
+        "narHash": "sha256-KTJd7qDJNtaxwQjHcp1AjkZQzKS5bBqSXzZirlwhG5o=",
+        "owner": "nkitsaini",
+        "repo": "karo",
+        "rev": "cbbe5f54b3303c75a2bd0c371ce55dbb2275d311",
+        "type": "github"
       },
       "original": {
-        "path": "softwares/karo",
-        "type": "path"
-      },
-      "parent": []
+        "owner": "nkitsaini",
+        "repo": "karo",
+        "type": "github"
+      }
     },
     "kit": {
       "inputs": {
@@ -192,22 +216,6 @@
       },
       "original": {
         "path": "modules",
-        "type": "path"
-      },
-      "parent": []
-    },
-    "markdown_lsp": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "path": "softwares/markdown_lsp",
-        "type": "path"
-      },
-      "original": {
-        "path": "softwares/markdown_lsp",
         "type": "path"
       },
       "parent": []
@@ -319,36 +327,40 @@
         "type": "github"
       }
     },
-    "radioctl": {
+    "root": {
+      "inputs": {
+        "airman": "airman",
+        "disko": "disko",
+        "flake-utils": "flake-utils",
+        "home-manager": "home-manager",
+        "karo": "karo",
+        "kit": "kit",
+        "nixgl": "nixgl",
+        "nixos-hardware": "nixos-hardware",
+        "nixpkgs": "nixpkgs_2",
+        "nur": "nur",
+        "sanemark": "sanemark",
+        "volume_control_rs": "volume_control_rs"
+      }
+    },
+    "sanemark": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "path": "softwares/radioctl",
-        "type": "path"
+        "lastModified": 1787238803,
+        "narHash": "sha256-4znTP6SX53e01Wn7R4gexIJcR3QXN8pNtjSnFEm+Vy8=",
+        "owner": "nkitsaini",
+        "repo": "sanemark",
+        "rev": "f0156b682ff47298b3560ecf694e231f4b5a5ad1",
+        "type": "github"
       },
       "original": {
-        "path": "softwares/radioctl",
-        "type": "path"
-      },
-      "parent": []
-    },
-    "root": {
-      "inputs": {
-        "disko": "disko",
-        "flake-utils": "flake-utils",
-        "home-manager": "home-manager",
-        "karo": "karo",
-        "kit": "kit",
-        "markdown_lsp": "markdown_lsp",
-        "nixgl": "nixgl",
-        "nixos-hardware": "nixos-hardware",
-        "nixpkgs": "nixpkgs_2",
-        "nur": "nur",
-        "radioctl": "radioctl",
-        "volume_control_rs": "volume_control_rs"
+        "owner": "nkitsaini",
+        "repo": "sanemark",
+        "type": "github"
       }
     },
     "systems": {
