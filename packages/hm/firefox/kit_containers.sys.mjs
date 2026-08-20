@@ -10,10 +10,20 @@
 // unambiguously. A 0 produces stock Firefox behavior, and a missing container
 // is immediately visible as a badge-less tab (fail visible, never fail wrong).
 
-const lazy = {};
+const lazy = {
+  get ContextualIdentityService() {
+    try {
+      return ChromeUtils.importESModule(
+        "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs"
+      ).ContextualIdentityService;
+    } catch (e) {
+      return ChromeUtils.importESModule(
+        "resource://gre/modules/ContextualIdentityService.sys.mjs"
+      ).ContextualIdentityService;
+    }
+  },
+};
 ChromeUtils.defineESModuleGetters(lazy, {
-  ContextualIdentityService:
-    "resource://gre/modules/ContextualIdentityService.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
 });
 
@@ -35,7 +45,7 @@ export const KitContainers = {
       const label = identity =>
         lazy.ContextualIdentityService.getUserContextLabel(
           identity.userContextId
-        );
+        ) || identity.name || "";
       const identities = lazy.ContextualIdentityService.getPublicIdentities();
       let matches = identities.filter(i => label(i) === name);
       if (matches.length === 0) {

@@ -178,6 +178,8 @@ in
       }
       // lib.optionalAttrs (cfg.defaultContainer != null) {
         "kit.containers.default" = cfg.defaultContainer;
+        "privacy.userContext.enabled" = true;
+        "privacy.userContext.ui.enabled" = true;
       };
       # containers = {
       #   personal = {
