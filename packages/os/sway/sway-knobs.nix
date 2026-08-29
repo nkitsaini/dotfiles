@@ -74,6 +74,10 @@ in
   ];
 
   xdg.portal.config.common.default = "*";
+  # Same reason as packages/hm/theme/default.nix: without an explicit Settings
+  # backend, Sway + UseIn=gnome leaves org.freedesktop.portal.Settings missing
+  # and browsers/IDEs ignore the color-scheme toggle.
+  xdg.portal.config.common."org.freedesktop.impl.portal.Settings" = [ "gtk" ];
   xdg.portal.enable = true;
   xdg.portal.wlr.enable = true;
   # Without settings, xdg-desktop-portal-wlr falls back to its default screencast

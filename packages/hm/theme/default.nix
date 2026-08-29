@@ -70,6 +70,25 @@
     size = 24;
   };
 
+  # Browsers (Firefox/Chromium) and IDEs (Cursor/Zed) do not read the GNOME
+  # `color-scheme` gsettings key themselves. They ask xdg-desktop-portal for
+  # `org.freedesktop.appearance` / `color-scheme` and follow `SettingChanged`.
+  #
+  # Distro gtk.portal files are tagged `UseIn=gnome`. On Sway that means the
+  # Settings interface is never exposed (`Read` fails with UnknownMethod). The
+  # waybar toggle and darkmode reconciler still flip gsettings, and the
+  # wallpaper daemon watches that key directly — so only the wallpaper
+  # changes. This portals.conf forces Settings onto the gtk backend regardless
+  # of UseIn. Takes effect the next time xdg-desktop-portal starts (logout or
+  # `systemctl --user restart xdg-desktop-portal`).
+  xdg.configFile."xdg-desktop-portal/portals.conf".text = ''
+    [preferred]
+    default=wlr;gtk
+    org.freedesktop.impl.portal.Settings=gtk
+    org.freedesktop.impl.portal.ScreenCast=wlr
+    org.freedesktop.impl.portal.Screenshot=wlr
+  '';
+
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       gtk-theme = "Breeze";
