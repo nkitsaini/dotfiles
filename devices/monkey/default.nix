@@ -86,6 +86,26 @@
 
   networking.hostName = hostname; # Define your hostname.
 
+  # The Realtek r8169 PHY can fail to establish a link with EEE enabled.
+  systemd.network.links."70-ethernet-disable-eee" = {
+    matchConfig = {
+      Type = "ether";
+      # Try to exclude non-hardware ether interfaces
+      Path = "pci-*";
+    };
+    # A device uses only its first matching .link file, so preserve the naming
+    # policy that would otherwise come from systemd's 99-default.link.
+    linkConfig = {
+      NamePolicy = "keep kernel database onboard slot path";
+      AlternativeNamesPolicy = "database onboard slot path mac";
+      MACAddressPolicy = "persistent";
+    };
+    extraConfig = ''
+      [EnergyEfficientEthernet]
+      Enable=no
+    '';
+  };
+
   environment.systemPackages = [ pkgs.cups-filters ];
 
   # Enable CUPS to print documents.
