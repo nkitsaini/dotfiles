@@ -342,10 +342,11 @@
           exec ${pkgs.uv}/bin/uv tool run --with secretstorage --python 3.12 --with httpx --with requests --prerelease explicit yt-dlp@latest "$@"
         '';
       })
-      (writeScriptBin "copilot" ''
-        #!${pkgs.dash}/bin/dash
-        exec ${nodejs}/bin/node ${vimPlugins.copilot-vim}/dist/agent.js
-      '')
+      # Interactive terminal agent, provides `copilot`.
+      github-copilot-cli
+      # LSP server for editors, provides `copilot-language-server`. Speaks
+      # JSON-RPC on stdio, so running it by hand just blocks on stdin.
+      copilot-language-server
 
       (mkShoalScript "audiobook_generator" "audiobook_generator")
       (mkShoalScript "hh" "helios_helper")
