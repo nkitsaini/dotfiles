@@ -29,7 +29,7 @@ in
 
       services.dbus.packages = [
         cfg.package
-        pkgs.gcr
+        pkgs.gcr_3
       ];
 
       xdg.portal.extraPortals = [ cfg.package ];

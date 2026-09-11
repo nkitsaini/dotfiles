@@ -46,7 +46,10 @@ in
     headscale = {
       enable = true;
       package = (
-        pkgs.runCommand "headscale" { buildInputs = [ pkgs.makeWrapper ]; } ''
+        pkgs.runCommand "headscale" {
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          meta.mainProgram = "headscale";
+        } ''
           makeWrapper ${pkgs.headscale}/bin/headscale $out/bin/headscale --set HEADSCALE_EXPERIMENTAL_FEATURE_SSH 1
         ''
       );

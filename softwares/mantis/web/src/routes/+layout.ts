@@ -1,2 +1,3 @@
 export const ssr = false;
-export const prerender = true;
+// The static adapter generates index.html as the SPA fallback.
+export const prerender = false;

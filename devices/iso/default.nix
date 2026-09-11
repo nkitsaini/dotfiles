@@ -11,6 +11,9 @@
     ../../packages/os/core.nix
   ];
 
+  # ISO 9660 volume identifiers use uppercase letters, digits, and underscores.
+  isoImage.volumeID = "NIXOS_INSTALLER";
+
   # not sure?
   services.xserver.windowManager.i3 = { enable = true; };
 

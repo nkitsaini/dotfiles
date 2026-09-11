@@ -40,10 +40,10 @@
     home.packages = with pkgs; [
       firefox
       tigervnc
-      xfce.xfce4-session
-      xfce.xfce4-panel
-      xfce.xfdesktop
-      xfce.xfwm4
+      xfce4-session
+      xfce4-panel
+      xfdesktop
+      xfwm4
     ];
   }
 )
