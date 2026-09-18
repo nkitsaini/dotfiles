@@ -9,6 +9,93 @@ import capture
 
 
 class CaptureRenameTests(unittest.TestCase):
+    def test_new_capture_starts_with_generated_heading_and_is_pruned(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+
+            def inspect_capture(command: list[str], **_: object) -> None:
+                main_file = Path(command[-1])
+                suffix = main_file.parent.name.split("__", 1)[1]
+                self.assertEqual(main_file.read_text(), f"# {suffix}\n\n")
+
+            with (
+                mock.patch.object(
+                    capture, "zed_command", side_effect=lambda path: ["zed", str(path)]
+                ),
+                mock.patch.object(capture.subprocess, "run", side_effect=inspect_capture),
+            ):
+                capture.capture(root)
+            self.assertEqual(list(root.iterdir()), [])
+
+    def test_empty_detection_preserves_titles_body_and_attachments(self) -> None:
+        for contents, attachment, empty in (
+            (" \n", None, True),
+            ("# capture-1234abcd\n\n", None, True),
+            ("# capture-1234abcd\n\nNotes", None, False),
+            ("# My title\n", None, False),
+            ("# capture-1234abcd\n", b"image data", False),
+            ("# capture-1234abcd\n", b" \n", True),
+        ):
+            with self.subTest(contents=contents, attachment=attachment):
+                with tempfile.TemporaryDirectory() as temporary_directory:
+                    session = self.make_session(
+                        Path(temporary_directory), "2026_08_12__capture-1234abcd", contents
+                    )
+                    if attachment is not None:
+                        (session / "attachment").write_bytes(attachment)
+                    self.assertEqual(capture.is_empty_session(session), empty)
+
+    def test_reviewed_title_variants_move_named_sessions(self) -> None:
+        for title, reviewed in (
+            ("Notes - reviewed", True),
+            ("Notes -ReViEwEd", False),
+            ("Notes REVIEWED  ", True),
+            ("reviewed", False),
+            ("Notes unreviewed", False),
+            ("NotesReViEwEd", False),
+            ("Reviewed notes", False),
+        ):
+            with self.subTest(title=title):
+                with tempfile.TemporaryDirectory() as temporary_directory:
+                    root = Path(temporary_directory)
+                    session = self.make_session(root, "2026_08_12__notes", f"# {title}\n")
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        result = capture.rename_from_heading(session)
+                        self.assertEqual(capture.rename_from_heading(result), result)
+                    self.assertEqual(capture.is_reviewed_session(result), reviewed)
+                    self.assertEqual((result / "main.md").read_text(), f"# {title}\n")
+
+    def test_review_auto_moves_existing_and_newly_reviewed_titles_without_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.make_session(root, "2026_08_12__existing", "# Existing - reviewed\n")
+            self.make_session(root, "2026_08_12__new", "# New\n")
+
+            def edit(command: list[str], **_: object) -> None:
+                Path(command[-1]).write_text("# New - reviewed\n")
+
+            with (
+                mock.patch.object(capture, "zed_command", side_effect=lambda path: ["zed", str(path)]),
+                mock.patch.object(capture.subprocess, "run", side_effect=edit) as editor,
+                mock.patch("builtins.input", side_effect=AssertionError("unexpected prompt")),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                capture.review(root)
+            self.assertEqual(editor.call_count, 1)
+            self.assertEqual(len(list((root / "reviewed").iterdir())), 2)
+
+    def test_bulk_rename_auto_reviews_and_preserves_colliding_session(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.make_session(root, "2026_08_12__capture-1234abcd", "# Notes reviewed\n")
+            existing = self.make_session(
+                root, "2026_08_12__notes-reviewed", "# Existing\n", reviewed=True
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                capture.rename_captures(root, reviewed=False)
+            self.assertTrue((root / "reviewed" / "2026_08_12__notes-reviewed-2").is_dir())
+            self.assertEqual((existing / "main.md").read_text(), "# Existing\n")
+
     def make_session(
         self,
         root: Path,

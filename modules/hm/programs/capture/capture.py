@@ -55,9 +55,30 @@ def is_reviewed_session(session_path: Path) -> bool:
 
 
 def is_empty_session(session_dir: Path) -> bool:
-    """A session is empty when it has no files, or all its files are empty."""
+    """Ignore whitespace and an unchanged generated main.md heading."""
     files = [path for path in session_dir.rglob("*") if path.is_file()]
-    return all(not path.read_bytes().strip() for path in files)
+    parts = session_parts(session_dir)
+    placeholder = (
+        f"# {parts[1]}".encode()
+        if parts and is_generated_suffix(parts[1])
+        else None
+    )
+    for path in files:
+        contents = path.read_bytes().strip()
+        if contents and not (
+            path == session_dir / "main.md" and contents == placeholder
+        ):
+            return False
+    return True
+
+
+def initialize_main_file(session_path: Path) -> Path:
+    main_file = session_path / "main.md"
+    if not main_file.exists():
+        parts = session_parts(session_path)
+        title = parts[1] if parts else session_path.name
+        main_file.write_text(f"# {title}\n\n")
+    return main_file
 
 
 def session_name(suffix: str | None = None) -> str:
@@ -226,6 +247,7 @@ def write_heading_from_folder(session_path: Path) -> bool:
 
 
 def rename_from_heading(session_path: Path, *, warn: bool = False) -> Path:
+    session_path = auto_mark_reviewed(session_path)
     parts = session_parts(session_path)
     if parts is None:
         return session_path
@@ -264,6 +286,7 @@ def sync_session_to_heading(
     session_path: Path, *, apply: bool, warn_missing: bool
 ) -> tuple[Path, str | None]:
     """Return (path, warning_kind). warning_kind is 'missing' or 'mismatch'."""
+    session_path = auto_mark_reviewed(session_path)
     parts = session_parts(session_path)
     if parts is None:
         return session_path, None
@@ -310,6 +333,19 @@ def mark_reviewed(session_path: Path, sessions_path: Path) -> Path:
     return destination
 
 
+def auto_mark_reviewed(session_path: Path) -> Path:
+    heading = top_level_heading(session_path / "main.md")
+    if (
+        not is_reviewed_session(session_path)
+        and heading
+        and heading.casefold().endswith(" reviewed")
+    ):
+        destination = mark_reviewed(session_path, session_path.parent)
+        print_renamed(session_label(session_path), session_label(destination))
+        return destination
+    return session_path
+
+
 def zed_command(main_file: Path) -> list[str]:
     zed = shutil.which("zed")
     if zed is None:
@@ -323,8 +359,7 @@ def zed_command(main_file: Path) -> list[str]:
 def capture(sessions_path: Path, suffix: str | None = None) -> None:
     session_path = unique_session_path(sessions_path, suffix)
     session_path.mkdir(parents=True)
-    main_file = session_path / "main.md"
-    main_file.touch()
+    main_file = initialize_main_file(session_path)
 
     try:
         subprocess.run(zed_command(main_file), check=True)
@@ -348,6 +383,7 @@ def unreviewed_sessions(sessions_path: Path) -> list[Path]:
         if path.is_dir()
         and path.name != REVIEWED_DIRNAME
         and not is_empty_session(path)
+        and not is_reviewed_session(auto_mark_reviewed(path))
     ]
 
 
@@ -359,13 +395,15 @@ def review(sessions_path: Path) -> None:
 
     print(f"{paint(str(len(sessions)), 'bold')} unreviewed capture(s).")
     for index, session_path in enumerate(sessions, start=1):
-        main_file = session_path / "main.md"
-        main_file.touch(exist_ok=True)
+        main_file = initialize_main_file(session_path)
         print(
             f"\n[{index}/{len(sessions)}] {paint(session_path.name, 'bold')}"
         )
         subprocess.run(zed_command(main_file), check=True)
         session_path = rename_from_heading(session_path)
+
+        if is_reviewed_session(session_path):
+            continue
 
         answer = input("Mark reviewed? [Y/n/q] ").strip().lower()
         if answer == "q":

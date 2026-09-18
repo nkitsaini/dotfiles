@@ -257,10 +257,7 @@
       unzip
       gnutar
 
-      (pkgs.rustup.overrideAttrs (old: {
-        # do not run rustup tests if cache is missing. They take forever.
-        doCheck = false;
-      }))
+      rustup
 
       qrencode
       s3fs

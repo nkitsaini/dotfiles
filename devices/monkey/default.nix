@@ -81,7 +81,11 @@
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
-  boot.loader.systemd-boot.configurationLimit = 120;
+  # Keep the small ESP from filling up. To activate an older retained generation:
+  # nixos-rebuild list-generations
+  # sudo nix-env -p /nix/var/nix/profiles/system --switch-generation GENERATION
+  # sudo /nix/var/nix/profiles/system/bin/switch-to-configuration switch
+  boot.loader.systemd-boot.configurationLimit = 5;
   boot.loader.efi.canTouchEfiVariables = true;
 
   networking.hostName = hostname; # Define your hostname.
