@@ -54,6 +54,10 @@ class CaptureRenameTests(unittest.TestCase):
             ("Notes unreviewed", False),
             ("NotesReViEwEd", False),
             ("Reviewed notes", False),
+            ("[reviewed] Notes", True),
+            ("Notes [ReViEwEd] from today", True),
+            ("Notes [reviewed]", True),
+            ("Notes [unreviewed]", False),
         ):
             with self.subTest(title=title):
                 with tempfile.TemporaryDirectory() as temporary_directory:
@@ -72,7 +76,7 @@ class CaptureRenameTests(unittest.TestCase):
             self.make_session(root, "2026_08_12__new", "# New\n")
 
             def edit(command: list[str], **_: object) -> None:
-                Path(command[-1]).write_text("# New - reviewed\n")
+                Path(command[-1]).write_text("# New [ReViEwEd] notes\n")
 
             with (
                 mock.patch.object(capture, "zed_command", side_effect=lambda path: ["zed", str(path)]),

@@ -335,10 +335,13 @@ def mark_reviewed(session_path: Path, sessions_path: Path) -> Path:
 
 def auto_mark_reviewed(session_path: Path) -> Path:
     heading = top_level_heading(session_path / "main.md")
+    folded_heading = heading.casefold() if heading else ""
     if (
         not is_reviewed_session(session_path)
-        and heading
-        and heading.casefold().endswith(" reviewed")
+        and (
+            folded_heading.endswith(" reviewed")
+            or "[reviewed]" in folded_heading
+        )
     ):
         destination = mark_reviewed(session_path, session_path.parent)
         print_renamed(session_label(session_path), session_label(destination))
