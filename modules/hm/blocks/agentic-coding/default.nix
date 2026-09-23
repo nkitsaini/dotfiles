@@ -18,7 +18,7 @@ in
   config = mkIf cfg.enable {
     home.packages = with pkgs; [
       antigravity-cli
-      code-cursor
+      (import ./cursor-package.nix { inherit pkgs; })
       codex
       bubblewrap # sandboxing for codex
     ];

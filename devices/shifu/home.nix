@@ -29,7 +29,7 @@
         ln -s ${pkgs.wireplumber}/bin/wpctl $out/bin/wpctl
       '')
       pkgs.awscli2
-      pkgs.code-cursor
+      (import ../../modules/hm/blocks/agentic-coding/cursor-package.nix { inherit pkgs; })
       pkgs.cursor-cli
       pkgs.mariadb.client
       pkgs.cloudflared
