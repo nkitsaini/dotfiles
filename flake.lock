@@ -190,11 +190,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1787315982,
-        "narHash": "sha256-P1yy/YX661L6frspB6pwUXV5SYus8k0jWOtH4voY3wo=",
+        "lastModified": 1790480968,
+        "narHash": "sha256-0unos9B6NBvx8R8IrBbWUB2Rz3hMt7EGrjRHdwp2EcI=",
         "owner": "nkitsaini",
         "repo": "karo",
-        "rev": "741ddde87baba416926e1b6deb31b4ef244660ed",
+        "rev": "caf591db857b4b27c7405125293f54fa7f6e23e8",
         "type": "github"
       },
       "original": {
