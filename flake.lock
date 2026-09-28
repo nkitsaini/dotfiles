@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1787238803,
-        "narHash": "sha256-ieh5GxFLH5KgmWRQQV2lfFtpbTHtaYeVdwuAvdCL/Xo=",
+        "lastModified": 1790582942,
+        "narHash": "sha256-4iUIJ6gMGrD1BTflCOD4oUEXFVg4OANtgQTem8ARn00=",
         "owner": "nkitsaini",
         "repo": "airman",
-        "rev": "f61113de709391308b8139e977c7e5eee9fd14e3",
+        "rev": "d89aa1001a7fb852425f2893dd1506285f09efb0",
         "type": "github"
       },
       "original": {
