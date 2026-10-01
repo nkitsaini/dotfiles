@@ -46,10 +46,10 @@
       languages = {
         Go.format_on_save = "on";
         Markdown = {
-          language_servers = [ "vtsls" ];
+          language_servers = [ "sanemark" ];
           format_on_save = "off";
           document_folding_ranges = "on";
-          formatter.language_server.name = "vtsls";
+          formatter.language_server.name = "sanemark";
         };
       };
 
@@ -63,15 +63,6 @@
       vim_mode = true;
       buffer_font_family = "Noto Mono";
       autosave = "on_focus_change";
-
-      lsp = {
-        # zed does not provide a way to define custom lsp: https://github.com/zed-industries/zed/discussions/24092
-        # override an unused one
-        vtsls.binary = {
-          path = "sanemark";
-          arguments = [ ];
-        };
-      };
 
       feature_flags = {
         tabular-data-preview = "on";
